@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ngsidekick"
+description = "Tools for neuroglancer scenes."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Stuart Berg", email = "bergs@janelia.hhmi.org" }
+]
+keywords = ["neuroglancer", "connectomics", "visualization"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "License :: OSI Approved :: BSD License"
+]
+dependencies = [
+  "numpy",
+  "pandas",
+  "numba",
+  "tqdm",
+  "tensorstore",
+  "neuroglancer",
+  "requests",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/janelia-flyem/ngsidekick"
+Repository = "https://github.com/janelia-flyem/ngsidekick"
+Issues = "https://github.com/janelia-flyem/ngsidekick/issues"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+gcs = ["google-cloud-storage"]
+
+[tool.hatch.version]
+path = "src/ngsidekick/__init__.py"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ngsidekick"]
+include = [
+  "src/ngsidekick/py.typed",
+  "LICENSE",
+]
+
+
