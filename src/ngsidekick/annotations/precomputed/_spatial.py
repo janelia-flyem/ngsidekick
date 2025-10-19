@@ -566,7 +566,7 @@ def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_su
                 level_bufs['chunk_code'].to_numpy(),
                 gridspec.grid_shapes[level]
             )
-            level_bufs.index = [map('_'.join, grid_coords.astype(str))]
+            level_bufs.index = list(map('_'.join, grid_coords.astype(str)))
 
         level_metadata = _write_buffers(
             level_bufs['combined_buf'],
