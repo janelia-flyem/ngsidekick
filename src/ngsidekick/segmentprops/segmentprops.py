@@ -599,25 +599,22 @@ def _tag_description_list(unique_tags, tag_descriptions):
     return td
 
 
-def segment_properties_to_dataframe(js):
+def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool = True):
     """
     Converts JSON to DataFrame.
     This is primarily for testing and demonstration.
 
-    Note:
-        A user's original dataframe is not generally recoverable
-        from the segment properties JSON representation
-        if tags are present.
-
-        This function translates all tags to boolean columns
-        (one column per tag), rather than strings or categoricals
-        (which is how the user probably originally had them).
-        The resulting dataframe might contain MANY boolean columns,
-        likely requiring more memory than the user's original
-        dataframe did.
-
-        No attempt is made to parse the prefixes of the tags to group
-        them into shared columns.
+    Args:
+        js:
+            The JSON representation of the segment properties.
+        consolidate_tags_by_prefix:
+            If True, consolidate boolean tag columns into Categorical columns
+            according to their prefix, assuming the data was written
+            using according to the naming conventions followed
+            by segment_properties_json(..., tag_prefix_mode="all").
+            Otherwise, a separate boolean column is created for each unique tag.
+    Returns:
+        DataFrame
     """
     segment_ids = [*map(int, js['inline']['ids'])]
     segment_ids = pd.Index(segment_ids, name='segment')
@@ -659,4 +656,35 @@ def segment_properties_to_dataframe(js):
     flags[rows, cols] = True
 
     tags_df = pd.DataFrame(flags, segment_ids, unique_tags)
+
+    if consolidate_tags_by_prefix:
+        tags_df = _consolidate_tags(tags_df)
+
     return pd.concat((scalar_df, tags_df), axis=1)
+
+
+def _consolidate_tags(tags_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Consolidate boolean tag columns into Categorical columns
+    according to their prefix, assuming the data was written
+    using according to the naming conventions followed
+    by segment_properties_json(..., tag_prefix_mode="all").
+    """
+    tag_groups = {}
+    for col in tags_df.columns:
+        if ':' not in col:
+            continue
+        prefix, tag = col.split(':', 1)
+        tag_groups.setdefault(prefix, []).append(col)
+
+    for prefix, cols in tag_groups.items():
+        # Preserve the tag order in the categorical dtype.
+        tags = [col.split(':', 1)[1] for col in cols]
+        dtype = pd.CategoricalDtype(categories=tags)
+        tags_df[prefix] = pd.Series(None, dtype=dtype)
+        for col in cols:
+            tag = col.split(':', 1)[1]
+            tags_df.loc[tags_df[col], prefix] = tag
+
+    tags_df = tags_df.drop(columns=chain(*tag_groups.values()))
+    return tags_df
