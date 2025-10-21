@@ -599,7 +599,7 @@ def _tag_description_list(unique_tags, tag_descriptions):
     return td
 
 
-def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool = True):
+def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool = True, return_separate_tags: bool = False):
     """
     Converts JSON to DataFrame.
     This is primarily for testing and demonstration.
@@ -613,8 +613,13 @@ def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool =
             using according to the naming conventions followed
             by segment_properties_json(..., tag_prefix_mode="all").
             Otherwise, a separate boolean column is created for each unique tag.
+        return_separate_tags:
+            If True, return two dataframes, for scalar columns and tag columns.
+            Otherwise, combine them into a single dataframe.
+
     Returns:
-        DataFrame
+        If return_separate_tags=True, return (scalar_df, tags_df).
+        By default, concatenate them across columns into a single dataframe.
     """
     segment_ids = [*map(int, js['inline']['ids'])]
     segment_ids = pd.Index(segment_ids, name='segment')
@@ -660,7 +665,11 @@ def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool =
     if consolidate_tags_by_prefix:
         tags_df = _consolidate_tags(tags_df)
 
-    return pd.concat((scalar_df, tags_df), axis=1)
+
+    if return_separate_tags:
+        return scalar_df, tags_df
+    else:
+        return pd.concat((scalar_df, tags_df), axis=1)
 
 
 def _consolidate_tags(tags_df: pd.DataFrame) -> pd.DataFrame:
