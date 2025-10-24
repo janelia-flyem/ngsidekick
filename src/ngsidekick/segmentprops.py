@@ -342,6 +342,8 @@ def _scalar_property_types(df, label_col, description_col, string_cols, number_c
             prop_types['label'] = 'label'
         elif name == 'description':
             prop_types['description'] = 'description'
+        elif dtype in ("object", "string"):
+            prop_types[name] = 'string'
         elif np.issubdtype(dtype, np.number):
             prop_types[name] = 'number'
         else:
