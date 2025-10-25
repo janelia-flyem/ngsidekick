@@ -1,3 +1,4 @@
+import re
 import ast
 import string
 from typing import List, Dict
@@ -13,12 +14,15 @@ def select_segment_properties(
     subset: List[str],
     scalar_expressions: Dict[str, str] = {},
     tag_expressions: Dict[str, str] = {}
-) -> pd.DataFrame:
+) -> dict:
 
     scalar_df, tags_df = segment_properties_to_dataframe(info, return_separate_tags=True)
     full_df = pd.concat((scalar_df, tags_df), axis=1)
-    new_df = _select_segment_properties_from_dataframe(full_df, scalar_expressions, tag_expressions)
+    new_df = _select_segment_properties_from_dataframe(full_df, {**scalar_expressions, **tag_expressions})
     new_tag_cols = new_df.select_dtypes(include=bool).columns
+
+    if invalid_subset := set(subset) - (set(tags_df.columns) | set(scalar_df.columns)):
+        raise ValueError(f"Invalid segment properties: {', '.join(invalid_subset)}")
 
     subset_tags_df = tags_df[[c for c in subset if c in tags_df.columns]]
     subset_scalar_df = scalar_df[[c for c in subset if c in scalar_df.columns]]
@@ -28,8 +32,7 @@ def select_segment_properties(
 
 def _select_segment_properties_from_dataframe(
     full_df: pd.DataFrame,
-    scalar_expressions: Dict[str, str] = {},
-    tag_expressions: Dict[str, str] = {}
+    expressions: Dict[str, str] = {},
 ) -> pd.DataFrame:
 
     for col in full_df.columns.tolist():
@@ -37,13 +40,19 @@ def _select_segment_properties_from_dataframe(
             full_df[col] = full_df[col].astype('string').fillna('')
     
     new_df = full_df[[]].copy()
-    for name, expr in scalar_expressions.items():
+    for name, expr in expressions.items():
         if template_names := string_template_names(expr):
+            if invalid_template_names := set(template_names) - set(full_df.columns):
+                raise ValueError(f"Invalid segment properties: {', '.join(invalid_template_names)}")
             # This is faster than using df.apply() with a lambda.
             new_df[name] = [
-                expr.format(**dict(zip(template_names, row)), locals={}, globals={})
+                expr.format(**dict(zip(template_names, row)), locals={}, globals={}).strip()
                 for row in full_df[template_names].values
             ]
+        elif re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', expr):
+            # String appears not to be a template or an expression.
+            # It must just be a column name.
+            new_df[name] = full_df[expr]
         else:
             rewritten = hoist_literals_to_columns(full_df, expr, prefix="__")
             new_df[name] = full_df.eval(
