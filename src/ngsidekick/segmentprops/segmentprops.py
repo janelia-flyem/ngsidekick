@@ -326,13 +326,13 @@ def _scalar_property_types(df, label_col, description_col, string_cols, number_c
     if (
         len(df.columns) == 1
         and not prop_types
-        and not np.issubdtype(df.dtypes.iloc[0], np.number)
+        and (df.dtypes.iloc[0] == 'string' or not np.issubdtype(df.dtypes.iloc[0], np.number))
     ):
         prop_types = {df.columns[0]: 'label'}
 
     # Infer the types of unlisted columns from either the name or dtype
     for name, dtype in df.dtypes.items():
-        if dtype == bool and prop_types.get(name) != 'tags':  # noqa: E721
+        if dtype in (bool, 'boolean') and prop_types.get(name) != 'tags':  # noqa: E721
             raise RuntimeError(f"Column '{name}': Boolean columns are only valid as tag_cols")
         elif prop_types.get(name) == 'number' and not np.issubdtype(dtype, np.number):
             raise RuntimeError(f"Column '{name}': Not valid as number_cols (dtype: {dtype})")
@@ -474,7 +474,7 @@ def _convert_to_categorical(s):
     if s.dtype == 'category':
         s = s.cat.remove_unused_categories()
 
-    if s.dtype == bool:
+    if s.dtype in (bool, 'boolean'):
         s = s.astype('category', copy=False)
         s = s.cat.rename_categories({True: s.name})
         if False in s.dtype.categories:
@@ -529,7 +529,7 @@ def _insert_tag_prefixes(df, tag_prefix_mode, orig_dtypes):
 
     assert tag_prefix_mode == 'all'
     for c, s in list(df.items()):
-        if orig_dtypes[c] == 'bool':
+        if orig_dtypes[c] in ('bool', 'boolean'):
             # Boolean columns need no prefix;
             # the column name is the entire tag.
             continue
