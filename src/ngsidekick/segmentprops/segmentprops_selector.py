@@ -54,9 +54,8 @@ def _select_segment_properties_from_dataframe(
             # It must just be a column name.
             new_df[name] = full_df[expr]
         else:
-            rewritten = hoist_literals_to_columns(full_df, expr, prefix="__")
             new_df[name] = full_df.eval(
-                rewritten,
+                expr,
                 local_dict={},
                 global_dict={},
                 engine='python'
@@ -70,63 +69,3 @@ def string_template_names(template: str) -> bool:
         return [name for (_, name, *_) in string.Formatter().parse(template) if name]
     except ValueError:
         return []
-
-
-def hoist_literals_to_columns(df: pd.DataFrame, expr: str, prefix: str = "_") -> str:
-    """
-    Parse `expr`, replace literals with new dataframe columns (prefixed with `prefix`),
-    broadcast those literal values to the columns, and return the rewritten expression.
-    """
-    class Hoister(ast.NodeTransformer):
-        def __init__(self, df, prefix):
-            self.df = df
-            self.prefix = prefix
-            self.pool = {}          # (type, value) -> colname  (dedupe identical literals)
-            self.counter = 0
-
-        def _fresh_name(self) -> str:
-            # Find a column name not already in df
-            while True:
-                name = f"{self.prefix}L{self.counter}"
-                self.counter += 1
-                if name not in self.df.columns:
-                    return name
-
-        def _name_for(self, value):
-            key = (type(value), value)
-            if key not in self.pool:
-                self.pool[key] = self._fresh_name()
-            return self.pool[key]
-
-        def visit_Tuple(self, node: ast.Tuple):
-            # Don't hoist literals inside tuples - preserve them as-is
-            return node
-
-        def visit_List(self, node: ast.List):
-            # Don't hoist literals inside lists - preserve them as-is
-            return node
-
-        def visit_Constant(self, node: ast.Constant):
-            # Hoist simple literals
-            if isinstance(node.value, (str, int, float, bool, type(None))):
-                name = self._name_for(node.value)
-                return ast.copy_location(ast.Name(id=name, ctx=ast.Load()), node)
-            return node
-
-    tree = ast.parse(expr, mode="eval")
-    hoister = Hoister(df, prefix)
-    new_tree = hoister.visit(tree)
-    ast.fix_missing_locations(new_tree)
-    rewritten = ast.unparse(new_tree)
-
-    # Create/broadcast columns for each hoisted literal
-    for (typ, value), col in hoister.pool.items():
-        if isinstance(value, str):
-            # keep pandas StringDtype to avoid object/string mixing issues
-            df[col] = pd.Series(pd.array([value] * len(df), dtype="string"), index=df.index)
-        elif value is None:
-            df[col] = pd.Series([pd.NA] * len(df), dtype="string", index=df.index)
-        else:
-            df[col] = value
-
-    return rewritten
