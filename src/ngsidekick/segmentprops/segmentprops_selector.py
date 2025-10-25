@@ -89,6 +89,14 @@ def hoist_literals_to_columns(df: pd.DataFrame, expr: str, prefix: str = "_") ->
                 self.pool[key] = self._fresh_name()
             return self.pool[key]
 
+        def visit_Tuple(self, node: ast.Tuple):
+            # Don't hoist literals inside tuples - preserve them as-is
+            return node
+
+        def visit_List(self, node: ast.List):
+            # Don't hoist literals inside lists - preserve them as-is
+            return node
+
         def visit_Constant(self, node: ast.Constant):
             # Hoist simple literals
             if isinstance(node.value, (str, int, float, bool, type(None))):
