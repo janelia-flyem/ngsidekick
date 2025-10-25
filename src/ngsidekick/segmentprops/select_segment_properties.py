@@ -1,7 +1,7 @@
 import re
-import ast
 import string
 from typing import List, Dict
+from pandas.api.types import is_numeric_dtype
 
 import numpy as np
 import pandas as pd
@@ -21,13 +21,43 @@ def select_segment_properties(
     new_df = _select_segment_properties_from_dataframe(full_df, {**scalar_expressions, **tag_expressions})
     new_tag_cols = new_df.select_dtypes(include=bool).columns
 
+    if '_all' in subset:
+        subset += [
+            c for c in full_df.columns
+            if c not in subset
+        ]
+        subset.remove('_all_tags')
+
+    if '_all_tags' in subset:
+        subset += [
+            c for c in full_df.columns
+            if c not in subset and not is_numeric_dtype(full_df[c].dtype)
+        ]
+        subset.remove('_all_tags')
+
+    if '_default' in subset:
+        counts = full_df.nunique()
+        subset += [
+            c for c in full_df.columns
+            if c not in subset and counts[c] <= 1000
+        ]
+        subset.remove('_default')
+
+    if '_default_tags' in subset:
+        counts = full_df.nunique()
+        subset += [
+            c for c in full_df.columns
+            if c not in subset and counts[c] <= 1000 and not is_numeric_dtype(full_df[c].dtype)
+        ]
+        subset.remove('_default_tags')
+
     if invalid_subset := set(subset) - (set(tags_df.columns) | set(scalar_df.columns)):
         raise ValueError(f"Invalid segment properties: {', '.join(invalid_subset)}")
 
     subset_tags_df = tags_df[[c for c in subset if c in tags_df.columns]]
     subset_scalar_df = scalar_df[[c for c in subset if c in scalar_df.columns]]
     combined_df = pd.concat((new_df, subset_scalar_df, subset_tags_df), axis=1)
-    return segment_properties_json(combined_df, tag_cols=[*new_tag_cols, *[c for c in tags_df.columns if c in subset]])
+    return segment_properties_json(combined_df, tag_cols=[*new_tag_cols, *[c for c in subset if c in tags_df.columns]])
 
 
 def _select_segment_properties_from_dataframe(
