@@ -17,6 +17,12 @@ def select_segment_properties(
 ) -> dict:
 
     scalar_df, tags_df = segment_properties_to_dataframe(info, return_separate_tags=True)
+
+    # It's possible for a scalar column to also be used in the tags.
+    # We'll drop the scalar and just keep the one from the tags,
+    # since the tag column takes less RAM.
+    scalar_df = scalar_df[[c for c in scalar_df.columns if c not in tags_df.columns]]
+
     full_df = pd.concat((scalar_df, tags_df), axis=1)
     new_df = _select_segment_properties_from_dataframe(full_df, {**scalar_expressions, **tag_expressions})
     new_tag_cols = list(tag_expressions.keys())
