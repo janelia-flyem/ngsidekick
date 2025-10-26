@@ -19,7 +19,7 @@ def select_segment_properties(
     scalar_df, tags_df = segment_properties_to_dataframe(info, return_separate_tags=True)
     full_df = pd.concat((scalar_df, tags_df), axis=1)
     new_df = _select_segment_properties_from_dataframe(full_df, {**scalar_expressions, **tag_expressions})
-    new_tag_cols = new_df.select_dtypes(include=bool).columns
+    new_tag_cols = list(tag_expressions.keys())
 
     if '_all' in subset:
         subset += [
@@ -69,27 +69,48 @@ def _select_segment_properties_from_dataframe(
         if full_df[col].dtype in ("category", "object", "string"):
             full_df[col] = full_df[col].astype('string').fillna('')
     
+    # In some datasets, the segment properties use '~' to indicate an empty field
+    # instead of the empty string to avoid sorting empty types near the top of the ID list.
+    # For the purposes of expression evaluation, we treat '~' and '' as None.
+    full_df_with_empty = full_df.replace('~', '')
+
     new_df = full_df[[]].copy()
     for name, expr in expressions.items():
         if template_names := string_template_names(expr):
-            if invalid_template_names := set(template_names) - set(full_df.columns):
+            # Only evaluate the expression for rows in which at least
+            # one of the referenced template names is not None.
+            # Other rows are not evaluated and get an empty string by default.
+            # (Special case: For the 'label' column, it will be replaced with '~' later.)
+            new_df[name] = ''
+            if invalid_template_names := set(template_names) - set(full_df_with_empty.columns):
                 raise ValueError(f"Invalid segment properties: {', '.join(invalid_template_names)}")
-            # This is faster than using df.apply() with a lambda.
-            new_df[name] = [
+            valid_rows = (full_df_with_empty[template_names] != '').any(axis=1)
+
+            # This list comprehension is faster than using df.apply() with a lambda.
+            new_df.loc[valid_rows, name] = [
                 expr.format(**dict(zip(template_names, row)), locals={}, globals={}).strip()
-                for row in full_df[template_names].values
+                for row in full_df_with_empty.loc[valid_rows, template_names].values
             ]
         elif re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', expr):
-            # String appears not to be a template or an expression.
-            # It must just be a column name.
+            # String appears not to be a template nor an expression;
+            # it must just be a column name.
             new_df[name] = full_df[expr]
         else:
-            new_df[name] = full_df.eval(
+            new_df[name] = full_df_with_empty.eval(
                 expr,
                 local_dict={},
                 global_dict={},
                 engine='python'
             )
+
+        # We append the newly computed column to the input dataframe so it
+        # can be referenced in subsequent expressions if the user wants to.
+        full_df_with_empty[name] = new_df[name]
+
+    # It's annoying to have the empty labels sorted at the top of our ID list,
+    # so we replace the empty string with '~' here to shove them to the bottom.
+    if 'label' in new_df.columns:
+        new_df['label'] = new_df['label'].replace('', '~')
 
     return new_df
 
