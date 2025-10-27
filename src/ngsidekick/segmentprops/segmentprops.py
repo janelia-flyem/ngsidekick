@@ -607,12 +607,15 @@ def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool =
     Args:
         js:
             The JSON representation of the segment properties.
+
         consolidate_tags_by_prefix:
             If True, consolidate boolean tag columns into Categorical columns
             according to their prefix, assuming the data was written
             using according to the naming conventions followed
             by segment_properties_json(..., tag_prefix_mode="all").
-            Otherwise, a separate boolean column is created for each unique tag.
+            Otherwise, a separate boolean column is created for each
+            unique tag -- potentially tons of columns (and RAM)!
+
         return_separate_tags:
             If True, return two dataframes, for scalar columns and tag columns.
             Otherwise, combine them into a single dataframe.
@@ -641,59 +644,61 @@ def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool =
 
     scalar_df = pd.DataFrame(scalar_values, segment_ids).astype(scalar_dtypes)
 
-    # Early return if there are no tags.
-    if not tags_props:
-        if return_separate_tags:
-            return scalar_df, scalar_df[[]]
-        return scalar_df
+    if tags_props:
+        tags_df = _convert_tags_to_dataframe(segment_ids, tags_props, consolidate_tags_by_prefix)
+    else:
+        tags_df = scalar_df[[]]
 
+    if return_separate_tags:
+        return scalar_df, tags_df
+
+    # It's possible for a scalar column to also be used in the tags.
+    # We'll drop the scalar and just keep the one from the tags,
+    # since the tag column takes less RAM.
+    scalar_df = scalar_df[[c for c in scalar_df.columns if c not in tags_df.columns]]
+    return pd.concat((scalar_df, tags_df), axis=1)
+
+
+def _convert_tags_to_dataframe(segment_ids, tags_props, consolidate_tags_by_prefix):
     code_lists = tags_props[0]['values']
     unique_tags = tags_props[0]['tags']
 
     segment_count = len(code_lists)
     tag_count = len(unique_tags)
 
-    if consolidate_tags_by_prefix:
-        tag_prefixes = pd.Series([tag.split(':', 1)[0] for tag in unique_tags]).astype('category')
+    # Flatten the lists of codes,
+    # but keep track of the rows they came from.
+    flat_tag_codes = pd.Series([*chain(*code_lists)])
+    code_rows = np.repeat(
+        range(segment_count),
+        [*map(len, code_lists)]
+    )
 
-        # Flatten the lists of codes,
-        # but keep track of the rows they came from.
-        flat_tag_codes = pd.Series([*chain(*code_lists)])
-        flat_prefixes = flat_tag_codes.map(tag_prefixes)
-        rows = np.repeat(
-            range(segment_count),
-            [*map(len, code_lists)]
-        )
-        tag_codes = -np.ones((len(code_lists), pd.Series(tag_prefixes).nunique()), np.int32)
-        tag_codes[rows, flat_prefixes.cat.codes] = flat_tag_codes
+    if not consolidate_tags_by_prefix:
+        # Return a boolean column for every unique tag.
+        # Could be tons of columns!
+        flags_matrix = np.zeros((segment_count, tag_count), bool)
+        flags_matrix[code_rows, flat_tag_codes] = True
+        return pd.DataFrame(flags_matrix, segment_ids, unique_tags)
 
-        tags_df = pd.DataFrame(None, segment_ids)
-        for col, col_codes in zip(tag_prefixes.cat.categories, tag_codes.T):
-            tags_df[col] = pd.Categorical.from_codes(col_codes, unique_tags)
-            tags_df[col] = tags_df[col].cat.remove_unused_categories()
-            tags_df[col] = tags_df[col].cat.rename_categories({
-                tag: tag.split(':', 1)[1] if ':' in tag else tag
-                for tag in tags_df[col].dtype.categories
-            })
-    else:
-        # Flatten the lists of codes,
-        # but keep track of the rows they came from.
-        cols = [*chain(*code_lists)]
-        rows = np.repeat(
-            range(segment_count),
-            [*map(len, code_lists)]
-        )
+    tag_prefixes = pd.Series([tag.split(':', 1)[0] for tag in unique_tags]).astype('category')
+    flat_prefixes = flat_tag_codes.map(tag_prefixes)
 
-        flags = np.zeros((segment_count, tag_count), bool)
-        flags[rows, cols] = True
+    # Assumble the flattened codes into a matrix (row per segment, column per prefix).
+    # Default is -1 (categorical code for a missing value).
+    code_matrix = -1 * np.ones((segment_count, pd.Series(tag_prefixes).nunique()), np.int32)
+    code_matrix[code_rows, flat_prefixes.cat.codes] = flat_tag_codes
 
-        tags_df = pd.DataFrame(flags, segment_ids, unique_tags)
+    tag_categoricals = {}
+    for prefix, code_column in zip(tag_prefixes.cat.categories, code_matrix.T):
+        # Initialize as a categorical that corresponds to all tags combined,
+        # then reduce to a categorical for just this column's values (without prefixes).
+        tag_cat = pd.Categorical.from_codes(code_column, unique_tags)
+        tag_cat = tag_cat.remove_unused_categories()
+        tag_cat = tag_cat.rename_categories({
+            tag: tag.split(':', 1)[1] if ':' in tag else tag
+            for tag in tag_cat.dtype.categories
+        })
+        tag_categoricals[prefix] = tag_cat
 
-    if return_separate_tags:
-        return scalar_df, tags_df
-    else:
-        # It's possible for a scalar column to also be used in the tags.
-        # We'll drop the scalar and just keep the one from the tags,
-        # since the tag column takes less RAM.
-        scalar_df = scalar_df[[c for c in scalar_df.columns if c not in tags_df.columns]]
-        return pd.concat((scalar_df, tags_df), axis=1)
+    return pd.DataFrame(tag_categoricals, segment_ids)
