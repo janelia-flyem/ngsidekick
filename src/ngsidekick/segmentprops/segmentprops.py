@@ -640,7 +640,11 @@ def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool =
     }
 
     scalar_df = pd.DataFrame(scalar_values, segment_ids).astype(scalar_dtypes)
+
+    # Early return if there are no tags.
     if not tags_props:
+        if return_separate_tags:
+            return scalar_df, scalar_df[[]]
         return scalar_df
 
     code_lists = tags_props[0]['values']
