@@ -44,6 +44,12 @@ make-bucket-public = "ngsidekick:make_bucket_public"
 [project.optional-dependencies]
 test = ["pytest>=7"]
 gcs = ["google-cloud-storage"]
+docs = [
+  "sphinx>=7.0",
+  "sphinx-piccolo-theme",
+  "sphinx-autodoc-typehints",
+  "myst-parser",
+]
 
 [tool.hatch.version]
 source = "vcs"

@@ -139,7 +139,6 @@ def local_annotation_json(df, name="annotations", color="#ffff00", size=8.0, lin
     This does not result in a complete neuroglancer link; it results in something
     that can be added to the layers list in the neuroglancer viewer JSON state.
 
-
     Args:
         df:
             DataFrame containing the annotation data.
@@ -191,6 +190,8 @@ def local_annotation_json(df, name="annotations", color="#ffff00", size=8.0, lin
 
             By default, the annotation IDs are the same as the column names and the annotation types are inferred.
             You can override the property 'spec' by supplying a dict-of-dicts here instead of a list of columns:
+
+            .. code-block:: python
 
                 properties={
                     "my_column": {
