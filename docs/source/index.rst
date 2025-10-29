@@ -1,5 +1,5 @@
-ngsidekick documentation
-========================
+NGSidekick
+==========
 
 Tools for neuroglancer scenes.
 

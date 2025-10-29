@@ -26,7 +26,7 @@ https://docs.google.com/spreadsheets/d/1SC-szBtssuqMnVrNdZv9LHj4UB0rUFMwZaxeDnek
 
 Copy that template and pass the URL of your copied sheet to this tool.
 Make sure your sheet is visible to "anyone with the link" and editable at least by you
-(via your GOOGLE_APPLICATION_CREDENTIALS).
+(via your ``GOOGLE_APPLICATION_CREDENTIALS``).
 
 Example usage:
 
@@ -46,7 +46,7 @@ To install the neuroglancer ``video_tool``:
 Note:
     This tool accepts (and produces) a non-standard format for neuroglancer video scripts
     which allows comments (starting with '#') and blank lines.
-    When writing to a video script, comments can be excluded with the --no-comments flag.
+    When writing to a video script, comments can be excluded with the ``--no-comments`` flag.
     Otherwise, you'll have to exclude them yourself before running the neuroglancer video_tool:
 
     .. code-block:: bash

@@ -156,7 +156,7 @@ def make_bucket_public(bucket=None):
 
     This feature is also installed along with ngsidekick as a command-line tool:
 
-        ..code-block:: bash
+        .. code-block:: bash
 
             make-bucket-public gs://mybucket/mydir
 

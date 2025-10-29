@@ -65,6 +65,8 @@ def segment_properties_json(
             If you want a column to be used for both tags _and_ a different property,
             be sure to list it explicitly in both arguments.  For example:
 
+            .. code-block:: python
+
                 segment_properties_json(df, label_col='cell_class', tag_cols=['cell_class', ...])
 
             In addition to string/category inputs, columns with dtype bool can also be
@@ -72,12 +74,12 @@ def segment_properties_json(
             are tagged with the column name.
 
         tag_prefix_mode:
-            Either 'all' or 'disambiguate' or None.
+            Either ``'all'`` or ``'disambiguate'`` or ``None``.
 
-            - If 'all', then all tags will be prefixed with the name of their source column,
-              (e.g. 'status:Anchor'), other than boolean columns.
+            - If ``'all'``, then all tags will be prefixed with the name of their source column,
+              (e.g. ``status:Anchor``), other than those which came from boolean columns.
 
-            - If 'disambiguate', then only tags which appear in multiple columns
+            - If ``'disambiguate'``, then only tags which appear in multiple columns
               be prefixed with the name of their source column.
 
             - If None, then no disambiguation is performed.
@@ -680,7 +682,7 @@ def _convert_tags_to_dataframe(segment_ids, tags_props, consolidate_tags_by_pref
     tag_prefixes = pd.Series([tag.split(':', 1)[0] for tag in unique_tags]).astype('category')
     flat_prefixes = flat_tag_codes.map(tag_prefixes)
 
-    # Assumble the flattened codes into a matrix (row per segment, column per prefix).
+    # Assemble the flattened codes into a matrix (row per segment, column per prefix).
     # Default is -1 (categorical code for a missing value).
     code_matrix = -1 * np.ones((segment_count, pd.Series(tag_prefixes).nunique()), np.int32)
     code_matrix[code_rows, flat_prefixes.cat.codes] = flat_tag_codes
