@@ -253,6 +253,13 @@ def write_precomputed_annotations(
         )
     
     # Write the top-level 'info' file for the annotation output directory.
+    # Check for NaN in bounds (which would produce invalid JSON)
+    if np.any(np.isnan(bounds[0])) or np.any(np.isnan(bounds[1])):
+        raise ValueError(
+            f"Bounds contain NaN values: lower={bounds[0]}, upper={bounds[1]}. "
+            "Check your input data for missing or invalid coordinate values."
+        )
+
     info = {
         "@type": "neuroglancer_annotations_v1",
         "dimensions": coord_space.to_json(),
