@@ -331,7 +331,7 @@ a video script using this utility.</p>
 <a class="reference external" href="https://docs.google.com/spreadsheets/d/1SC-szBtssuqMnVrNdZv9LHj4UB0rUFMwZaxeDnekA4c/edit?gid=162774670#gid=162774670">https://docs.google.com/spreadsheets/d/1SC-szBtssuqMnVrNdZv9LHj4UB0rUFMwZaxeDnekA4c/edit?gid=162774670#gid=162774670</a></p>
 <p>Copy that template and pass the URL of your copied sheet to this tool.
 Make sure your sheet is visible to “anyone with the link” and editable at least by you
-(via your GOOGLE_APPLICATION_CREDENTIALS).</p>
+(via your <code class="docutils literal notranslate"><span class="pre">GOOGLE_APPLICATION_CREDENTIALS</span></code>).</p>
 <p>Example usage:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">SHEET_URL</span><span class="o">=</span>https://docs.google.com/spreadsheets/d/15Q1oRLZQd1MWZOjRr_DyIkFbbhMZCSP4sbU78JXkoSM/edit?gid<span class="o">=</span><span class="m">162774670</span><span class="c1">#gid=162774670</span>
 python<span class="w"> </span>ngvideo-helper<span class="w"> </span>script-to-sheet<span class="w"> </span>video_script.txt<span class="w"> </span><span class="nv">$SHEET_URL</span>
@@ -347,7 +347,7 @@ pixi<span class="w"> </span>add<span class="w"> </span>--pypi<span class="w"> </
 <p class="admonition-title">Note</p>
 <p>This tool accepts (and produces) a non-standard format for neuroglancer video scripts
 which allows comments (starting with ‘#’) and blank lines.
-When writing to a video script, comments can be excluded with the –no-comments flag.
+When writing to a video script, comments can be excluded with the <code class="docutils literal notranslate"><span class="pre">--no-comments</span></code> flag.
 Otherwise, you’ll have to exclude them yourself before running the neuroglancer video_tool:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pixi<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>neuroglancer.tool.video_tool<span class="w"> </span>render<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--browser<span class="w"> </span>firefox<span class="w"> </span>--no-headless<span class="w"> </span>--refresh-browser-timeout<span class="o">=</span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
