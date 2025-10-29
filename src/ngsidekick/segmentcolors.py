@@ -1,11 +1,12 @@
 """
 Python implementation of neuroglancer's pseudo-random segment color generator.
 
-Adapted from Austin Hoag's implementation:
+Adapted from `Austin Hoag's implementation <https://github.com/google/neuroglancer/blob/master/python/neuroglancer/segment_colors.py>`_.
+This version is lightly refactored to support JIT-compilation and vectorization using numba.
 
-    https://github.com/google/neuroglancer/blob/master/python/neuroglancer/segment_colors.py
-
-This version is lightly refactored and uses numba to JIT-compile and vectorize it.
+See also:
+The source code here in segmentcolors.py also includes a WebGL implementation
+of the same algorithm, suitable for neuroglancer annotation shaders.
 """
 # @license
 # Copyright 2017 Google Inc.
