@@ -1,13 +1,8 @@
-Storage
-=======
+Google Cloud Storage
+====================
 
-.. automodule:: ngsidekick.storage
+.. automodule:: ngsidekick.gcs
    :members:
    :undoc-members:
    :show-inheritance:
-
-Overview
---------
-
-Storage utilities for managing data persistence and retrieval.
 

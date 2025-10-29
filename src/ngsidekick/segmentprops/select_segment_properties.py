@@ -15,6 +15,72 @@ def select_segment_properties(
     scalar_expressions: Dict[str, str] = {},
     tag_expressions: Dict[str, str] = {}
 ) -> dict:
+    """
+    Given the JSON data from a neuroglancer segment properties 'info' file,
+    select a subset of the properties and/or tags and return the reduced JSON info.
+
+    You can also add *new* properties and/or tags by providing expressions
+    (in pandas eval syntax) to be evaluated using the source data.
+
+    In addition to expressions, you can provide a template string to be evaluated
+    with Python string formatting.
+
+    The variables available to the expressions are the columns extracted from the
+    source data as produced via `segment_properties_to_dataframe()`.
+    The tag list is parsed into separate columns according to their prefixes
+    (assuming ':' delimits the prefix).
+
+    The 'label' column is special: It is the one that will be displayed in the neuroglancer segment list.
+
+    Args:
+        info:
+            The JSON data from a neuroglancer segment properties 'info' file.
+
+        subset:
+            The subset of properties or tag categories to select.
+            Special values:
+            - '_all': Select all properties and tags.
+            - '_all_tags': Select all tag categories.
+            - '_default': Select all properties and tags that have less than 1000 unique values.
+            - '_default_tags': Select all tag categories that have less than 1000 unique values.
+
+        scalar_expressions:
+            Expressions to be evaluated using the source data to compute new properties.
+
+        tag_expressions:
+            Expressions to be evaluated using the source data to compute new tags.
+
+    Returns:
+        The reduced/enhanced JSON data from a neuroglancer segment properties 'info' file.
+    
+
+    Note:
+        For the purpose of expression evaluation, we treat '~' and missing values (untagged) as "".
+
+    Examples:
+
+    .. code-block:: python
+
+        new_info = select_segment_properties(info, subset=['superclass', 'type'])
+        new_info = select_segment_properties(
+            info,
+            scalar_expressions={
+                'size': 'length * width * height',
+                'label': "{type} ({superclass})"
+            },
+        )
+        new_info = select_segment_properties(
+            info,
+            tag_expressions={
+                'is_left_hemilineage_01': 'hemilineage in ("01A", "01B") and soma_side == "L"'
+            }
+        )
+    
+    See also:
+        The `ngsidekick-server <https://github.com/janelia-flyem/ngsidekick-server>`_
+        project wraps this function in a web service to enable dynamic segment property
+        selection directly in neuroglancer (via user-provided source URLs).
+    """
 
     scalar_df, tags_df = segment_properties_to_dataframe(info, return_separate_tags=True)
 

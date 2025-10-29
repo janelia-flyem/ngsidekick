@@ -40,6 +40,8 @@ Issues = "https://github.com/janelia-flyem/ngsidekick/issues"
 
 [project.scripts]
 make-bucket-public = "ngsidekick:make_bucket_public"
+ngvideo-helper = "ngsidekick.ngvideo_helper:main"
+
 
 [project.optional-dependencies]
 test = ["pytest>=7"]

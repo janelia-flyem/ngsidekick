@@ -1,13 +1,7 @@
-Utilities
-=========
+State Utilities
+===============
 
-.. automodule:: ngsidekick.util
+.. automodule:: ngsidekick.state_utils
    :members:
    :undoc-members:
    :show-inheritance:
-
-Overview
---------
-
-General utility functions for ngsidekick.
-

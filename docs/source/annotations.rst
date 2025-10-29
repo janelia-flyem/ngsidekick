@@ -17,6 +17,6 @@ Submodules
 .. toctree::
    :maxdepth: 1
 
-   annotations.local
-   annotations.precomputed
+   local
+   precomputed
 

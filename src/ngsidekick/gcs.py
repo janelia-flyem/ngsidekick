@@ -1,5 +1,5 @@
 """
-Utility functions related to storing neuroglancer states in cloud storage.
+Utility functions related to storing neuroglancer states in Google Cloud Storage.
 """
 import json
 import argparse

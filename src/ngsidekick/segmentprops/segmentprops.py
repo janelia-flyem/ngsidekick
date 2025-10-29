@@ -1,6 +1,3 @@
-"""
-Utility for converting a DataFrame to neuroglancer segment properties (a JSON document).
-"""
 import json
 from itertools import chain
 from collections.abc import Iterable, Mapping
@@ -116,7 +113,7 @@ def segment_properties_json(
 
     Example:
 
-        .. code-block: ipython
+        .. code-block:: ipython
 
             In [41]: print(df)
             Out[41]:
@@ -601,8 +598,7 @@ def _tag_description_list(unique_tags, tag_descriptions):
 
 def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool = True, return_separate_tags: bool = False):
     """
-    Converts JSON to DataFrame.
-    This is primarily for testing and demonstration.
+    Converts segment properties info JSON to DataFrame.
 
     Args:
         js:

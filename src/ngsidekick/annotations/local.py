@@ -1,3 +1,6 @@
+"""
+Functions for encoding or parsing data for ``local://annotations`` sources.
+"""
 import copy
 from textwrap import indent, dedent
 
@@ -138,6 +141,9 @@ def local_annotation_json(df, name="annotations", color="#ffff00", size=8.0, lin
     Construct the JSON data for a neuroglancer local annotations layer.
     This does not result in a complete neuroglancer link; it results in something
     that can be added to the layers list in the neuroglancer viewer JSON state.
+
+    Note:
+        This function's signature will likely change in the future.
 
     Args:
         df:

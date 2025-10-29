@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'ngsidekick'
-copyright = '2025, Stuart Berg'
+copyright = '2025, HHMI'
 author = 'Stuart Berg'
 
 # -- General configuration ---------------------------------------------------

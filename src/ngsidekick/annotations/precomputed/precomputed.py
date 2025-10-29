@@ -38,9 +38,7 @@ def write_precomputed_annotations(
 ):
     """
     Export the data from a pandas DataFrame into neuroglancer's precomputed annotations format
-    as described in the neuroglancer spec[1].
-
-    [1]:  https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md
+    as described in the `neuroglancer spec <https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md>`_.
 
     A progress bar is shown when writing each portion of the export (annotation ID index, related ID indexes),
     but there may be a significant amount of preprocessing time that occurs before the actual writing begins.
@@ -76,7 +74,7 @@ def write_precomputed_annotations(
             (If you do retain a reference, it defeats the point of using a TableHandle in the first place.)
 
         coord_space:
-            CoordinateSpace or equivalent.
+            ``neuroglancer.coordinate_space.CoordinateSpace`` or equivalent.
             The coordinate space of the annotations.
             Among other things, this determines which input columns represent the annotation geometry.
             For convenience, we accept a couple different formats for the coordinate space,
@@ -84,24 +82,21 @@ def write_precomputed_annotations(
 
             Examples (all equivalent):
 
-                - "xyz"
-                - ['x', 'y', 'z']
-                - {"names": ['x', 'y', 'z']}
-                - {
+            .. code-block:: python
+
+                >>> coord_space = "xyz"
+                >>> coord_space = ['x', 'y', 'z']
+                >>> coord_space = {"names": ['x', 'y', 'z']}
+                >>> coord_space = {
                     "names": ['x', 'y', 'z'],
                     "units": ['nm', 'nm', 'nm'],
                     "scales": [1, 1, 1]
-                  }
-                - {
-                    "x": [1, "nm"],
-                    "y": [1, "nm"],
-                    "z": [1, "nm"],
                 }
-                - CoordinateSpace(
-                    names=['x', 'y', 'z'],
-                    scales=[1.0, 1.0, 1.0],
-                    units=['nm', 'nm', 'nm'],
-                  )
+                >>> coord_space = CoordinateSpace(
+                ...     names=['x', 'y', 'z'],
+                ...     scales=[1.0, 1.0, 1.0],
+                ...     units=['nm', 'nm', 'nm']
+                ... )
 
         annotation_type:
             Literal['point', 'line', 'ellipsoid', 'axis_aligned_bounding_box']

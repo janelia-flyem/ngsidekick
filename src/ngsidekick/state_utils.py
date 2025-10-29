@@ -40,6 +40,7 @@ def download_ngstate(link):
         link: str
             A neuroglancer link such as:
             https://neuroglancer-demo.appspot.com/#!gs://flyem-male-cns/v0.9/male-cns-v0.9.json
+
     Returns:
         dict
     """

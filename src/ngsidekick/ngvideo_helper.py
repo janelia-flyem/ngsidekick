@@ -3,11 +3,13 @@ Utilities for converting a neuroglancer video script to a Google Sheet and back.
 
 The neuroglancer video_tool uses a very simple format for video scripts:
 
-<url>
-<duration>
-<url>
-<duration>
-...
+.. code-block:: text
+
+    <url>
+    <duration>
+    <url>
+    <duration>
+    ...
 
 That format is simple to create, but annoying to edit.
 
@@ -28,11 +30,15 @@ Make sure your sheet is visible to "anyone with the link" and editable at least 
 
 Example usage:
 
-    SHEET_URL=https://docs.google.com/spreadsheets/d/15Q1oRLZQd1MWZOjRr_DyIkFbbhMZCSP4sbU78JXkoSM/edit?gid=162774670#gid=162774670
-    python video_tool_utils.py script-to-sheet video_script.txt $SHEET_URL
-    python video_tool_utils.py sheet-to-script $SHEET_URL video_script.txt
+.. code-block:: bash
 
-To install the neuroglancer video_tool:
+    SHEET_URL=https://docs.google.com/spreadsheets/d/15Q1oRLZQd1MWZOjRr_DyIkFbbhMZCSP4sbU78JXkoSM/edit?gid=162774670#gid=162774670
+    python ngvideo-helper script-to-sheet video_script.txt $SHEET_URL
+    python ngvideo-helper sheet-to-script $SHEET_URL video_script.txt
+
+To install the neuroglancer ``video_tool``:
+
+.. code-block:: bash
 
     pixi init selenium geckodriver pillow numpy requests tornado six google-apitools google-auth atomicwrites ffmpeg
     pixi add --pypi neuroglancer
@@ -42,6 +48,8 @@ Note:
     which allows comments (starting with '#') and blank lines.
     When writing to a video script, comments can be excluded with the --no-comments flag.
     Otherwise, you'll have to exclude them yourself before running the neuroglancer video_tool:
+
+    .. code-block:: bash
 
         pixi run python -m neuroglancer.tool.video_tool render \\
             --browser firefox --no-headless --refresh-browser-timeout=10 \\

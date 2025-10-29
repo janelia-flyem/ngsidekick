@@ -7,6 +7,19 @@ import pandas as pd
 
 @dataclass
 class TableHandle:
+    """
+    A wrapper for a pandas DataFrame that can be provided to transfer ownership
+    of the DataFrame to ``write_precomputed_annotations()``, which will delete
+    the handle's reference to the DataFrame as soon as possible to save RAM.
+
+    Example:
+
+    .. code-block:: python
+
+        >>> handle = TableHandle(df)
+        >>> del df  # Delete your own reference to the original data
+        >>> write_precomputed_annotations(handle, 'xyz', 'point')
+    """
     df: pd.DataFrame | None = None
 
 
