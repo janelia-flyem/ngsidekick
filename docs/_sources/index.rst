@@ -1,4 +1,4 @@
-ngsidekick
+NGSidekick
 ==========
 
 Tools for neuroglancer scenes.
