@@ -44,7 +44,7 @@ ngvideo-helper = "ngsidekick.ngvideo_helper:main"
 
 
 [project.optional-dependencies]
-test = ["pytest>=7"]
+test = ["pytest>=7", "flask", "bokeh"]
 gcs = ["google-cloud-storage"]
 docs = [
   "sphinx>=7.0",
@@ -58,8 +58,11 @@ source = "vcs"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q"
+addopts = "-ra -q -m 'not manual'"
 testpaths = ["tests"]
+markers = [
+    "manual: marks tests as requiring manual inspection (deselected by default)",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ngsidekick"]
