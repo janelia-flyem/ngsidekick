@@ -1,5 +1,7 @@
 # NGSidekick
 
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://janelia-flyem.github.io/ngsidekick/docs/index.html)
+
 Tools for neuroglancer scenes.
 
 
