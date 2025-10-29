@@ -38,6 +38,9 @@ Homepage = "https://github.com/janelia-flyem/ngsidekick"
 Repository = "https://github.com/janelia-flyem/ngsidekick"
 Issues = "https://github.com/janelia-flyem/ngsidekick/issues"
 
+[project.scripts]
+make-bucket-public = "ngsidekick:make_bucket_public"
+
 [project.optional-dependencies]
 test = ["pytest>=7"]
 gcs = ["google-cloud-storage"]
