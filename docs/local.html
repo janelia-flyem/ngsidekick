@@ -309,10 +309,7 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.extract_local_annotations"><code class="docutils literal notranslate"><span class="pre">extract_local_annotations()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.extract_annotations"><code class="docutils literal notranslate"><span class="pre">extract_annotations()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.local_annotation_json"><code class="docutils literal notranslate"><span class="pre">local_annotation_json()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.point_annotation_layer_json"><code class="docutils literal notranslate"><span class="pre">point_annotation_layer_json()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.annotation_layer_json"><code class="docutils literal notranslate"><span class="pre">annotation_layer_json()</span></code></a></li>
 </ul>
             </nav>
         </div>
@@ -326,36 +323,10 @@ document.write(`
                   
   <section id="module-ngsidekick.annotations.local">
 <span id="annotations-local"></span><h1>annotations.local<a class="headerlink" href="#module-ngsidekick.annotations.local" title="Link to this heading">#</a></h1>
+<p>Functions for encoding or parsing data for <code class="docutils literal notranslate"><span class="pre">local://annotations</span></code> sources.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.annotations.local.extract_local_annotations">
 <span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.local.</span></span><span class="sig-name descname"><span class="pre">extract_local_annotations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">link</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">link_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visible_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/annotations/local.html#extract_local_annotations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.annotations.local.extract_local_annotations" title="Link to this definition">#</a></dt>
-<dd><p>Extract local://annotations data from a neuroglancer link.
-The annotation coordinates (point, pointA, pointB, radii) are extracted
-into separate columns, named x,y,z/xa,ya,za/xb,yb,zb/rx,ry,rz
-(consistent with local_annotation_json() in this file).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>link</strong> – Either a neuroglancer JSON state (dict), or a neuroglancer link with embedded state,
-or a neuroglancer link that references a JSON state file, such as
-<a class="reference external" href="https://neuroglancer-demo.appspot.com/#!gs://flyem-views/hemibrain/v1.2/base.json">https://neuroglancer-demo.appspot.com/#!gs://flyem-views/hemibrain/v1.2/base.json</a></p></li>
-<li><p><strong>link_index</strong> – Deprecated.
-Adds a column named ‘link_index’ populated with the provided value in all rows.</p></li>
-<li><p><strong>user</strong> – Deprecated.
-Adds a column named ‘user’ populated with the provided value in all rows.</p></li>
-<li><p><strong>visible_only</strong> – If True, do not extract annotations from layers that are not currently
-visible in the given link state.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="ngsidekick.annotations.local.extract_annotations">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.local.</span></span><span class="sig-name descname"><span class="pre">extract_annotations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">link</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">link_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visible_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ngsidekick.annotations.local.extract_annotations" title="Link to this definition">#</a></dt>
 <dd><p>Extract local://annotations data from a neuroglancer link.
 The annotation coordinates (point, pointA, pointB, radii) are extracted
 into separate columns, named x,y,z/xa,ya,za/xb,yb,zb/rx,ry,rz
@@ -386,6 +357,10 @@ visible in the given link state.</p></li>
 <dd><p>Construct the JSON data for a neuroglancer local annotations layer.
 This does not result in a complete neuroglancer link; it results in something
 that can be added to the layers list in the neuroglancer viewer JSON state.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function’s signature will likely change in the future.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -424,160 +399,18 @@ you could write setPointMarkerSize(prop_confidence()) in your annotation shader.
 also annotation ‘enum’ properties if you pass them via pandas categorical columns.</p>
 <p>By default, the annotation IDs are the same as the column names and the annotation types are inferred.
 You can override the property ‘spec’ by supplying a dict-of-dicts here instead of a list of columns:</p>
-<blockquote>
-<div><dl>
-<dt>properties={</dt><dd><dl class="simple">
-<dt>“my_column”: {</dt><dd><p>“id”: “my property”,
-“description”: “This is my annotation property.”,
-“type”: “float32”,
-“enum_values”: [0.0, 0.5, 1.0],
-“enum_labels”: [“nothing”, “something”, “everything”],</p>
-</dd>
-</dl>
-<p>},
-“another_column: {…}</p>
-</dd>
-</dl>
-<p>}</p>
-</div></blockquote>
-</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>dict (JSON data)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="ngsidekick.annotations.local.point_annotation_layer_json">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.local.</span></span><span class="sig-name descname"><span class="pre">point_annotation_layer_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'annotations'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'#ffff00'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linkedSegmentationLayer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_panel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">res_nm_xyz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">8,</span> <span class="pre">8)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ngsidekick.annotations.local.point_annotation_layer_json" title="Link to this definition">#</a></dt>
-<dd><p>Construct the JSON data for a neuroglancer local annotations layer.
-This does not result in a complete neuroglancer link; it results in something
-that can be added to the layers list in the neuroglancer viewer JSON state.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> – <p>DataFrame containing the annotation data.
-Which columns you must provide depends on which annotation type(s) you want to display.</p>
-<ul>
-<li><p>For point annotations, provide [‘x’, ‘y’, ‘z’]</p></li>
-<li><p>For line annotations or axis_aligned_bounding_box annotations,
-provide [‘xa’, ‘ya’, ‘za’, ‘xb’, ‘yb’, ‘zb’]</p></li>
-<li><p>For ellipsoid annotations, provide [‘x’, ‘y’, ‘z’, ‘rx’, ‘ry’, ‘rz’]
-for the center point and radii.</p></li>
-</ul>
-<p>You may also provide a column ‘type’ to explicitly set the annotation type.
-In some cases, ‘type’ isn’t needed since annotation type can be inferred from the
-columns you provided. But in the case of line and box annotations, the input
-columns are the same, so you must provide a ‘type’ column.</p>
-<p>You may also provide additional columns to use as annotation properties,
-in which case they should be listed in the ‘properties’ argument. (See below.)</p>
-</p></li>
-<li><p><strong>name</strong> – The name of the annotation layer</p></li>
-<li><p><strong>color</strong> – The default color for annotations, which can be overridden by the annotation shader.</p></li>
-<li><p><strong>size</strong> – The annotation size to hard-code into the default annotation shader used by this function.
-(Only used for points and line endpoints.)</p></li>
-<li><p><strong>linkedSegmentationLayer</strong> – If the annotations should be associated with another layer in the view,
-this specifies the name of that layer.
-This function sets the ‘filterBySegmentation’ key to hide annotations from non-selected segments.
-If you are providing a linkedSegmentationLayer, your dataframe should contain
-a ‘segments’ column to indicate which segments are associated with each annotation.</p></li>
-<li><p><strong>show_panel</strong> – If True, the selection panel will be visible in the side bar by default.</p></li>
-<li><p><strong>properties</strong> – <p>The list column names to use as annotation properties.
-Properties are visible in the selection panel when an annotation is selected,
-and they can also be used in annotation shaders via special functions neuroglancer
-defines for each property.  For example, for a property named ‘confidence’,
-you could write setPointMarkerSize(prop_confidence()) in your annotation shader.</p>
-<p>This function supports annotation color proprties via strings (e.g. ‘#ffffff’) and
-also annotation ‘enum’ properties if you pass them via pandas categorical columns.</p>
-<p>By default, the annotation IDs are the same as the column names and the annotation types are inferred.
-You can override the property ‘spec’ by supplying a dict-of-dicts here instead of a list of columns:</p>
-<blockquote>
-<div><dl>
-<dt>properties={</dt><dd><dl class="simple">
-<dt>“my_column”: {</dt><dd><p>“id”: “my property”,
-“description”: “This is my annotation property.”,
-“type”: “float32”,
-“enum_values”: [0.0, 0.5, 1.0],
-“enum_labels”: [“nothing”, “something”, “everything”],</p>
-</dd>
-</dl>
-<p>},
-“another_column: {…}</p>
-</dd>
-</dl>
-<p>}</p>
-</div></blockquote>
-</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>dict (JSON data)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="ngsidekick.annotations.local.annotation_layer_json">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.local.</span></span><span class="sig-name descname"><span class="pre">annotation_layer_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'annotations'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'#ffff00'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linkedSegmentationLayer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_panel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">res_nm_xyz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8,</span> <span class="pre">8,</span> <span class="pre">8)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ngsidekick.annotations.local.annotation_layer_json" title="Link to this definition">#</a></dt>
-<dd><p>Construct the JSON data for a neuroglancer local annotations layer.
-This does not result in a complete neuroglancer link; it results in something
-that can be added to the layers list in the neuroglancer viewer JSON state.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> – <p>DataFrame containing the annotation data.
-Which columns you must provide depends on which annotation type(s) you want to display.</p>
-<ul>
-<li><p>For point annotations, provide [‘x’, ‘y’, ‘z’]</p></li>
-<li><p>For line annotations or axis_aligned_bounding_box annotations,
-provide [‘xa’, ‘ya’, ‘za’, ‘xb’, ‘yb’, ‘zb’]</p></li>
-<li><p>For ellipsoid annotations, provide [‘x’, ‘y’, ‘z’, ‘rx’, ‘ry’, ‘rz’]
-for the center point and radii.</p></li>
-</ul>
-<p>You may also provide a column ‘type’ to explicitly set the annotation type.
-In some cases, ‘type’ isn’t needed since annotation type can be inferred from the
-columns you provided. But in the case of line and box annotations, the input
-columns are the same, so you must provide a ‘type’ column.</p>
-<p>You may also provide additional columns to use as annotation properties,
-in which case they should be listed in the ‘properties’ argument. (See below.)</p>
-</p></li>
-<li><p><strong>name</strong> – The name of the annotation layer</p></li>
-<li><p><strong>color</strong> – The default color for annotations, which can be overridden by the annotation shader.</p></li>
-<li><p><strong>size</strong> – The annotation size to hard-code into the default annotation shader used by this function.
-(Only used for points and line endpoints.)</p></li>
-<li><p><strong>linkedSegmentationLayer</strong> – If the annotations should be associated with another layer in the view,
-this specifies the name of that layer.
-This function sets the ‘filterBySegmentation’ key to hide annotations from non-selected segments.
-If you are providing a linkedSegmentationLayer, your dataframe should contain
-a ‘segments’ column to indicate which segments are associated with each annotation.</p></li>
-<li><p><strong>show_panel</strong> – If True, the selection panel will be visible in the side bar by default.</p></li>
-<li><p><strong>properties</strong> – <p>The list column names to use as annotation properties.
-Properties are visible in the selection panel when an annotation is selected,
-and they can also be used in annotation shaders via special functions neuroglancer
-defines for each property.  For example, for a property named ‘confidence’,
-you could write setPointMarkerSize(prop_confidence()) in your annotation shader.</p>
-<p>This function supports annotation color proprties via strings (e.g. ‘#ffffff’) and
-also annotation ‘enum’ properties if you pass them via pandas categorical columns.</p>
-<p>By default, the annotation IDs are the same as the column names and the annotation types are inferred.
-You can override the property ‘spec’ by supplying a dict-of-dicts here instead of a list of columns:</p>
-<blockquote>
-<div><dl>
-<dt>properties={</dt><dd><dl class="simple">
-<dt>“my_column”: {</dt><dd><p>“id”: “my property”,
-“description”: “This is my annotation property.”,
-“type”: “float32”,
-“enum_values”: [0.0, 0.5, 1.0],
-“enum_labels”: [“nothing”, “something”, “everything”],</p>
-</dd>
-</dl>
-<p>},
-“another_column: {…}</p>
-</dd>
-</dl>
-<p>}</p>
-</div></blockquote>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">properties</span><span class="o">=</span><span class="p">{</span>
+    <span class="s2">&quot;my_column&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;my property&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;This is my annotation property.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;float32&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;enum_values&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+        <span class="s2">&quot;enum_labels&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;nothing&quot;</span><span class="p">,</span> <span class="s2">&quot;something&quot;</span><span class="p">,</span> <span class="s2">&quot;everything&quot;</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;another_column: {...}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
 </p></li>
 </ul>
 </dd>
@@ -635,10 +468,7 @@ You can override the property ‘spec’ by supplying a dict-of-dicts here inste
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.extract_local_annotations"><code class="docutils literal notranslate"><span class="pre">extract_local_annotations()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.extract_annotations"><code class="docutils literal notranslate"><span class="pre">extract_annotations()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.local_annotation_json"><code class="docutils literal notranslate"><span class="pre">local_annotation_json()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.point_annotation_layer_json"><code class="docutils literal notranslate"><span class="pre">point_annotation_layer_json()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.local.annotation_layer_json"><code class="docutils literal notranslate"><span class="pre">annotation_layer_json()</span></code></a></li>
 </ul>
   </nav></div>
 

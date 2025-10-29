@@ -329,11 +329,11 @@ document.write(`
   <section id="module-ngsidekick.segmentcolors">
 <span id="segment-colors"></span><h1>Segment Colors<a class="headerlink" href="#module-ngsidekick.segmentcolors" title="Link to this heading">#</a></h1>
 <p>Python implementation of neuroglancer’s pseudo-random segment color generator.</p>
-<p>Adapted from Austin Hoag’s implementation:</p>
-<blockquote>
-<div><p><a class="github reference external" href="https://github.com/google/neuroglancer/blob/master/python/neuroglancer/segment_colors.py">google/neuroglancer</a></p>
-</div></blockquote>
-<p>This version is lightly refactored and uses numba to JIT-compile and vectorize it.</p>
+<p>Adapted from <a class="reference external" href="https://github.com/google/neuroglancer/blob/master/python/neuroglancer/segment_colors.py">Austin Hoag’s implementation</a>.
+This version is lightly refactored to support JIT-compilation and vectorization using numba.</p>
+<p>See also:
+The source code here in segmentcolors.py also includes a WebGL implementation
+of the same algorithm, suitable for neuroglancer annotation shaders.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.segmentcolors.hex_string_from_segment_id">
 <span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">hex_string_from_segment_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color_seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segment_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentcolors.html#hex_string_from_segment_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.hex_string_from_segment_id" title="Link to this definition">#</a></dt>

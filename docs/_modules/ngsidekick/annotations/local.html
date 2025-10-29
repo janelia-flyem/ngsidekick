@@ -262,13 +262,16 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for ngsidekick.annotations.local</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Functions for encoding or parsing data for ``local://annotations`` sources.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">textwrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">indent</span><span class="p">,</span> <span class="n">dedent</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_nglink</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..state_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_nglink</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotation_property_specs</span>
 
 <div class="viewcode-block" id="extract_local_annotations">
@@ -348,9 +351,6 @@ document.write(`
 
 
 
-<span class="c1"># legacy name</span>
-<span class="n">extract_annotations</span> <span class="o">=</span> <span class="n">extract_local_annotations</span>
-
 <span class="c1"># Tip: Here&#39;s a nice repo with lots of colormaps implemented in GLSL.</span>
 <span class="c1"># https://github.com/kbinani/colormap-shaders</span>
 <span class="n">SHADER_FMT</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
@@ -411,6 +411,8 @@ document.write(`
 <span class="sd">    This does not result in a complete neuroglancer link; it results in something</span>
 <span class="sd">    that can be added to the layers list in the neuroglancer viewer JSON state.</span>
 
+<span class="sd">    Note:</span>
+<span class="sd">        This function&#39;s signature will likely change in the future.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        df:</span>
@@ -464,6 +466,8 @@ document.write(`
 <span class="sd">            By default, the annotation IDs are the same as the column names and the annotation types are inferred.</span>
 <span class="sd">            You can override the property &#39;spec&#39; by supplying a dict-of-dicts here instead of a list of columns:</span>
 
+<span class="sd">            .. code-block:: python</span>
+
 <span class="sd">                properties={</span>
 <span class="sd">                    &quot;my_column&quot;: {</span>
 <span class="sd">                        &quot;id&quot;: &quot;my property&quot;,</span>
@@ -512,13 +516,6 @@ document.write(`
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">data</span></div>
 
-
-
-<span class="c1"># Deprecated name (now supports more than just points)</span>
-<span class="n">point_annotation_layer_json</span> <span class="o">=</span> <span class="n">local_annotation_json</span>
-
-<span class="c1"># Deprecated name</span>
-<span class="n">annotation_layer_json</span> <span class="o">=</span> <span class="n">local_annotation_json</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_annotation_list_json</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">linkedSegmentationLayer</span><span class="p">,</span> <span class="n">properties</span><span class="p">):</span>

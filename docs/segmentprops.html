@@ -285,7 +285,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -301,6 +303,16 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.segmentprops.segment_properties_json"><code class="docutils literal notranslate"><span class="pre">segment_properties_json()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.segmentprops.segment_properties_to_dataframe"><code class="docutils literal notranslate"><span class="pre">segment_properties_to_dataframe()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.segmentprops.select_segment_properties"><code class="docutils literal notranslate"><span class="pre">select_segment_properties()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -313,7 +325,241 @@ document.write(`
   <section id="segment-properties">
 <h1>Segment Properties<a class="headerlink" href="#segment-properties" title="Link to this heading">#</a></h1>
 <p>The <code class="docutils literal notranslate"><span class="pre">segmentprops</span></code> module provides tools for managing segment properties in Neuroglancer.</p>
-<span class="target" id="module-ngsidekick.segmentprops"></span></section>
+<dl class="py function" id="module-ngsidekick.segmentprops">
+<dt class="sig sig-object py" id="ngsidekick.segmentprops.segment_properties_json">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentprops.</span></span><span class="sig-name descname"><span class="pre">segment_properties_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">description_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">string_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag_prefix_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag_descriptions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_descriptions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_empty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentprops/segmentprops.html#segment_properties_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentprops.segment_properties_json" title="Link to this definition">#</a></dt>
+<dd><p>Given a DataFrame, construct the JSON representation for neuroglancer segment properties
+(i.e. segment properties ‘info’ file) according to the neuroglancer spec:
+<a class="github reference external" href="https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/segment_properties.md">google/neuroglancer</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – <p>DataFrame whose index contains segment IDs.
+For clarity of intent, we require that the Index be named ‘segment’ or ‘body’.</p>
+<p>All columns will be converted to segment properties. If a column is not
+explicitly listed in the following arguments, its property type will be inferred
+from the column dtype (or column name, in the case of label/description).</p>
+<p>The column dtypes can be string, category, or number, but 64-bit values
+will be downcast to 32-bit. Boolean columns are only valid as tags.</p>
+<p>The order of the input columns determines the order in which properties will be written.
+Neuroglancer preserves that order when displaying columns of numeric properties.</p>
+</p></li>
+<li><p><strong>label_col</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Name of the column to use for the ‘label’ property, which is shown in neuroglancer by default.
+If the column happens to be named ‘label’, then you need not provide it here.
+Or, if your dataframe contains only one column (and it’s non-numeric), we assume it is the label.</p></li>
+<li><p><strong>description_col</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Name of the column to use as the ‘description’ property.
+If you name the column ‘description’, then you need not provide it here.</p></li>
+<li><p><strong>string_cols</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Names of the columns to represent as ‘string’ properties.
+(Usually unnecessary.  Non-numeric columns become string properties by default,
+unless they are named in tag_cols.)</p></li>
+<li><p><strong>number_cols</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Names of the columns to represent as ‘number’ properties.
+(Usually unnecessary.  Numeric columns become number properties by default.)</p></li>
+<li><p><strong>tag_cols</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – <p>Names of the columns from which to generate the (combined) ‘tags’ property.
+If you want a column to be used for both tags _and_ a different property,
+be sure to list it explicitly in both arguments.  For example:</p>
+<blockquote>
+<div><p>segment_properties_json(df, label_col=’cell_class’, tag_cols=[‘cell_class’, …])</p>
+</div></blockquote>
+<p>In addition to string/category inputs, columns with dtype bool can also be
+used for tags, in which case the False items are discarded and the True items
+are tagged with the column name.</p>
+</p></li>
+<li><p><strong>tag_prefix_mode</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<code class="docutils literal notranslate"><span class="pre">'all'</span></code>, <code class="docutils literal notranslate"><span class="pre">'disambiguate'</span></code>, <code class="docutils literal notranslate"><span class="pre">None</span></code>]</span>) – <p>Either ‘all’ or ‘disambiguate’ or None.</p>
+<ul>
+<li><p>If ‘all’, then all tags will be prefixed with the name of their source column,
+(e.g. ‘status:Anchor’), other than boolean columns.</p></li>
+<li><p>If ‘disambiguate’, then only tags which appear in multiple columns
+be prefixed with the name of their source column.</p></li>
+<li><p>If None, then no disambiguation is performed.</p></li>
+</ul>
+</p></li>
+<li><p><strong>sort_tags</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – If True, order tags alphabetically (after prefixes are applied, if any) so they
+are listed in sorted order in the neuroglancer UI.
+Otherwise, tags are listed according to the order given by ‘tag_cols’,
+with tags from earlier columns preceding tags from later columns,
+but tags within each column will be sorted with respect to each other.
+Note: For categorical input columns with ordered categories, the sort order
+is determined by the categorical’s intrinsic ordering, not alphanumeric sorting.</p></li>
+<li><p><strong>tag_descriptions</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Optional. A dict of {tag: description} describing each tag value.
+Missing tags will be given a default description.</p></li>
+<li><p><strong>col_descriptions</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Optional. A dict of {column: description} describing each property
+(input column) other than ‘tags’.</p></li>
+<li><p><strong>drop_empty</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – If any IDs in the input have no non-empty (null or “”) properties,
+then drop them from the output entirely so they don’t show up in
+neuroglancer’s default segment list.</p></li>
+<li><p><strong>output_path</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – If provided, export the JSON to a file.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>]]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JSON data (as a dict) which should be written into an ‘info’ file to
+host neuroglancer precomputed segment properties.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="n">In</span> <span class="p">[</span><span class="mi">41</span><span class="p">]:</span> <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="n">Out</span><span class="p">[</span><span class="mi">41</span><span class="p">]:</span>
+            <span class="nb">type</span>              <span class="k">class</span><span class="w">       </span><span class="nc">hemilineage</span>  <span class="n">has_soma</span>  <span class="n">PreSyn</span>  <span class="n">PostSyn</span>
+<span class="n">segment</span>
+<span class="mi">910719</span>  <span class="n">IN13B018</span>   <span class="n">intrinsic_neuron</span>               <span class="mi">13</span><span class="n">B</span>      <span class="kc">True</span>     <span class="mi">786</span>     <span class="mi">3164</span>
+<span class="mi">160503</span>    <span class="n">PFNm</span><span class="o">/</span><span class="n">p</span>            <span class="n">central</span>          <span class="n">DM3_CX_p</span>      <span class="kc">True</span>      <span class="mi">40</span>      <span class="mi">177</span>
+<span class="mi">908822</span>  <span class="n">IN03B079</span>   <span class="n">intrinsic_neuron</span>               <span class="mi">03</span><span class="n">B</span>      <span class="kc">True</span>     <span class="mi">176</span>      <span class="mi">951</span>
+<span class="mi">10552</span>      <span class="n">DNp29</span>  <span class="n">descending_neuron</span>  <span class="n">putative_primary</span>      <span class="kc">True</span>    <span class="mi">1567</span>     <span class="mi">4559</span>
+<span class="mi">43797</span>     <span class="n">MeVP11</span>  <span class="n">visual_projection</span>               <span class="n">NaN</span>      <span class="kc">True</span>     <span class="mi">158</span>      <span class="mi">504</span>
+<span class="mi">232845</span>     <span class="n">R1</span><span class="o">-</span><span class="n">R6</span>            <span class="n">sensory</span>               <span class="n">NaN</span>     <span class="kc">False</span>      <span class="mi">25</span>       <span class="mi">18</span>
+<span class="mi">547654</span>     <span class="n">R1</span><span class="o">-</span><span class="n">R6</span>            <span class="n">sensory</span>               <span class="n">NaN</span>     <span class="kc">False</span>      <span class="mi">57</span>       <span class="mi">29</span>
+<span class="mi">803197</span>  <span class="n">IN07B019</span>   <span class="n">intrinsic_neuron</span>               <span class="n">TBD</span>      <span class="kc">True</span>     <span class="mi">796</span>     <span class="mi">3615</span>
+<span class="mi">75597</span>      <span class="n">KCg</span><span class="o">-</span><span class="n">m</span>            <span class="n">central</span>              <span class="n">MBp4</span>      <span class="kc">True</span>     <span class="mi">223</span>      <span class="mi">802</span>
+<span class="mi">165485</span>   <span class="n">vDeltaK</span>            <span class="n">central</span>               <span class="n">NaN</span>      <span class="kc">True</span>      <span class="mi">36</span>      <span class="mi">282</span>
+
+<span class="n">In</span> <span class="p">[</span><span class="mi">42</span><span class="p">]:</span> <span class="n">info</span> <span class="o">=</span> <span class="n">segment_properties_json</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="n">tag_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="s1">&#39;hemilineage&#39;</span><span class="p">,</span> <span class="s1">&#39;has_soma&#39;</span><span class="p">])</span>
+
+<span class="n">In</span> <span class="p">[</span><span class="mi">43</span><span class="p">]:</span> <span class="c1"># Note: The output below has been indented by hand for clarity.</span>
+    <span class="o">...</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">info</span><span class="p">))</span>
+<span class="p">{</span>
+    <span class="s2">&quot;@type&quot;</span><span class="p">:</span> <span class="s2">&quot;neuroglancer_segment_properties&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;inline&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;ids&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;910719&quot;</span><span class="p">,</span> <span class="s2">&quot;160503&quot;</span><span class="p">,</span> <span class="s2">&quot;908822&quot;</span><span class="p">,</span> <span class="s2">&quot;10552&quot;</span><span class="p">,</span> <span class="s2">&quot;43797&quot;</span><span class="p">,</span> <span class="s2">&quot;232845&quot;</span><span class="p">,</span> <span class="s2">&quot;547654&quot;</span><span class="p">,</span> <span class="s2">&quot;803197&quot;</span><span class="p">,</span> <span class="s2">&quot;75597&quot;</span><span class="p">,</span> <span class="s2">&quot;165485&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;type&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;label&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;values&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;IN13B018&quot;</span><span class="p">,</span> <span class="s2">&quot;PFNm/p&quot;</span><span class="p">,</span> <span class="s2">&quot;IN03B079&quot;</span><span class="p">,</span> <span class="s2">&quot;DNp29&quot;</span><span class="p">,</span> <span class="s2">&quot;MeVP11&quot;</span><span class="p">,</span> <span class="s2">&quot;R1-R6&quot;</span><span class="p">,</span> <span class="s2">&quot;R1-R6&quot;</span><span class="p">,</span> <span class="s2">&quot;IN07B019&quot;</span><span class="p">,</span> <span class="s2">&quot;KCg-m&quot;</span><span class="p">,</span> <span class="s2">&quot;vDeltaK&quot;</span><span class="p">]</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;PreSyn&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="s2">&quot;int32&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;values&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">786</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">176</span><span class="p">,</span> <span class="mi">1567</span><span class="p">,</span> <span class="mi">158</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">57</span><span class="p">,</span> <span class="mi">796</span><span class="p">,</span> <span class="mi">223</span><span class="p">,</span> <span class="mi">36</span><span class="p">]</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;PostSyn&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="s2">&quot;int32&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;values&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3164</span><span class="p">,</span> <span class="mi">177</span><span class="p">,</span> <span class="mi">951</span><span class="p">,</span> <span class="mi">4559</span><span class="p">,</span> <span class="mi">504</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">29</span><span class="p">,</span> <span class="mi">3615</span><span class="p">,</span> <span class="mi">802</span><span class="p">,</span> <span class="mi">282</span><span class="p">]</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;class:central&quot;</span><span class="p">,</span> <span class="s2">&quot;class:descending_neuron&quot;</span><span class="p">,</span> <span class="s2">&quot;class:intrinsic_neuron&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;class:sensory&quot;</span><span class="p">,</span> <span class="s2">&quot;class:visual_projection&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;has_soma&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;hemilineage:03B&quot;</span><span class="p">,</span> <span class="s2">&quot;hemilineage:13B&quot;</span><span class="p">,</span> <span class="s2">&quot;hemilineage:DM3_CX_p&quot;</span><span class="p">,</span> <span class="s2">&quot;hemilineage:MBp4&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;hemilineage:TBD&quot;</span><span class="p">,</span> <span class="s2">&quot;hemilineage:putative_primary&quot;</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;values&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+                <span class="p">]</span>
+            <span class="p">}</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngsidekick.segmentprops.segment_properties_to_dataframe">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentprops.</span></span><span class="sig-name descname"><span class="pre">segment_properties_to_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">js</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consolidate_tags_by_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_separate_tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentprops/segmentprops.html#segment_properties_to_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentprops.segment_properties_to_dataframe" title="Link to this definition">#</a></dt>
+<dd><p>Converts segment properties info JSON to DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>js</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span>) – The JSON representation of the segment properties.</p></li>
+<li><p><strong>consolidate_tags_by_prefix</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – If True, consolidate boolean tag columns into Categorical columns
+according to their prefix, assuming the data was written
+using according to the naming conventions followed
+by segment_properties_json(…, tag_prefix_mode=”all”).
+Otherwise, a separate boolean column is created for each
+unique tag – potentially tons of columns (and RAM)!</p></li>
+<li><p><strong>return_separate_tags</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – If True, return two dataframes, for scalar columns and tag columns.
+Otherwise, combine them into a single dataframe.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If return_separate_tags=True, return (scalar_df, tags_df).
+By default, concatenate them across columns into a single dataframe.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngsidekick.segmentprops.select_segment_properties">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentprops.</span></span><span class="sig-name descname"><span class="pre">select_segment_properties</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scalar_expressions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag_expressions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentprops/select_segment_properties.html#select_segment_properties"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentprops.select_segment_properties" title="Link to this definition">#</a></dt>
+<dd><p>Given the JSON data from a neuroglancer segment properties ‘info’ file,
+select a subset of the properties and/or tags and return the reduced JSON info.</p>
+<p>You can also add <em>new</em> properties and/or tags by providing expressions
+(in pandas eval syntax) to be evaluated using the source data.</p>
+<p>In addition to expressions, you can provide a template string to be evaluated
+with Python string formatting.</p>
+<p>The variables available to the expressions are the columns extracted from the
+source data as produced via <cite>segment_properties_to_dataframe()</cite>.
+The tag list is parsed into separate columns according to their prefixes
+(assuming ‘:’ delimits the prefix).</p>
+<p>The ‘label’ column is special: It is the one that will be displayed in the neuroglancer segment list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>info</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span>) – The JSON data from a neuroglancer segment properties ‘info’ file.</p></li>
+<li><p><strong>subset</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – The subset of properties or tag categories to select.
+Special values:
+- ‘_all’: Select all properties and tags.
+- ‘_all_tags’: Select all tag categories.
+- ‘_default’: Select all properties and tags that have less than 1000 unique values.
+- ‘_default_tags’: Select all tag categories that have less than 1000 unique values.</p></li>
+<li><p><strong>scalar_expressions</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Expressions to be evaluated using the source data to compute new properties.</p></li>
+<li><p><strong>tag_expressions</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – Expressions to be evaluated using the source data to compute new tags.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The reduced/enhanced JSON data from a neuroglancer segment properties ‘info’ file.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the purpose of expression evaluation, we treat ‘~’ and missing values (untagged) as “”.</p>
+</div>
+<p>Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">new_info</span> <span class="o">=</span> <span class="n">select_segment_properties</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;superclass&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">])</span>
+<span class="n">new_info</span> <span class="o">=</span> <span class="n">select_segment_properties</span><span class="p">(</span>
+    <span class="n">info</span><span class="p">,</span>
+    <span class="n">scalar_expressions</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;size&#39;</span><span class="p">:</span> <span class="s1">&#39;length * width * height&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{type}</span><span class="s2"> (</span><span class="si">{superclass}</span><span class="s2">)&quot;</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="n">new_info</span> <span class="o">=</span> <span class="n">select_segment_properties</span><span class="p">(</span>
+    <span class="n">info</span><span class="p">,</span>
+    <span class="n">tag_expressions</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;is_left_hemilineage_01&#39;</span><span class="p">:</span> <span class="s1">&#39;hemilineage in (&quot;01A&quot;, &quot;01B&quot;) and soma_side == &quot;L&quot;&#39;</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>The <a class="reference external" href="https://github.com/janelia-flyem/ngsidekick-server">ngsidekick-server</a>
+project wraps this function in a web service to enable dynamic segment property
+selection directly in neuroglancer (via user-provided source URLs).</p>
+</div>
+</dd></dl>
+
+</section>
 
 
                 </article>
@@ -350,6 +596,23 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.segmentprops.segment_properties_json"><code class="docutils literal notranslate"><span class="pre">segment_properties_json()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.segmentprops.segment_properties_to_dataframe"><code class="docutils literal notranslate"><span class="pre">segment_properties_to_dataframe()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.segmentprops.select_segment_properties"><code class="docutils literal notranslate"><span class="pre">select_segment_properties()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>
