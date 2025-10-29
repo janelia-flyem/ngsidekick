@@ -23,6 +23,7 @@ echo "Committing built docs"
 git switch -c gh-pages origin/gh-pages
 rm -r docs
 cp -R ${REPO_DIR}/docs/build/html docs
+touch .nojekyll
 git add .
 git commit -m "Updated docs for ${GIT_DESC}" .
 
