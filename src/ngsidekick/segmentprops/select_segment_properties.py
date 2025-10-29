@@ -32,7 +32,7 @@ def select_segment_properties(
             c for c in full_df.columns
             if c not in subset
         ]
-        subset.remove('_all_tags')
+        subset.remove('_all')
 
     if '_all_tags' in subset:
         subset += [
