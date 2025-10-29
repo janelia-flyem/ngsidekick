@@ -4,7 +4,7 @@ from textwrap import indent, dedent
 import numpy as np
 import pandas as pd
 
-from ..util import parse_nglink
+from ..state_utils import parse_nglink
 from .util import annotation_property_specs
 
 def extract_local_annotations(link, *, link_index=None, user=None, visible_only=False):

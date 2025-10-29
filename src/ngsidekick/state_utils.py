@@ -61,7 +61,7 @@ def download_ngstate(link):
     raise ValueError(f"Don't understand state link: {link}")
 
 
-def format_nglink(ng_server, link_json_settings):
+def encode_ngstate(ng_server, link_json_settings):
     """
     Produce a fully expanded URL from a neuroglancer server and a JSON state.
     """
