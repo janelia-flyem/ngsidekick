@@ -13,18 +13,6 @@ uv add ngsidekick
 uv pip install ngsidekick
 ```
 
-- Using conda (conda-forge):
-
-```bash
-conda install -c conda-forge ngsidekick
-```
-
-- Using pixi (conda-forge):
-
-```bash
-pixi add ngsidekick -c conda-forge
-```
-
 ## Development
 
 Create an environment and run tests:
