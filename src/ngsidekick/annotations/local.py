@@ -81,9 +81,6 @@ def extract_local_annotations(link, *, link_index=None, user=None, visible_only=
     return df
 
 
-# legacy name
-extract_annotations = extract_local_annotations
-
 # Tip: Here's a nice repo with lots of colormaps implemented in GLSL.
 # https://github.com/kbinani/colormap-shaders
 SHADER_FMT = dedent("""\
@@ -242,13 +239,6 @@ def local_annotation_json(df, name="annotations", color="#ffff00", size=8.0, lin
         df, linkedSegmentationLayer, properties
     )
     return data
-
-
-# Deprecated name (now supports more than just points)
-point_annotation_layer_json = local_annotation_json
-
-# Deprecated name
-annotation_layer_json = local_annotation_json
 
 
 def _annotation_list_json(df, linkedSegmentationLayer, properties):
