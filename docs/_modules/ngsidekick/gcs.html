@@ -1,0 +1,536 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ngsidekick.gcs &#8212; ngsidekick  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ngsidekick/gcs';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ngsidekick  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../state_utils.html">State Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../segmentprops.html">Segment Properties</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../annotations.html">Annotations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../local.html">annotations.local</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../precomputed.html">annotations.precomputed</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../segmentcolors.html">Segment Colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gcs.html">Google Cloud Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ngvideo_helper.html">NGVideo Helper</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for ngsidekick.gcs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Utility functions related to storing neuroglancer states in Google Cloud Storage.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProcessPoolExecutor</span><span class="p">,</span> <span class="n">ThreadPoolExecutor</span>
+
+
+<div class="viewcode-block" id="upload_ngstates">
+<a class="viewcode-back" href="../../gcs.html#ngsidekick.gcs.upload_ngstates">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">upload_ngstates</span><span class="p">(</span><span class="n">bucket_dir</span><span class="p">,</span> <span class="n">states</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">processes</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">disable_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_prefix</span><span class="o">=</span><span class="s1">&#39;https://neuroglancer-demo.appspot.com&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Use multithreading or multiprocessing to upload many files in parallel,</span>
+<span class="sd">    similar to `gsutil -m cp []...]`, except that in this case you must choose</span>
+<span class="sd">    between multithreading or multiprocessing (not a combination of the two).</span>
+
+<span class="sd">    For the return values, neuroglancer links are returned (using the given prefix).</span>
+<span class="sd">    If no prefix is given, then the URLs to the uploaded files are returned.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bucket_dir: str</span>
+<span class="sd">            The bucket directory to upload the states to, such as &#39;gs://mybucket/mydir&#39;</span>
+<span class="sd">        states: dict</span>
+<span class="sd">            A dictionary of neuroglancer states, keyed by the filename.</span>
+<span class="sd">        threads: int</span>
+<span class="sd">            The number of threads to use for uploading.</span>
+<span class="sd">        processes: int</span>
+<span class="sd">            The number of processes to use for uploading.</span>
+<span class="sd">        disable_cache: bool</span>
+<span class="sd">            If True, set `public, no-store` metadata on the uploaded files to disable caching.</span>
+<span class="sd">        return_prefix: str</span>
+<span class="sd">            If provided, return neuroglancer links using the given neuroglancer deployment.</span>
+<span class="sd">            If None, then return the direct URLs to the uploaded files in google storage.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of str</span>
+<span class="sd">            A list of links.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">bucket_dir</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">processes</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">threads</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> \
+        <span class="s2">&quot;Pick multiprocessing or multithreading (or neither), but not both.&quot;</span>
+
+    <span class="n">bucket_dir</span> <span class="o">=</span> <span class="n">bucket_dir</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">):]</span>
+    <span class="n">bucket</span> <span class="o">=</span> <span class="n">bucket_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dirpath</span> <span class="o">=</span> <span class="n">bucket_dir</span><span class="p">[</span><span class="mi">1</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">bucket</span><span class="p">):]</span>
+
+    <span class="n">blob_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">dirpath</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">states</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+    <span class="n">blobs</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span> <span class="n">states</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">blobname</span><span class="p">,</span> <span class="n">blob</span><span class="p">,</span> <span class="s1">&#39;application/json&#39;</span><span class="p">,</span> <span class="n">disable_cache</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">blobname</span><span class="p">,</span> <span class="n">blob</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">blob_names</span><span class="p">,</span> <span class="n">blobs</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">processes</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">processes</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+            <span class="n">urls</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">args</span><span class="p">:</span> <span class="n">upload_to_bucket</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">),</span> <span class="n">args</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">threads</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">threads</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+            <span class="n">urls</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">args</span><span class="p">:</span> <span class="n">upload_to_bucket</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">),</span> <span class="n">args</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Sequential execution</span>
+        <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span><span class="n">upload_to_bucket</span><span class="p">(</span><span class="o">*</span><span class="n">arg_tuple</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg_tuple</span> <span class="ow">in</span> <span class="n">args</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">return_prefix</span><span class="p">:</span>
+        <span class="n">old_prefix</span> <span class="o">=</span> <span class="s1">&#39;https://storage.googleapis.com/&#39;</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">old_prefix</span><span class="p">)</span> <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">)</span>
+        <span class="n">return_prefix</span> <span class="o">=</span> <span class="n">return_prefix</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/#!gs://&#39;</span>
+        <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span><span class="n">url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">old_prefix</span><span class="p">,</span> <span class="n">return_prefix</span><span class="p">)</span> <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">urls</span></div>
+
+
+
+<div class="viewcode-block" id="upload_ngstate">
+<a class="viewcode-back" href="../../gcs.html#ngsidekick.gcs.upload_ngstate">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">upload_ngstate</span><span class="p">(</span><span class="n">bucket_path</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">disable_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_prefix</span><span class="o">=</span><span class="s1">&#39;https://neuroglancer-demo.appspot.com&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Upload the given JSON state to a gbucket location,</span>
+<span class="sd">    such as &#39;gs://flyem-user-links/short/foobar.json&#39;</span>
+
+<span class="sd">    For the return value, a neuroglancer link is returned (using the given prefix).</span>
+<span class="sd">    If no prerix is given, then the URL to the uploaded file is returned.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bucket_path: str</span>
+<span class="sd">            The bucket directory to upload the state to, such as &#39;gs://mybucket/mydir&#39;</span>
+<span class="sd">        state: dict</span>
+<span class="sd">            The neuroglancer state to upload.</span>
+<span class="sd">        disable_cache: bool</span>
+<span class="sd">            If True, set `public, no-store` metadata on the uploaded file to disable caching.</span>
+<span class="sd">        return_prefix: str</span>
+<span class="sd">            If provided, return neuroglancer links using the given neuroglancer deployment.</span>
+<span class="sd">            If None, then return the direct URLs to the uploaded files in google storage.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str</span>
+<span class="sd">            A neuroglancer link to the uploaded file or the direct URL to the</span>
+<span class="sd">            uploaded file in google storage, depending on whether `return_prefix`</span>
+<span class="sd">            was provided.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">bucket_path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">)</span>
+    <span class="n">bucket_path</span> <span class="o">=</span> <span class="n">bucket_path</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">):]</span>
+
+    <span class="n">bucket</span> <span class="o">=</span> <span class="n">bucket_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">bucket_path</span><span class="p">[</span><span class="mi">1</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">bucket</span><span class="p">):]</span>
+
+    <span class="n">state_string</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">upload_to_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">state_string</span><span class="p">,</span> <span class="n">disable_cache</span><span class="o">=</span><span class="n">disable_cache</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_prefix</span><span class="p">:</span>
+        <span class="n">return_prefix</span> <span class="o">=</span> <span class="n">return_prefix</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/#!gs://&#39;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;https://storage.googleapis.com/&#39;</span><span class="p">,</span> <span class="n">return_prefix</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">url</span></div>
+
+
+
+<div class="viewcode-block" id="upload_json">
+<a class="viewcode-back" href="../../gcs.html#ngsidekick.gcs.upload_json">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">upload_json</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">bucket_path</span><span class="p">,</span> <span class="n">disable_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Upload the given JSON data to a gbucket location,</span>
+<span class="sd">    such as &#39;gs://flyem-user-links/short/foobar.json&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">bucket_path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">)</span>
+    <span class="n">bucket_path</span> <span class="o">=</span> <span class="n">bucket_path</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">):]</span>
+
+    <span class="n">bucket</span> <span class="o">=</span> <span class="n">bucket_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">bucket_path</span><span class="p">[</span><span class="mi">1</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">bucket</span><span class="p">):]</span>
+
+    <span class="k">return</span> <span class="n">upload_to_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="s1">&#39;application/json&#39;</span><span class="p">,</span> <span class="n">disable_cache</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="upload_to_bucket">
+<a class="viewcode-back" href="../../gcs.html#ngsidekick.gcs.upload_to_bucket">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">upload_to_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">blob_name</span><span class="p">,</span> <span class="n">blob_contents</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;application/json&#39;</span><span class="p">,</span> <span class="n">disable_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Upload a blob of data to the specified google storage bucket.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bucket: str or google.cloud.storage.Bucket</span>
+<span class="sd">            The bucket to upload the data to.</span>
+<span class="sd">        blob_name: str</span>
+<span class="sd">            The name of the blob to upload.</span>
+<span class="sd">        blob_contents: str</span>
+<span class="sd">            The data to upload.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">google.cloud</span><span class="w"> </span><span class="kn">import</span> <span class="n">storage</span>
+        <span class="n">storage_client</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
+        <span class="n">bucket</span> <span class="o">=</span> <span class="n">storage_client</span><span class="o">.</span><span class="n">get_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">)</span>
+
+    <span class="n">blob</span> <span class="o">=</span> <span class="n">bucket</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">blob_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">disable_cache</span><span class="p">:</span>
+        <span class="n">blob</span><span class="o">.</span><span class="n">cache_control</span> <span class="o">=</span> <span class="s1">&#39;public, no-store&#39;</span>
+    <span class="n">blob</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">(</span><span class="n">blob_contents</span><span class="p">,</span> <span class="n">content_type</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">blob</span><span class="o">.</span><span class="n">public_url</span></div>
+
+
+
+<div class="viewcode-block" id="make_bucket_public">
+<a class="viewcode-back" href="../../gcs.html#ngsidekick.gcs.make_bucket_public">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_bucket_public</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    To host data in google storage for neuroglancer for general access,</span>
+<span class="sd">    you need to make the bucket public and configure permissive CORS settings.</span>
+
+<span class="sd">    This function does that.</span>
+
+<span class="sd">    This feature is also installed along with ngsidekick as a command-line tool:</span>
+
+<span class="sd">        ..code-block:: bash</span>
+
+<span class="sd">            make-bucket-public gs://mybucket/mydir</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bucket: str or None</span>
+<span class="sd">            The bucket to make public, such as &#39;gs://mybucket/mydir&#39;</span>
+<span class="sd">            If None, then the bucket is read from the command line.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">bucket</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;bucket&#39;</span><span class="p">)</span>
+        <span class="n">bucket</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span><span class="o">.</span><span class="n">bucket</span>
+    <span class="k">if</span> <span class="n">bucket</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">):</span>
+        <span class="n">bucket</span> <span class="o">=</span> <span class="n">bucket</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s1">&#39;gs://&#39;</span><span class="p">):]</span>
+
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;gsutil iam ch allUsers:objectViewer gs://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">cors_settings</span> <span class="o">=</span> <span class="p">[{</span>
+            <span class="s2">&quot;maxAgeSeconds&quot;</span><span class="p">:</span> <span class="mi">3600</span><span class="p">,</span>
+            <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;origin&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;responseHeader&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">,</span> <span class="s2">&quot;Range&quot;</span><span class="p">]</span>
+        <span class="p">}]</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">cors_settings</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;gsutil cors set </span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> gs://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Configured bucket for public neuroglancer access: gs://</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Stuart Berg
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, HHMI.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

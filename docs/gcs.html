@@ -1,0 +1,552 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Google Cloud Storage &#8212; ngsidekick  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'gcs';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="NGVideo Helper" href="ngvideo_helper.html" />
+    <link rel="prev" title="Segment Colors" href="segmentcolors.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ngsidekick  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="state_utils.html">State Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentprops.html">Segment Properties</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="annotations.html">Annotations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="local.html">annotations.local</a></li>
+<li class="toctree-l2"><a class="reference internal" href="precomputed.html">annotations.precomputed</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentcolors.html">Segment Colors</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Google Cloud Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ngvideo_helper.html">NGVideo Helper</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/gcs.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Google Cloud Storage</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_ngstates"><code class="docutils literal notranslate"><span class="pre">upload_ngstates()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_ngstate"><code class="docutils literal notranslate"><span class="pre">upload_ngstate()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_json"><code class="docutils literal notranslate"><span class="pre">upload_json()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_to_bucket"><code class="docutils literal notranslate"><span class="pre">upload_to_bucket()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.make_bucket_public"><code class="docutils literal notranslate"><span class="pre">make_bucket_public()</span></code></a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="module-ngsidekick.gcs">
+<span id="google-cloud-storage"></span><h1>Google Cloud Storage<a class="headerlink" href="#module-ngsidekick.gcs" title="Link to this heading">#</a></h1>
+<p>Utility functions related to storing neuroglancer states in Google Cloud Storage.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="ngsidekick.gcs.upload_ngstates">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.gcs.</span></span><span class="sig-name descname"><span class="pre">upload_ngstates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">processes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'https://neuroglancer-demo.appspot.com'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/gcs.html#upload_ngstates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.gcs.upload_ngstates" title="Link to this definition">#</a></dt>
+<dd><p>Use multithreading or multiprocessing to upload many files in parallel,
+similar to <cite>gsutil -m cp []…]</cite>, except that in this case you must choose
+between multithreading or multiprocessing (not a combination of the two).</p>
+<p>For the return values, neuroglancer links are returned (using the given prefix).
+If no prefix is given, then the URLs to the uploaded files are returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bucket_dir</strong> – str
+The bucket directory to upload the states to, such as ‘gs://mybucket/mydir’</p></li>
+<li><p><strong>states</strong> – dict
+A dictionary of neuroglancer states, keyed by the filename.</p></li>
+<li><p><strong>threads</strong> – int
+The number of threads to use for uploading.</p></li>
+<li><p><strong>processes</strong> – int
+The number of processes to use for uploading.</p></li>
+<li><p><strong>disable_cache</strong> – bool
+If True, set <cite>public, no-store</cite> metadata on the uploaded files to disable caching.</p></li>
+<li><p><strong>return_prefix</strong> – str
+If provided, return neuroglancer links using the given neuroglancer deployment.
+If None, then return the direct URLs to the uploaded files in google storage.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>list of str</dt><dd><p>A list of links.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngsidekick.gcs.upload_ngstate">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.gcs.</span></span><span class="sig-name descname"><span class="pre">upload_ngstate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'https://neuroglancer-demo.appspot.com'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/gcs.html#upload_ngstate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.gcs.upload_ngstate" title="Link to this definition">#</a></dt>
+<dd><p>Upload the given JSON state to a gbucket location,
+such as ‘gs://flyem-user-links/short/foobar.json’</p>
+<p>For the return value, a neuroglancer link is returned (using the given prefix).
+If no prerix is given, then the URL to the uploaded file is returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bucket_path</strong> – str
+The bucket directory to upload the state to, such as ‘gs://mybucket/mydir’</p></li>
+<li><p><strong>state</strong> – dict
+The neuroglancer state to upload.</p></li>
+<li><p><strong>disable_cache</strong> – bool
+If True, set <cite>public, no-store</cite> metadata on the uploaded file to disable caching.</p></li>
+<li><p><strong>return_prefix</strong> – str
+If provided, return neuroglancer links using the given neuroglancer deployment.
+If None, then return the direct URLs to the uploaded files in google storage.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>str</dt><dd><p>A neuroglancer link to the uploaded file or the direct URL to the
+uploaded file in google storage, depending on whether <cite>return_prefix</cite>
+was provided.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngsidekick.gcs.upload_json">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.gcs.</span></span><span class="sig-name descname"><span class="pre">upload_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/gcs.html#upload_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.gcs.upload_json" title="Link to this definition">#</a></dt>
+<dd><p>Upload the given JSON data to a gbucket location,
+such as ‘gs://flyem-user-links/short/foobar.json’</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngsidekick.gcs.upload_to_bucket">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.gcs.</span></span><span class="sig-name descname"><span class="pre">upload_to_bucket</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">blob_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">blob_contents</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'application/json'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disable_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/gcs.html#upload_to_bucket"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.gcs.upload_to_bucket" title="Link to this definition">#</a></dt>
+<dd><p>Upload a blob of data to the specified google storage bucket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bucket</strong> – str or google.cloud.storage.Bucket
+The bucket to upload the data to.</p></li>
+<li><p><strong>blob_name</strong> – str
+The name of the blob to upload.</p></li>
+<li><p><strong>blob_contents</strong> – str
+The data to upload.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ngsidekick.gcs.make_bucket_public">
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.gcs.</span></span><span class="sig-name descname"><span class="pre">make_bucket_public</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/gcs.html#make_bucket_public"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.gcs.make_bucket_public" title="Link to this definition">#</a></dt>
+<dd><p>To host data in google storage for neuroglancer for general access,
+you need to make the bucket public and configure permissive CORS settings.</p>
+<p>This function does that.</p>
+<p>This feature is also installed along with ngsidekick as a command-line tool:</p>
+<blockquote>
+<div><p>..code-block:: bash</p>
+<blockquote>
+<div><p>make-bucket-public gs://mybucket/mydir</p>
+</div></blockquote>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>bucket</strong> – str or None
+The bucket to make public, such as ‘gs://mybucket/mydir’
+If None, then the bucket is read from the command line.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="segmentcolors.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Segment Colors</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="ngvideo_helper.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">NGVideo Helper</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_ngstates"><code class="docutils literal notranslate"><span class="pre">upload_ngstates()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_ngstate"><code class="docutils literal notranslate"><span class="pre">upload_ngstate()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_json"><code class="docutils literal notranslate"><span class="pre">upload_json()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.upload_to_bucket"><code class="docutils literal notranslate"><span class="pre">upload_to_bucket()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.gcs.make_bucket_public"><code class="docutils literal notranslate"><span class="pre">make_bucket_public()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Stuart Berg
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, HHMI.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

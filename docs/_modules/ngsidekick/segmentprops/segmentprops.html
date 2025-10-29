@@ -1,0 +1,1039 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ngsidekick.segmentprops.segmentprops &#8212; ngsidekick  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ngsidekick/segmentprops/segmentprops';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ngsidekick  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../state_utils.html">State Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentprops.html">Segment Properties</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../annotations.html">Annotations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../local.html">annotations.local</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../precomputed.html">annotations.precomputed</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentcolors.html">Segment Colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../gcs.html">Google Cloud Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ngvideo_helper.html">NGVideo Helper</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for ngsidekick.segmentprops.segmentprops</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">chain</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+
+<div class="viewcode-block" id="segment_properties_json">
+<a class="viewcode-back" href="../../../segmentprops.html#ngsidekick.segmentprops.segment_properties_json">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">segment_properties_json</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">label_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">description_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">string_cols</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
+    <span class="n">number_cols</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
+    <span class="n">tag_cols</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
+    <span class="n">tag_prefix_mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="s1">&#39;disambiguate&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;all&#39;</span><span class="p">,</span>
+    <span class="n">sort_tags</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">tag_descriptions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="n">col_descriptions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="n">drop_empty</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">output_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a DataFrame, construct the JSON representation for neuroglancer segment properties</span>
+<span class="sd">    (i.e. segment properties &#39;info&#39; file) according to the neuroglancer spec:</span>
+<span class="sd">    https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/segment_properties.md</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df:</span>
+<span class="sd">            DataFrame whose index contains segment IDs.</span>
+<span class="sd">            For clarity of intent, we require that the Index be named &#39;segment&#39; or &#39;body&#39;.</span>
+
+<span class="sd">            All columns will be converted to segment properties. If a column is not</span>
+<span class="sd">            explicitly listed in the following arguments, its property type will be inferred</span>
+<span class="sd">            from the column dtype (or column name, in the case of label/description).</span>
+
+<span class="sd">            The column dtypes can be string, category, or number, but 64-bit values</span>
+<span class="sd">            will be downcast to 32-bit. Boolean columns are only valid as tags.</span>
+
+<span class="sd">            The order of the input columns determines the order in which properties will be written.</span>
+<span class="sd">            Neuroglancer preserves that order when displaying columns of numeric properties.</span>
+
+<span class="sd">        label_col:</span>
+<span class="sd">            Name of the column to use for the &#39;label&#39; property, which is shown in neuroglancer by default.</span>
+<span class="sd">            If the column happens to be named &#39;label&#39;, then you need not provide it here.</span>
+<span class="sd">            Or, if your dataframe contains only one column (and it&#39;s non-numeric), we assume it is the label.</span>
+
+<span class="sd">        description_col:</span>
+<span class="sd">            Name of the column to use as the &#39;description&#39; property.</span>
+<span class="sd">            If you name the column &#39;description&#39;, then you need not provide it here.</span>
+
+<span class="sd">        string_cols:</span>
+<span class="sd">            Names of the columns to represent as &#39;string&#39; properties.</span>
+<span class="sd">            (Usually unnecessary.  Non-numeric columns become string properties by default,</span>
+<span class="sd">            unless they are named in tag_cols.)</span>
+
+<span class="sd">        number_cols:</span>
+<span class="sd">            Names of the columns to represent as &#39;number&#39; properties.</span>
+<span class="sd">            (Usually unnecessary.  Numeric columns become number properties by default.)</span>
+
+<span class="sd">        tag_cols:</span>
+<span class="sd">            Names of the columns from which to generate the (combined) &#39;tags&#39; property.</span>
+<span class="sd">            If you want a column to be used for both tags _and_ a different property,</span>
+<span class="sd">            be sure to list it explicitly in both arguments.  For example:</span>
+
+<span class="sd">                segment_properties_json(df, label_col=&#39;cell_class&#39;, tag_cols=[&#39;cell_class&#39;, ...])</span>
+
+<span class="sd">            In addition to string/category inputs, columns with dtype bool can also be</span>
+<span class="sd">            used for tags, in which case the False items are discarded and the True items</span>
+<span class="sd">            are tagged with the column name.</span>
+
+<span class="sd">        tag_prefix_mode:</span>
+<span class="sd">            Either &#39;all&#39; or &#39;disambiguate&#39; or None.</span>
+
+<span class="sd">            - If &#39;all&#39;, then all tags will be prefixed with the name of their source column,</span>
+<span class="sd">              (e.g. &#39;status:Anchor&#39;), other than boolean columns.</span>
+
+<span class="sd">            - If &#39;disambiguate&#39;, then only tags which appear in multiple columns</span>
+<span class="sd">              be prefixed with the name of their source column.</span>
+
+<span class="sd">            - If None, then no disambiguation is performed.</span>
+
+<span class="sd">        sort_tags:</span>
+<span class="sd">            If True, order tags alphabetically (after prefixes are applied, if any) so they</span>
+<span class="sd">            are listed in sorted order in the neuroglancer UI.</span>
+<span class="sd">            Otherwise, tags are listed according to the order given by &#39;tag_cols&#39;,</span>
+<span class="sd">            with tags from earlier columns preceding tags from later columns,</span>
+<span class="sd">            but tags within each column will be sorted with respect to each other.</span>
+<span class="sd">            Note: For categorical input columns with ordered categories, the sort order</span>
+<span class="sd">            is determined by the categorical&#39;s intrinsic ordering, not alphanumeric sorting.</span>
+
+<span class="sd">        tag_descriptions:</span>
+<span class="sd">            Optional. A dict of {tag: description} describing each tag value.</span>
+<span class="sd">            Missing tags will be given a default description.</span>
+
+<span class="sd">        col_descriptions:</span>
+<span class="sd">            Optional. A dict of {column: description} describing each property</span>
+<span class="sd">            (input column) other than &#39;tags&#39;.</span>
+
+<span class="sd">        drop_empty:</span>
+<span class="sd">            If any IDs in the input have no non-empty (null or &quot;&quot;) properties,</span>
+<span class="sd">            then drop them from the output entirely so they don&#39;t show up in</span>
+<span class="sd">            neuroglancer&#39;s default segment list.</span>
+
+<span class="sd">        output_path:</span>
+<span class="sd">            If provided, export the JSON to a file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        JSON data (as a dict) which should be written into an &#39;info&#39; file to</span>
+<span class="sd">        host neuroglancer precomputed segment properties.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        .. code-block:: ipython</span>
+
+<span class="sd">            In [41]: print(df)</span>
+<span class="sd">            Out[41]:</span>
+<span class="sd">                        type              class       hemilineage  has_soma  PreSyn  PostSyn</span>
+<span class="sd">            segment</span>
+<span class="sd">            910719  IN13B018   intrinsic_neuron               13B      True     786     3164</span>
+<span class="sd">            160503    PFNm/p            central          DM3_CX_p      True      40      177</span>
+<span class="sd">            908822  IN03B079   intrinsic_neuron               03B      True     176      951</span>
+<span class="sd">            10552      DNp29  descending_neuron  putative_primary      True    1567     4559</span>
+<span class="sd">            43797     MeVP11  visual_projection               NaN      True     158      504</span>
+<span class="sd">            232845     R1-R6            sensory               NaN     False      25       18</span>
+<span class="sd">            547654     R1-R6            sensory               NaN     False      57       29</span>
+<span class="sd">            803197  IN07B019   intrinsic_neuron               TBD      True     796     3615</span>
+<span class="sd">            75597      KCg-m            central              MBp4      True     223      802</span>
+<span class="sd">            165485   vDeltaK            central               NaN      True      36      282</span>
+
+<span class="sd">            In [42]: info = segment_properties_json(df, &#39;type&#39;, tag_cols=[&#39;class&#39;, &#39;hemilineage&#39;, &#39;has_soma&#39;])</span>
+
+<span class="sd">            In [43]: # Note: The output below has been indented by hand for clarity.</span>
+<span class="sd">                ...: print(json.dumps(info))</span>
+<span class="sd">            {</span>
+<span class="sd">                &quot;@type&quot;: &quot;neuroglancer_segment_properties&quot;,</span>
+<span class="sd">                &quot;inline&quot;: {</span>
+<span class="sd">                    &quot;ids&quot;: [&quot;910719&quot;, &quot;160503&quot;, &quot;908822&quot;, &quot;10552&quot;, &quot;43797&quot;, &quot;232845&quot;, &quot;547654&quot;, &quot;803197&quot;, &quot;75597&quot;, &quot;165485&quot;],</span>
+<span class="sd">                    &quot;properties&quot;: [</span>
+<span class="sd">                        {</span>
+<span class="sd">                            &quot;id&quot;: &quot;type&quot;,</span>
+<span class="sd">                            &quot;type&quot;: &quot;label&quot;,</span>
+<span class="sd">                            &quot;values&quot;: [&quot;IN13B018&quot;, &quot;PFNm/p&quot;, &quot;IN03B079&quot;, &quot;DNp29&quot;, &quot;MeVP11&quot;, &quot;R1-R6&quot;, &quot;R1-R6&quot;, &quot;IN07B019&quot;, &quot;KCg-m&quot;, &quot;vDeltaK&quot;]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        {</span>
+<span class="sd">                            &quot;id&quot;: &quot;PreSyn&quot;,</span>
+<span class="sd">                            &quot;type&quot;: &quot;number&quot;,</span>
+<span class="sd">                            &quot;data_type&quot;: &quot;int32&quot;,</span>
+<span class="sd">                            &quot;values&quot;: [786, 40, 176, 1567, 158, 25, 57, 796, 223, 36]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        {</span>
+<span class="sd">                            &quot;id&quot;: &quot;PostSyn&quot;,</span>
+<span class="sd">                            &quot;type&quot;: &quot;number&quot;,</span>
+<span class="sd">                            &quot;data_type&quot;: &quot;int32&quot;,</span>
+<span class="sd">                            &quot;values&quot;: [3164, 177, 951, 4559, 504, 18, 29, 3615, 802, 282]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        {</span>
+<span class="sd">                            &quot;id&quot;: &quot;tags&quot;,</span>
+<span class="sd">                            &quot;type&quot;: &quot;tags&quot;,</span>
+<span class="sd">                            &quot;tags&quot;: [</span>
+<span class="sd">                                &quot;class:central&quot;, &quot;class:descending_neuron&quot;, &quot;class:intrinsic_neuron&quot;,</span>
+<span class="sd">                                &quot;class:sensory&quot;, &quot;class:visual_projection&quot;,</span>
+<span class="sd">                                &quot;has_soma&quot;,</span>
+<span class="sd">                                &quot;hemilineage:03B&quot;, &quot;hemilineage:13B&quot;, &quot;hemilineage:DM3_CX_p&quot;, &quot;hemilineage:MBp4&quot;,</span>
+<span class="sd">                                &quot;hemilineage:TBD&quot;, &quot;hemilineage:putative_primary&quot;</span>
+<span class="sd">                            ],</span>
+<span class="sd">                            &quot;values&quot;: [</span>
+<span class="sd">                                [2, 5, 7],</span>
+<span class="sd">                                [0, 5, 8],</span>
+<span class="sd">                                [2, 5, 6],</span>
+<span class="sd">                                [1, 5, 11],</span>
+<span class="sd">                                [4, 5],</span>
+<span class="sd">                                [3],</span>
+<span class="sd">                                [3],</span>
+<span class="sd">                                [2, 5, 10],</span>
+<span class="sd">                                [0, 5, 9],</span>
+<span class="sd">                                [0, 5]</span>
+<span class="sd">                            ]</span>
+<span class="sd">                        }</span>
+<span class="sd">                    ]</span>
+<span class="sd">                }</span>
+<span class="sd">            }</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">string_cols</span><span class="p">,</span> <span class="n">number_cols</span><span class="p">,</span> <span class="n">tag_cols</span> <span class="o">=</span> <span class="n">_validate_args</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">label_col</span><span class="p">,</span> <span class="n">description_col</span><span class="p">,</span> <span class="n">string_cols</span><span class="p">,</span> <span class="n">number_cols</span><span class="p">,</span>
+        <span class="n">tag_cols</span><span class="p">,</span> <span class="n">tag_prefix_mode</span><span class="p">,</span> <span class="n">tag_descriptions</span><span class="p">,</span> <span class="n">col_descriptions</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">drop_empty</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">_drop_empty_rows</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="c1"># Determine the neuroglancer property type for each column (except tags).</span>
+    <span class="n">scalar_types</span> <span class="o">=</span> <span class="n">_scalar_property_types</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">label_col</span><span class="p">,</span> <span class="n">description_col</span><span class="p">,</span> <span class="n">string_cols</span><span class="p">,</span> <span class="n">number_cols</span><span class="p">,</span> <span class="n">tag_cols</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Construct JSON for all properties except tags.</span>
+    <span class="n">json_props</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">prop_type</span> <span class="ow">in</span> <span class="n">scalar_types</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">jsn</span> <span class="o">=</span> <span class="n">_scalar_property_json</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">],</span> <span class="n">prop_type</span><span class="p">,</span> <span class="n">col_descriptions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
+        <span class="n">json_props</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">jsn</span><span class="p">)</span>
+
+    <span class="c1"># Construct JSON for tags.</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tag_cols</span><span class="p">):</span>
+        <span class="n">jsn</span> <span class="o">=</span> <span class="n">_tags_property_json</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">tag_cols</span><span class="p">,</span> <span class="n">tag_prefix_mode</span><span class="p">,</span> <span class="n">sort_tags</span><span class="p">,</span> <span class="n">tag_descriptions</span><span class="p">)</span>
+        <span class="n">json_props</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">jsn</span><span class="p">)</span>
+
+    <span class="c1"># Assemble the complete output.</span>
+    <span class="n">segment_ids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;@type&#39;</span><span class="p">:</span> <span class="s1">&#39;neuroglancer_segment_properties&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;inline&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;ids&#39;</span><span class="p">:</span> <span class="n">segment_ids</span><span class="p">,</span>
+            <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="n">json_props</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">info</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_args</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">label_col</span><span class="p">,</span> <span class="n">description_col</span><span class="p">,</span> <span class="n">string_cols</span><span class="p">,</span> <span class="n">number_cols</span><span class="p">,</span>
+                   <span class="n">tag_cols</span><span class="p">,</span> <span class="n">tag_prefix_mode</span><span class="p">,</span> <span class="n">tag_descriptions</span><span class="p">,</span> <span class="n">col_descriptions</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Basic checks and convenience conversions where appropriate.</span>
+<span class="sd">    (Series -&gt; DataFrame, str -&gt; list)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">string_cols</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">string_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">string_cols</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">number_cols</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">number_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">number_cols</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tag_cols</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">tag_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag_cols</span><span class="p">]</span>
+
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">string_cols</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">number_cols</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tag_cols</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tag_descriptions</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">col_descriptions</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;body&#39;</span><span class="p">,</span> <span class="s1">&#39;segment&#39;</span><span class="p">),</span> \
+        <span class="sa">f</span><span class="s2">&quot;Index name must be &#39;body&#39; or &#39;segment&#39;, not &#39;</span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+    <span class="k">assert</span> <span class="n">tag_prefix_mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="s1">&#39;disambiguate&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> \
+        <span class="sa">f</span><span class="s2">&quot;Invalid tag_prefix_mode: </span><span class="si">{</span><span class="n">tag_prefix_mode</span><span class="si">}</span><span class="s2">.&quot;</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">dupes</span> <span class="o">:=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">())</span><span class="o">.</span><span class="n">any</span><span class="p">(),</span> \
+        <span class="sa">f</span><span class="s2">&quot;Duplicated column names: </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">dupes</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="c1"># Check for columns that were listed in multiple arguments (except tag_cols).</span>
+    <span class="n">listed_scalar_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">label_col</span><span class="p">,</span> <span class="n">description_col</span><span class="p">,</span> <span class="o">*</span><span class="n">string_cols</span><span class="p">,</span> <span class="o">*</span><span class="n">number_cols</span><span class="p">]</span>
+    <span class="n">listed_scalar_cols</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="nb">filter</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">listed_scalar_cols</span><span class="p">)]</span>
+    <span class="n">listed_scalar_cols</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">listed_scalar_cols</span><span class="p">)</span>
+    <span class="n">dupes</span> <span class="o">=</span> <span class="n">listed_scalar_cols</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">listed_scalar_cols</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">dupes</span> <span class="o">:=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dupes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Some columns were included in multiple arguments: </span><span class="si">{</span><span class="n">dupes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">string_cols</span><span class="p">,</span> <span class="n">number_cols</span><span class="p">,</span> <span class="n">tag_cols</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_drop_empty_rows</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Drop rows which contain only NaN, &quot;&quot;, and False, and thus</span>
+<span class="sd">    will have no non-empty value for any neuroglancer property.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="c1"># Note that the only columns which are permitted to</span>
+    <span class="c1"># have dtype &#39;bool&#39; are the boolean tag cols (if any).</span>
+    <span class="c1"># Therefore, False is considered &#39;empty&#39;.</span>
+    <span class="n">bool_cols</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+    <span class="n">other_cols</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">bool_cols</span><span class="p">)</span>
+
+    <span class="n">valid_bool</span> <span class="o">=</span> <span class="n">valid_other</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bool_cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">valid_bool</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">bool_cols</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">other_cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">not_null</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">other_cols</span><span class="p">]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span>
+        <span class="n">not_empty</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">other_cols</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">valid_other</span> <span class="o">=</span> <span class="p">(</span><span class="n">not_null</span> <span class="o">&amp;</span> <span class="n">not_empty</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">valid_bool</span> <span class="o">|</span> <span class="n">valid_other</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scalar_property_types</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">label_col</span><span class="p">,</span> <span class="n">description_col</span><span class="p">,</span> <span class="n">string_cols</span><span class="p">,</span> <span class="n">number_cols</span><span class="p">,</span> <span class="n">tag_cols</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine the names and neuroglancer property types of all scalar (non-tag)</span>
+<span class="sd">    properties that can be extracted from the given DataFrame.</span>
+
+<span class="sd">    The property types will be determined from the user&#39;s explicitly provided lists</span>
+<span class="sd">    when available; otherwise they&#39;re inferred from the column name/dtype.</span>
+
+<span class="sd">    Here, &#39;scalar&#39; includes all non-tag types: number, string, label, description.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Start with the user-provided types and then auto-type the other columns below.</span>
+    <span class="c1"># Although we won&#39;t include tag columns in the result, we temporarily store</span>
+    <span class="c1"># them in prop_types to avoid auto-typing them.</span>
+    <span class="c1"># Note:</span>
+    <span class="c1">#   The user is permitted to list tag columns in the scalar columns too,</span>
+    <span class="c1">#   in which case the scalar type takes precedence in this function.</span>
+    <span class="n">prop_types</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="s1">&#39;tags&#39;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tag_cols</span><span class="p">}</span>
+    <span class="n">prop_types</span> <span class="o">|=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">string_cols</span><span class="p">}</span>
+    <span class="n">prop_types</span> <span class="o">|=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="s1">&#39;number&#39;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">number_cols</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">label_col</span><span class="p">:</span>
+        <span class="n">prop_types</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;label&#39;</span>
+    <span class="k">if</span> <span class="n">description_col</span><span class="p">:</span>
+        <span class="n">prop_types</span><span class="p">[</span><span class="n">description_col</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;description&#39;</span>
+
+    <span class="k">if</span> <span class="n">unknown_cols</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">prop_types</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Columns not found: </span><span class="si">{</span><span class="n">unknown_cols</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># For convenience, if there&#39;s only one column, and it wasn&#39;t explicitly listed,</span>
+    <span class="c1"># AND it&#39;s non-numeric, we presume it&#39;s meant to be the &#39;label&#39; column.</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="ow">and</span> <span class="ow">not</span> <span class="n">prop_types</span>
+        <span class="ow">and</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;string&#39;</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">))</span>
+    <span class="p">):</span>
+        <span class="n">prop_types</span> <span class="o">=</span> <span class="p">{</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="s1">&#39;label&#39;</span><span class="p">}</span>
+
+    <span class="c1"># Infer the types of unlisted columns from either the name or dtype</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="s1">&#39;boolean&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">prop_types</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">!=</span> <span class="s1">&#39;tags&#39;</span><span class="p">:</span>  <span class="c1"># noqa: E721</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: Boolean columns are only valid as tag_cols&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">prop_types</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;number&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: Not valid as number_cols (dtype: </span><span class="si">{</span><span class="n">dtype</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">prop_types</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;label&#39;</span><span class="p">:</span>
+            <span class="n">prop_types</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;label&#39;</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span>
+            <span class="n">prop_types</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;description&#39;</span>
+        <span class="k">elif</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;string&quot;</span><span class="p">):</span>
+            <span class="n">prop_types</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;string&#39;</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">):</span>
+            <span class="n">prop_types</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;number&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">prop_types</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;string&#39;</span>
+
+    <span class="c1"># Re-order to match original input columns.</span>
+    <span class="c1"># Property order determines appearance order in neuroglancer,</span>
+    <span class="c1"># at least for numeric properties.</span>
+    <span class="n">prop_types</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="n">prop_types</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">}</span>
+
+    <span class="c1"># Return scalar properties only</span>
+    <span class="n">prop_types</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">prop_types</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">!=</span> <span class="s1">&#39;tags&#39;</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">prop_types</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scalar_property_json</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">prop_type</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constructs the JSON for any segment property</span>
+<span class="sd">    other than the &#39;tags&#39; property.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">prop_type</span> <span class="o">==</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_scalar_number_property_json</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">description</span><span class="p">)</span>
+
+    <span class="n">prop</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">prop_type</span><span class="p">,</span>
+        <span class="s1">&#39;values&#39;</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">description</span><span class="p">:</span>
+        <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+
+    <span class="k">return</span> <span class="n">prop</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scalar_number_property_json</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constructs the JSON for a &#39;number&#39; property.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dtype_name</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">in</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">):</span>
+        <span class="n">dtype_name</span> <span class="o">=</span> <span class="n">_select_int64_downcast</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+        <span class="n">dtype_name</span> <span class="o">=</span> <span class="s1">&#39;float32&#39;</span>
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Numeric column &#39;</span><span class="si">{</span><span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; contains NaN.&quot;</span><span class="p">)</span>
+
+    <span class="n">prop</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;number&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;data_type&#39;</span><span class="p">:</span> <span class="n">dtype_name</span><span class="p">,</span>
+        <span class="s1">&#39;values&#39;</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">description</span><span class="p">:</span>
+        <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+
+    <span class="k">return</span> <span class="n">prop</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_select_int64_downcast</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return either &quot;int32&quot; or &quot;uint32&quot; if the given (u)int64 Series</span>
+<span class="sd">    can be safely converted to one of those dtypes without overflow.</span>
+<span class="sd">    Otherwise, raise an error.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">dtype32</span> <span class="ow">in</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">):</span>
+        <span class="n">info32</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">dtype32</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">info32</span><span class="o">.</span><span class="n">min</span> <span class="ow">and</span> <span class="n">s</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">info32</span><span class="o">.</span><span class="n">max</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">info32</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Can&#39;t create a property for column: &#39;</span><span class="si">{</span><span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+        <span class="s2">&quot;Neuroglancer doesn&#39;t support 64-bit integer properties, &quot;</span>
+        <span class="s2">&quot;and your data exceeds the limits of (u)int32.&quot;</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tags_property_json</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">tag_cols</span><span class="p">,</span> <span class="n">tag_prefix_mode</span><span class="p">,</span> <span class="n">sort_tags</span><span class="p">,</span> <span class="n">tag_descriptions</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constructs the JSON for the &#39;tags&#39; segment property.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tags_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Individually convert each column to Categorical</span>
+    <span class="c1"># before we combine into a unified Categorical below.</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tag_cols</span><span class="p">:</span>
+        <span class="n">tags_df</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">_convert_to_categorical</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">c</span><span class="p">])</span>
+
+    <span class="n">_insert_tag_prefixes</span><span class="p">(</span><span class="n">tags_df</span><span class="p">,</span> <span class="n">tag_prefix_mode</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">)</span>
+
+    <span class="c1"># Unified tag list: deduplicate, but preserve order by default.</span>
+    <span class="n">tag_sets</span> <span class="o">=</span> <span class="p">(</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span> <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">tags_df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">)</span>
+    <span class="n">unique_tags</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="o">*</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">tag_sets</span><span class="p">)])</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">sort_tags</span><span class="p">:</span>
+        <span class="n">unique_tags</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">unique_tags</span><span class="p">)</span>
+
+    <span class="c1"># Convert all columns to a single unified Categorical dtype.</span>
+    <span class="n">tags_df</span> <span class="o">=</span> <span class="n">tags_df</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">CategoricalDtype</span><span class="p">(</span><span class="n">categories</span><span class="o">=</span><span class="n">unique_tags</span><span class="p">))</span>
+
+    <span class="c1"># Tags are represented in JSON as a list-of-lists of sorted codes.</span>
+    <span class="n">codes_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">c</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">codes</span> <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">tags_df</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+    <span class="n">sorted_codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">codes_df</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="c1"># Drop nulls</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">sorted_codes</span><span class="p">:</span>
+        <span class="n">row</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">row</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">prop</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="s1">&#39;tags&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;tags&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;tags&#39;</span><span class="p">:</span> <span class="n">unique_tags</span><span class="p">,</span>
+        <span class="s1">&#39;values&#39;</span><span class="p">:</span> <span class="n">sorted_codes</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">tag_descriptions</span><span class="p">:</span>
+        <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;tag_descriptions&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_tag_description_list</span><span class="p">(</span><span class="n">unique_tags</span><span class="p">,</span> <span class="n">tag_descriptions</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">prop</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_to_categorical</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert the given Series to a Categorical Series suitable for tags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="s1">&#39;category&#39;</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">remove_unused_categories</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="s1">&#39;boolean&#39;</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">rename_categories</span><span class="p">({</span><span class="kc">True</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="p">})</span>
+        <span class="k">if</span> <span class="kc">False</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">remove_categories</span><span class="p">([</span><span class="kc">False</span><span class="p">])</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">_replace_spaces</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="c1"># We interpret empty string as null</span>
+    <span class="k">if</span> <span class="s1">&#39;&#39;</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">remove_categories</span><span class="p">([</span><span class="s1">&#39;&#39;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">s</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_replace_spaces</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Replace all spaces in the given Categorical Series with underscores.</span>
+<span class="sd">    (Spaces are forbidden in neuroglancer tags.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">renames</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">cat</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">cat</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cat</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span>
+    <span class="p">}</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">rename_categories</span><span class="p">(</span><span class="n">renames</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="c1"># If both &quot;foo bar_baz&quot; and &quot;foo_bar baz&quot; exist in the</span>
+        <span class="c1"># original data, they will both map to &quot;foo_bar_baz&quot;, and</span>
+        <span class="c1"># rename_categories() complains about the duplicate category.</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_insert_tag_prefixes</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">tag_prefix_mode</span><span class="p">,</span> <span class="n">orig_dtypes</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Insert prefixes onto tags in df according to the tag_prefix_mode (if any).</span>
+<span class="sd">    The columns of df must already have Categorical dtypes.</span>
+
+<span class="sd">    Tags in columns which were originally bool (before we converted them</span>
+<span class="sd">    to Categorical) require no prefix, so we refer to orig_dtypes to skip</span>
+<span class="sd">    those columns.</span>
+
+<span class="sd">    Modifies df in-place.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">tag_prefix_mode</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">tag_prefix_mode</span> <span class="o">==</span> <span class="s1">&#39;disambiguate&#39;</span><span class="p">:</span>
+        <span class="n">_disambiguate_tags</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">assert</span> <span class="n">tag_prefix_mode</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span>
+    <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+        <span class="k">if</span> <span class="n">orig_dtypes</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;bool&#39;</span><span class="p">,</span> <span class="s1">&#39;boolean&#39;</span><span class="p">):</span>
+            <span class="c1"># Boolean columns need no prefix;</span>
+            <span class="c1"># the column name is the entire tag.</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Prefix must not contain spaces (forbidden by neuroglancer)</span>
+        <span class="c1"># or colons (because we use &#39;:&#39; as the separator).</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">rename_categories</span><span class="p">([</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">cat</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="k">for</span> <span class="n">cat</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span>
+        <span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_disambiguate_tags</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a dataframe in which all columns are Categoricals,</span>
+<span class="sd">    find category values that are common across multiple columns</span>
+<span class="sd">    and prepend a prefix (the column name) to such values</span>
+<span class="sd">    to make sure no category value is duplicated from one column</span>
+<span class="sd">    to the next.</span>
+
+<span class="sd">    Modifies df in-place.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">col_tags</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">tag</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span>
+        <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span>
+    <span class="p">]</span>
+    <span class="n">col_tags</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">col_tags</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;col&#39;</span><span class="p">,</span> <span class="s1">&#39;tag&#39;</span><span class="p">])</span>
+
+    <span class="c1"># Drop everything except the duplicate tags.</span>
+    <span class="n">is_dup</span> <span class="o">=</span> <span class="n">col_tags</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="s1">&#39;tag&#39;</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">col_tags</span> <span class="o">=</span> <span class="n">col_tags</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">is_dup</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Prefix must not contain spaces (forbidden by neuroglancer)</span>
+    <span class="c1"># or colons (because we use &#39;:&#39; as the separator).</span>
+    <span class="n">prefixes</span> <span class="o">=</span> <span class="n">col_tags</span><span class="p">[</span><span class="s1">&#39;col&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[: ]&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
+    <span class="n">col_tags</span><span class="p">[</span><span class="s1">&#39;new_tag&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">prefixes</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="n">col_tags</span><span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">old_new_df</span> <span class="ow">in</span> <span class="n">col_tags</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;col&#39;</span><span class="p">)[[</span><span class="s1">&#39;tag&#39;</span><span class="p">,</span> <span class="s1">&#39;new_tag&#39;</span><span class="p">]]:</span>
+        <span class="n">renames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">old_new_df</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">rename_categories</span><span class="p">(</span><span class="n">renames</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tag_description_list</span><span class="p">(</span><span class="n">unique_tags</span><span class="p">,</span> <span class="n">tag_descriptions</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given the list of all tags and a mapping of tags to descriptions,</span>
+<span class="sd">    return the descriptions in the same order as unique_tags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tag_descriptions</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">):</span> <span class="n">v</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">tag_descriptions</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="n">td</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">unique_tags</span><span class="p">:</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">tag_descriptions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># If we didn&#39;t find it, try stripping the tag prefix (if any)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">d</span> <span class="ow">and</span> <span class="s1">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">t</span><span class="p">:</span>
+            <span class="n">t2</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="n">t</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">):]</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">tag_descriptions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># If we still didn&#39;t find it, emit the tag itself.</span>
+        <span class="n">td</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span> <span class="ow">or</span> <span class="n">t</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">td</span>
+
+
+<div class="viewcode-block" id="segment_properties_to_dataframe">
+<a class="viewcode-back" href="../../../segmentprops.html#ngsidekick.segmentprops.segment_properties_to_dataframe">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">segment_properties_to_dataframe</span><span class="p">(</span><span class="n">js</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">consolidate_tags_by_prefix</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">return_separate_tags</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts segment properties info JSON to DataFrame.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        js:</span>
+<span class="sd">            The JSON representation of the segment properties.</span>
+
+<span class="sd">        consolidate_tags_by_prefix:</span>
+<span class="sd">            If True, consolidate boolean tag columns into Categorical columns</span>
+<span class="sd">            according to their prefix, assuming the data was written</span>
+<span class="sd">            using according to the naming conventions followed</span>
+<span class="sd">            by segment_properties_json(..., tag_prefix_mode=&quot;all&quot;).</span>
+<span class="sd">            Otherwise, a separate boolean column is created for each</span>
+<span class="sd">            unique tag -- potentially tons of columns (and RAM)!</span>
+
+<span class="sd">        return_separate_tags:</span>
+<span class="sd">            If True, return two dataframes, for scalar columns and tag columns.</span>
+<span class="sd">            Otherwise, combine them into a single dataframe.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        If return_separate_tags=True, return (scalar_df, tags_df).</span>
+<span class="sd">        By default, concatenate them across columns into a single dataframe.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">segment_ids</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">js</span><span class="p">[</span><span class="s1">&#39;inline&#39;</span><span class="p">][</span><span class="s1">&#39;ids&#39;</span><span class="p">])]</span>
+    <span class="n">segment_ids</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">segment_ids</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;segment&#39;</span><span class="p">)</span>
+
+    <span class="n">all_props</span> <span class="o">=</span> <span class="n">js</span><span class="p">[</span><span class="s1">&#39;inline&#39;</span><span class="p">][</span><span class="s1">&#39;properties&#39;</span><span class="p">]</span>
+    <span class="n">scalar_props</span> <span class="o">=</span> <span class="p">[</span><span class="n">prop</span> <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">all_props</span> <span class="k">if</span> <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;tags&#39;</span><span class="p">]</span>
+    <span class="n">tags_props</span> <span class="o">=</span>   <span class="p">[</span><span class="n">prop</span> <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">all_props</span> <span class="k">if</span> <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;tags&#39;</span><span class="p">]</span>
+
+    <span class="n">scalar_values</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]:</span> <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;values&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">scalar_props</span>
+    <span class="p">}</span>
+
+    <span class="n">scalar_dtypes</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]:</span> <span class="n">prop</span><span class="p">[</span><span class="s1">&#39;data_type&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">scalar_props</span>
+        <span class="k">if</span> <span class="s1">&#39;data_type&#39;</span> <span class="ow">in</span> <span class="n">prop</span>
+    <span class="p">}</span>
+
+    <span class="n">scalar_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">scalar_values</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">scalar_dtypes</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">tags_props</span><span class="p">:</span>
+        <span class="n">tags_df</span> <span class="o">=</span> <span class="n">_convert_tags_to_dataframe</span><span class="p">(</span><span class="n">segment_ids</span><span class="p">,</span> <span class="n">tags_props</span><span class="p">,</span> <span class="n">consolidate_tags_by_prefix</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tags_df</span> <span class="o">=</span> <span class="n">scalar_df</span><span class="p">[[]]</span>
+
+    <span class="k">if</span> <span class="n">return_separate_tags</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">scalar_df</span><span class="p">,</span> <span class="n">tags_df</span>
+
+    <span class="c1"># It&#39;s possible for a scalar column to also be used in the tags.</span>
+    <span class="c1"># We&#39;ll drop the scalar and just keep the one from the tags,</span>
+    <span class="c1"># since the tag column takes less RAM.</span>
+    <span class="n">scalar_df</span> <span class="o">=</span> <span class="n">scalar_df</span><span class="p">[[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">scalar_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tags_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]]</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">scalar_df</span><span class="p">,</span> <span class="n">tags_df</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_tags_to_dataframe</span><span class="p">(</span><span class="n">segment_ids</span><span class="p">,</span> <span class="n">tags_props</span><span class="p">,</span> <span class="n">consolidate_tags_by_prefix</span><span class="p">):</span>
+    <span class="n">code_lists</span> <span class="o">=</span> <span class="n">tags_props</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;values&#39;</span><span class="p">]</span>
+    <span class="n">unique_tags</span> <span class="o">=</span> <span class="n">tags_props</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;tags&#39;</span><span class="p">]</span>
+
+    <span class="n">segment_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">code_lists</span><span class="p">)</span>
+    <span class="n">tag_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_tags</span><span class="p">)</span>
+
+    <span class="c1"># Flatten the lists of codes,</span>
+    <span class="c1"># but keep track of the rows they came from.</span>
+    <span class="n">flat_tag_codes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="o">*</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">code_lists</span><span class="p">)])</span>
+    <span class="n">code_rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
+        <span class="nb">range</span><span class="p">(</span><span class="n">segment_count</span><span class="p">),</span>
+        <span class="p">[</span><span class="o">*</span><span class="nb">map</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span> <span class="n">code_lists</span><span class="p">)]</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">consolidate_tags_by_prefix</span><span class="p">:</span>
+        <span class="c1"># Return a boolean column for every unique tag.</span>
+        <span class="c1"># Could be tons of columns!</span>
+        <span class="n">flags_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">segment_count</span><span class="p">,</span> <span class="n">tag_count</span><span class="p">),</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="n">flags_matrix</span><span class="p">[</span><span class="n">code_rows</span><span class="p">,</span> <span class="n">flat_tag_codes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">flags_matrix</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">unique_tags</span><span class="p">)</span>
+
+    <span class="n">tag_prefixes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">unique_tags</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">)</span>
+    <span class="n">flat_prefixes</span> <span class="o">=</span> <span class="n">flat_tag_codes</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">tag_prefixes</span><span class="p">)</span>
+
+    <span class="c1"># Assumble the flattened codes into a matrix (row per segment, column per prefix).</span>
+    <span class="c1"># Default is -1 (categorical code for a missing value).</span>
+    <span class="n">code_matrix</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">segment_count</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">tag_prefixes</span><span class="p">)</span><span class="o">.</span><span class="n">nunique</span><span class="p">()),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+    <span class="n">code_matrix</span><span class="p">[</span><span class="n">code_rows</span><span class="p">,</span> <span class="n">flat_prefixes</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">codes</span><span class="p">]</span> <span class="o">=</span> <span class="n">flat_tag_codes</span>
+
+    <span class="n">tag_categoricals</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">code_column</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tag_prefixes</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span><span class="p">,</span> <span class="n">code_matrix</span><span class="o">.</span><span class="n">T</span><span class="p">):</span>
+        <span class="c1"># Initialize as a categorical that corresponds to all tags combined,</span>
+        <span class="c1"># then reduce to a categorical for just this column&#39;s values (without prefixes).</span>
+        <span class="n">tag_cat</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Categorical</span><span class="o">.</span><span class="n">from_codes</span><span class="p">(</span><span class="n">code_column</span><span class="p">,</span> <span class="n">unique_tags</span><span class="p">)</span>
+        <span class="n">tag_cat</span> <span class="o">=</span> <span class="n">tag_cat</span><span class="o">.</span><span class="n">remove_unused_categories</span><span class="p">()</span>
+        <span class="n">tag_cat</span> <span class="o">=</span> <span class="n">tag_cat</span><span class="o">.</span><span class="n">rename_categories</span><span class="p">({</span>
+            <span class="n">tag</span><span class="p">:</span> <span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">tag</span> <span class="k">else</span> <span class="n">tag</span>
+            <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tag_cat</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span>
+        <span class="p">})</span>
+        <span class="n">tag_categoricals</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span> <span class="o">=</span> <span class="n">tag_cat</span>
+
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">tag_categoricals</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">)</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Stuart Berg
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, HHMI.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,821 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ngsidekick.annotations.precomputed.precomputed &#8212; ngsidekick  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ngsidekick/annotations/precomputed/precomputed';</script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ngsidekick  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../../state_utils.html">State Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../segmentprops.html">Segment Properties</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../annotations.html">Annotations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../local.html">annotations.local</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../precomputed.html">annotations.precomputed</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../segmentcolors.html">Segment Colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../gcs.html">Google Cloud Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../ngvideo_helper.html">NGVideo Helper</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for ngsidekick.annotations.precomputed.precomputed</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">chain</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">neuroglancer.coordinate_space</span><span class="w"> </span><span class="kn">import</span> <span class="n">CoordinateSpace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">neuroglancer.viewer_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnnotationPropertySpec</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..util</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotation_property_specs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._util</span><span class="w"> </span><span class="kn">import</span> <span class="n">_encode_uint64_series</span><span class="p">,</span> <span class="n">_geometry_cols</span><span class="p">,</span> <span class="n">TableHandle</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._id</span><span class="w"> </span><span class="kn">import</span> <span class="n">_write_annotations_by_id</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._relationships</span><span class="w"> </span><span class="kn">import</span> <span class="n">_write_annotations_by_relationships</span><span class="p">,</span> <span class="n">_encode_relationships</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">_write_annotations_by_spatial_chunk</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="write_precomputed_annotations">
+<a class="viewcode-back" href="../../../../precomputed.html#ngsidekick.annotations.precomputed.write_precomputed_annotations">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_precomputed_annotations</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="n">TableHandle</span><span class="p">,</span>
+    <span class="n">coord_space</span><span class="p">:</span> <span class="n">CoordinateSpace</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">],</span>
+    <span class="n">annotation_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">,</span> <span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="s1">&#39;ellipsoid&#39;</span><span class="p">,</span> <span class="s1">&#39;axis_aligned_bounding_box&#39;</span><span class="p">],</span>
+    <span class="n">properties</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">AnnotationPropertySpec</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AnnotationPropertySpec</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">relationships</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;annotations&#39;</span><span class="p">,</span>
+    <span class="n">write_sharded</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">write_by_id</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">write_by_relationship</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">write_by_spatial_chunk</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">num_spatial_levels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span>
+    <span class="n">target_chunk_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10_000</span><span class="p">,</span>
+    <span class="n">shuffle_before_assigning_spatial_levels</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Export the data from a pandas DataFrame into neuroglancer&#39;s precomputed annotations format</span>
+<span class="sd">    as described in the `neuroglancer spec &lt;https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md&gt;`_.</span>
+
+<span class="sd">    A progress bar is shown when writing each portion of the export (annotation ID index, related ID indexes),</span>
+<span class="sd">    but there may be a significant amount of preprocessing time that occurs before the actual writing begins.</span>
+
+<span class="sd">    Note:</span>
+
+<span class="sd">        Internally, the data will be copied during processing and again </span>
+<span class="sd">        during writing, incurring significant RAM usage for large datasets.</span>
+<span class="sd">        To save at least some RAM, you can wrap your dataframe in a TableHandle</span>
+<span class="sd">        and then delete your own reference to the dataframe before calling this function.</span>
+<span class="sd">        The TableHandle&#39;s reference will be deleted internally as soon as possible</span>
+<span class="sd">        (after the data is transformed for writing, before this function returns).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df:</span>
+<span class="sd">            DataFrame or TableHandle.</span>
+<span class="sd">            The index of the DataFrame is used as the annotation ID, so it must be unique.</span>
+<span class="sd">            The required columns depend on the annotation_type and the coordinate space.</span>
+<span class="sd">            For example, assuming ``coord_space.names == [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;]``,</span>
+<span class="sd">            then provide the following columns:</span>
+
+<span class="sd">            - For point annotations, provide [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;]</span>
+<span class="sd">            - For line annotations or axis_aligned_bounding_box annotations,</span>
+<span class="sd">              provide [&#39;xa&#39;, &#39;ya&#39;, &#39;za&#39;, &#39;xb&#39;, &#39;yb&#39;, &#39;zb&#39;]</span>
+<span class="sd">            - For ellipsoid annotations, provide [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;, &#39;rx&#39;, &#39;ry&#39;, &#39;rz&#39;]</span>
+<span class="sd">              for the center point and radii.</span>
+
+<span class="sd">            You may also provide additional columns to use as annotation properties, in which</span>
+<span class="sd">            case their column names should be listed in the &#39;properties&#39; argument. (See below.)</span>
+
+<span class="sd">            If you provide a TableHandle, the handle&#39;s reference will be unset before this</span>
+<span class="sd">            function returns, deleting your data if you didn&#39;t retain a reference to it yourself.</span>
+<span class="sd">            (If you do retain a reference, it defeats the point of using a TableHandle in the first place.)</span>
+
+<span class="sd">        coord_space:</span>
+<span class="sd">            ``neuroglancer.coordinate_space.CoordinateSpace`` or equivalent.</span>
+<span class="sd">            The coordinate space of the annotations.</span>
+<span class="sd">            Among other things, this determines which input columns represent the annotation geometry.</span>
+<span class="sd">            For convenience, we accept a couple different formats for the coordinate space,</span>
+<span class="sd">            assuming a default scale of 1 nm if no scale/units are provided.</span>
+
+<span class="sd">            Examples (all equivalent):</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                &gt;&gt;&gt; coord_space = &quot;xyz&quot;</span>
+<span class="sd">                &gt;&gt;&gt; coord_space = [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;]</span>
+<span class="sd">                &gt;&gt;&gt; coord_space = {&quot;names&quot;: [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;]}</span>
+<span class="sd">                &gt;&gt;&gt; coord_space = {</span>
+<span class="sd">                    &quot;names&quot;: [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;],</span>
+<span class="sd">                    &quot;units&quot;: [&#39;nm&#39;, &#39;nm&#39;, &#39;nm&#39;],</span>
+<span class="sd">                    &quot;scales&quot;: [1, 1, 1]</span>
+<span class="sd">                }</span>
+<span class="sd">                &gt;&gt;&gt; coord_space = CoordinateSpace(</span>
+<span class="sd">                ...     names=[&#39;x&#39;, &#39;y&#39;, &#39;z&#39;],</span>
+<span class="sd">                ...     scales=[1.0, 1.0, 1.0],</span>
+<span class="sd">                ...     units=[&#39;nm&#39;, &#39;nm&#39;, &#39;nm&#39;]</span>
+<span class="sd">                ... )</span>
+
+<span class="sd">        annotation_type:</span>
+<span class="sd">            Literal[&#39;point&#39;, &#39;line&#39;, &#39;ellipsoid&#39;, &#39;axis_aligned_bounding_box&#39;]</span>
+<span class="sd">            The type of annotation to export. Note that the columns you provide in</span>
+<span class="sd">            the DataFrame depend on the annotation type.</span>
+
+<span class="sd">        properties:</span>
+<span class="sd">            If your dataframe contains columns for annotation properties,</span>
+<span class="sd">            list the names of those columns here.</span>
+
+<span class="sd">            Categorical columns will be automatically converted to integers with associated</span>
+<span class="sd">            enum labels.</span>
+
+<span class="sd">            To provide an rgb or rgba property such as &#39;mycolor&#39;, provide separate columns</span>
+<span class="sd">            in your dataframe named &#39;mycolor_r&#39;, &#39;mycolor_g&#39;, &#39;mycolor_b&#39; (and &#39;mycolor_a&#39;),</span>
+<span class="sd">            and then include &#39;mycolor&#39; in the properties list here.</span>
+
+<span class="sd">            The full property spec for each property will be inferred from the column dtype,</span>
+<span class="sd">            but if you want to explicitly override any property specs yourself, you can pass</span>
+<span class="sd">            a list of AnnotationPropertySpec objects here instead of just listing column names.</span>
+
+<span class="sd">            Property names must start with a lowercase letter and may contain only letters,</span>
+<span class="sd">            numbers, and underscores.</span>
+
+<span class="sd">        relationships:</span>
+<span class="sd">            list[str]</span>
+<span class="sd">            If your annotations have related segment IDs, such relationships can be provided</span>
+<span class="sd">            in the columns of your DataFrame. Each relationship should be listed in a single column,</span>
+<span class="sd">            whose values are lists of segment IDs.  In the special case where each annotation has</span>
+<span class="sd">            exactly one related segment, the column may have dtype=np.uint64 instead of containing lists.</span>
+
+<span class="sd">        output_dir:</span>
+<span class="sd">            str</span>
+<span class="sd">            The directory into which the exported annotations will be written.</span>
+<span class="sd">            Subdirectories will be created for the &quot;annotation ID index&quot; and each</span>
+<span class="sd">            &quot;related object id index&quot; as needed.</span>
+
+<span class="sd">        write_sharded:</span>
+<span class="sd">            bool</span>
+<span class="sd">            Whether to write the output as sharded files.</span>
+<span class="sd">            The sharded format is preferable for most use cases.</span>
+<span class="sd">            Without sharding, every annotation results in a separate file in the annotation ID index.</span>
+<span class="sd">            Similarly, every related ID results in a separate file in the related ID index.</span>
+
+<span class="sd">        write_by_id:</span>
+<span class="sd">            bool</span>
+<span class="sd">            Whether to write the annotations to the &quot;Annotation ID Index&quot;.</span>
+<span class="sd">            If False, skip writing.</span>
+
+<span class="sd">        write_relationships:</span>
+<span class="sd">            bool</span>
+<span class="sd">            Whether to write the relationships to the &quot;Related Object ID Index&quot;.</span>
+<span class="sd">            If False, skip writing.</span>
+
+<span class="sd">        write_by_spatial_chunk:</span>
+<span class="sd">            bool</span>
+<span class="sd">            Whether to write the spatial index.</span>
+
+<span class="sd">        num_spatial_levels:</span>
+<span class="sd">            int</span>
+<span class="sd">            The maximum number of spatial index levels to write.</span>
+<span class="sd">            If not all levels are needed (because all annotations fit within the first N levels),</span>
+<span class="sd">            then the actual number of levels written will be less than this value.</span>
+
+<span class="sd">        target_chunk_limit:</span>
+<span class="sd">            int</span>
+<span class="sd">            For the spatial index, this is how many annotations we aim to place in each</span>
+<span class="sd">            chunk (regardless of the level).</span>
+<span class="sd">            If there are more annotations than fit within the specified num_spacial_levels</span>
+<span class="sd">            while (approximately) adhering to the target_chunk_limit at each level, then the</span>
+<span class="sd">            extra annotations will be assigned to the last level.</span>
+
+<span class="sd">            Note:</span>
+<span class="sd">                Instead of specifying a valid limit here, you can disable subsampling in neuroglancer</span>
+<span class="sd">                by setting this to the special value of 0.  In our implementation, this is only valid</span>
+<span class="sd">                when num_spatial_levels=1.</span>
+
+<span class="sd">        shuffle_before_assigning_spatial_levels:</span>
+<span class="sd">            bool</span>
+<span class="sd">            Whether to shuffle the annotations before assigning spatial levels.</span>
+<span class="sd">            By default, we shuffle the annotations to avoid any bias in the spatial</span>
+<span class="sd">            assignment, which is what the neuroglancer spec recommends.</span>
+<span class="sd">            However, in some use-cases a bias may be desirable (e.g. deliberately</span>
+<span class="sd">            preferring to show larger annotations when zoomed out).</span>
+<span class="sd">            So if this is False, the annotations will be assigned to spatial levels in</span>
+<span class="sd">            the order they appear in the input dataframe, with earlier annotations</span>
+<span class="sd">            assigned to coarser spatial levels.</span>
+<span class="sd">        </span>
+<span class="sd">        description:</span>
+<span class="sd">            str</span>
+<span class="sd">            A description of the annotation collection.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">TableHandle</span><span class="p">):</span>
+        <span class="c1"># Take ownership of the dataframe.</span>
+        <span class="n">handle</span><span class="p">,</span> <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">df</span>
+        <span class="n">handle</span><span class="o">.</span><span class="n">df</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">coord_space</span> <span class="o">=</span> <span class="n">_construct_coord_space</span><span class="p">(</span><span class="n">coord_space</span><span class="p">)</span>
+    <span class="n">annotation_type</span> <span class="o">=</span> <span class="n">annotation_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">property_specs</span> <span class="o">=</span> <span class="n">annotation_property_specs</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">properties</span><span class="p">)</span>
+    <span class="n">bounds</span> <span class="o">=</span> <span class="n">_get_bounds</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">coord_space</span><span class="p">,</span> <span class="n">annotation_type</span><span class="p">)</span>
+    <span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Construct a buffer for each annotation and additional buffers</span>
+    <span class="c1"># for each annotation&#39;s relationships, stored in new columns of df.</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">_encode_annotations</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span>
+        <span class="n">coord_space</span><span class="p">,</span>
+        <span class="n">annotation_type</span><span class="p">,</span>
+        <span class="n">property_specs</span><span class="p">,</span>
+        <span class="n">relationships</span>
+    <span class="p">)</span>
+
+    <span class="n">by_id_metadata</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">write_by_id</span><span class="p">:</span>
+        <span class="n">by_id_metadata</span> <span class="o">=</span> <span class="n">_write_annotations_by_id</span><span class="p">(</span>
+            <span class="n">df</span><span class="p">,</span>
+            <span class="n">output_dir</span><span class="p">,</span>
+            <span class="n">write_sharded</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">write_by_relationship</span><span class="p">:</span>
+        <span class="n">df_handle_for_rel</span> <span class="o">=</span> <span class="n">TableHandle</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">write_by_spatial_chunk</span><span class="p">:</span>
+        <span class="n">df_handle_for_spatial</span> <span class="o">=</span> <span class="n">TableHandle</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="c1"># Delete our reference to df.</span>
+    <span class="c1"># The TableHandles own the data now.</span>
+    <span class="k">del</span> <span class="n">df</span>
+
+    <span class="n">by_rel_metadata</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">write_by_relationship</span><span class="p">:</span>    
+        <span class="n">by_rel_metadata</span> <span class="o">=</span> <span class="n">_write_annotations_by_relationships</span><span class="p">(</span>
+            <span class="n">df_handle_for_rel</span><span class="p">,</span>
+            <span class="n">relationships</span><span class="p">,</span>
+            <span class="n">output_dir</span><span class="p">,</span>
+            <span class="n">write_sharded</span>
+        <span class="p">)</span>
+
+    <span class="n">spatial_metadata</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">write_by_spatial_chunk</span><span class="p">:</span>
+        <span class="n">spatial_metadata</span> <span class="o">=</span> <span class="n">_write_annotations_by_spatial_chunk</span><span class="p">(</span>
+            <span class="n">df_handle_for_spatial</span><span class="p">,</span>
+            <span class="n">coord_space</span><span class="p">,</span>
+            <span class="n">annotation_type</span><span class="p">,</span>
+            <span class="n">bounds</span><span class="p">,</span>
+            <span class="n">num_spatial_levels</span><span class="p">,</span>
+            <span class="n">target_chunk_limit</span><span class="p">,</span>
+            <span class="n">shuffle_before_assigning_spatial_levels</span><span class="p">,</span>
+            <span class="n">output_dir</span><span class="p">,</span>
+            <span class="n">write_sharded</span>
+        <span class="p">)</span>
+    
+    <span class="c1"># Write the top-level &#39;info&#39; file for the annotation output directory.</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;@type&quot;</span><span class="p">:</span> <span class="s2">&quot;neuroglancer_annotations_v1&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;dimensions&quot;</span><span class="p">:</span> <span class="n">coord_space</span><span class="o">.</span><span class="n">to_json</span><span class="p">(),</span>
+        <span class="s2">&quot;lower_bound&quot;</span><span class="p">:</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+        <span class="s2">&quot;upper_bound&quot;</span><span class="p">:</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+        <span class="s2">&quot;annotation_type&quot;</span><span class="p">:</span> <span class="n">annotation_type</span><span class="p">,</span>
+        <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="n">property_specs</span><span class="p">,</span>
+        <span class="s2">&quot;by_id&quot;</span><span class="p">:</span> <span class="n">by_id_metadata</span><span class="p">,</span>
+        <span class="s2">&quot;relationships&quot;</span><span class="p">:</span> <span class="n">by_rel_metadata</span><span class="p">,</span>
+        <span class="s2">&quot;spatial&quot;</span><span class="p">:</span> <span class="n">spatial_metadata</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">description</span><span class="p">:</span>
+        <span class="n">info</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">output_dir</span><span class="si">}</span><span class="s2">/info&quot;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_construct_coord_space</span><span class="p">(</span><span class="n">coord_space</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function produces a CoordinateSpace object from any of our accepted</span>
+<span class="sd">    formats as explained in the docs for write_precomputed_annotations().</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        CoordinateSpace</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coord_space</span><span class="p">,</span> <span class="n">CoordinateSpace</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">coord_space</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coord_space</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">coord_space</span> <span class="o">!=</span> <span class="n">coord_space</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">coord_space</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coord_space</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid coordinate space: </span><span class="si">{</span><span class="n">coord_space</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CoordinateSpace</span><span class="p">(</span>
+            <span class="n">names</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">coord_space</span><span class="p">),</span>
+            <span class="n">units</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nm&#39;</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">coord_space</span><span class="p">),</span>
+            <span class="n">scales</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">coord_space</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coord_space</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">c</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">coord_space</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid coordinate space: </span><span class="si">{</span><span class="n">coord_space</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CoordinateSpace</span><span class="p">(</span>
+            <span class="n">names</span><span class="o">=</span><span class="n">coord_space</span><span class="p">,</span>
+            <span class="n">units</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nm&#39;</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">coord_space</span><span class="p">),</span>
+            <span class="n">scales</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">coord_space</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coord_space</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;names&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">coord_space</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">CoordinateSpace</span><span class="p">(</span><span class="n">json</span><span class="o">=</span><span class="n">coord_space</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">coord_space</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="p">{</span><span class="s1">&#39;names&#39;</span><span class="p">,</span> <span class="s1">&#39;units&#39;</span><span class="p">,</span> <span class="s1">&#39;scales&#39;</span><span class="p">,</span> <span class="s1">&#39;coordinate_arrays&#39;</span><span class="p">}):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid coordinate space: </span><span class="si">{</span><span class="n">coord_space</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="n">default_coord_space</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;names&#39;</span><span class="p">:</span> <span class="n">coord_space</span><span class="p">[</span><span class="s1">&#39;names&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;nm&#39;</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">coord_space</span><span class="p">[</span><span class="s1">&#39;names&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;scales&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">coord_space</span><span class="p">[</span><span class="s1">&#39;names&#39;</span><span class="p">]),</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">CoordinateSpace</span><span class="p">(</span><span class="o">**</span><span class="p">(</span><span class="n">default_coord_space</span> <span class="o">|</span> <span class="n">coord_space</span><span class="p">))</span>
+
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid coordinate space: </span><span class="si">{</span><span class="n">coord_space</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_bounds</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">coord_space</span><span class="p">,</span> <span class="n">annotation_type</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Inspect the geometry columns of the given dataframe to</span>
+<span class="sd">    determine the overall upper and lower bounds of the annotations.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        lower_bound, upper_bound</span>
+<span class="sd">        (both numpy arrays of length 3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">geometry_cols</span> <span class="o">=</span> <span class="n">_geometry_cols</span><span class="p">(</span><span class="n">coord_space</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="n">annotation_type</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">required_cols</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">geometry_cols</span><span class="p">)))</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Dataframe does not have all required geometry columns for the given coordinate space.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Required columns: </span><span class="si">{</span><span class="n">required_cols</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">annotation_type</span> <span class="o">==</span> <span class="s1">&#39;point&#39;</span><span class="p">:</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">geometry_cols</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">points</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+            <span class="n">points</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">annotation_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="s1">&#39;axis_aligned_bounding_box&#39;</span><span class="p">):</span>
+        <span class="n">points_a</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">geometry_cols</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">points_b</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">geometry_cols</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">points_a</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">points_b</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">points_a</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">points_b</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">annotation_type</span> <span class="o">==</span> <span class="s1">&#39;ellipsoid&#39;</span><span class="p">:</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">geometry_cols</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">radii</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">geometry_cols</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span>
+            <span class="p">(</span><span class="n">center</span> <span class="o">-</span> <span class="n">radii</span><span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">center</span> <span class="o">+</span> <span class="n">radii</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="p">])</span>
+
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Annotation type </span><span class="si">{</span><span class="n">annotation_type</span><span class="si">}</span><span class="s2"> not supported&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_encode_annotations</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">coord_space</span><span class="p">,</span> <span class="n">annotation_type</span><span class="p">,</span> <span class="n">property_specs</span><span class="p">,</span> <span class="n">relationships</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a (shallow) copy of the dataframe with additional columns containing</span>
+<span class="sd">    buffers for each encoded annotation and its encoded id and encoded relationships.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Encoding annotation IDs&quot;</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;id_buf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_encode_uint64_series</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Encoding annotation geometries and properties&quot;</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;ann_buf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_encode_geometries_and_properties</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">coord_space</span><span class="p">,</span> <span class="n">annotation_type</span><span class="p">,</span> <span class="n">property_specs</span>
+    <span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Encoding relationships&quot;</span><span class="p">)</span>
+    <span class="n">rel_bufs</span> <span class="o">=</span> <span class="n">_encode_relationships</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">relationships</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rel_bufs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;rel_buf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_bufs</span>
+
+    <span class="k">return</span> <span class="n">df</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_encode_geometries_and_properties</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">coord_space</span><span class="p">,</span> <span class="n">annotation_type</span><span class="p">,</span> <span class="n">property_specs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    For each annotation in the given dataframe, encode its geometry columns (e.g. x,y,z)</span>
+<span class="sd">    and property columns into a buffer, plus any padding that was necessary to align the</span>
+<span class="sd">    buffer to a 4-byte boundary, per the neuroglancer spec.</span>
+
+<span class="sd">    (In the precomputed format, geometry and properties always appear together,</span>
+<span class="sd">    regardless of whether they&#39;re being written to the &quot;Annotation ID Index&quot;,</span>
+<span class="sd">    the &quot;Related Object ID Index&quot; or the &quot;Spatial Index&quot;.)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.Series of dtype=object, containing one buffer for each annotation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">geometry_cols</span> <span class="o">=</span> <span class="n">_geometry_cols</span><span class="p">(</span><span class="n">coord_space</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="n">annotation_type</span><span class="p">)</span>
+    <span class="n">geometry_prop_df</span> <span class="o">=</span> <span class="n">_geometry_prop_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">geometry_cols</span><span class="p">,</span> <span class="n">property_specs</span><span class="p">)</span>
+    <span class="n">buf</span><span class="p">,</span> <span class="n">recsize</span> <span class="o">=</span> <span class="n">_encode_geometry_prop_df</span><span class="p">(</span><span class="n">geometry_prop_df</span><span class="p">,</span> <span class="n">geometry_cols</span><span class="p">,</span> <span class="n">property_specs</span><span class="p">)</span>
+    <span class="k">del</span> <span class="n">geometry_prop_df</span>
+
+    <span class="c1"># extract bytes from the appropriate slice for each record</span>
+    <span class="n">encoded_annotations</span> <span class="o">=</span> <span class="p">[</span><span class="n">buf</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="n">recsize</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">recsize</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))]</span>
+    <span class="n">ann_bufs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">encoded_annotations</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ann_bufs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_geometry_prop_df</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">geometry_cols</span><span class="p">,</span> <span class="n">property_specs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Select the subset of columns that specify the geometry and properties</span>
+<span class="sd">    of the annotations, and append columns for padding that will ensure</span>
+<span class="sd">    our encoded records have a width that is a multiple of 4 bytes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Note that the property specs are already sorted by</span>
+    <span class="c1"># dtype in the order neuroglancer requires.</span>
+    <span class="c1"># Order our columns accordingly before we encode them as records below.</span>
+    <span class="n">prop_cols</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">property_specs</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;rgb&#39;</span><span class="p">:</span>
+            <span class="n">prop_cols</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_r&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_g&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_b&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;rgba&#39;</span><span class="p">:</span>
+            <span class="n">prop_cols</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_r&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_g&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_b&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_a&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">prop_cols</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="n">geometry_prop_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="o">*</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">geometry_cols</span><span class="p">),</span> <span class="o">*</span><span class="n">prop_cols</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># Calculate padding as required by neuroglancer.</span>
+    <span class="n">property_widths</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">property_specs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;rgb&#39;</span><span class="p">:</span>
+            <span class="n">property_widths</span><span class="p">[</span><span class="n">spec</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="k">elif</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;rgba&#39;</span><span class="p">:</span>
+            <span class="n">property_widths</span><span class="p">[</span><span class="n">spec</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">property_widths</span><span class="p">[</span><span class="n">spec</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">itemsize</span>
+
+    <span class="n">property_padding</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span> <span class="o">-</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">property_widths</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">%</span> <span class="mi">4</span><span class="p">))</span> <span class="o">%</span> <span class="mi">4</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">property_padding</span><span class="p">):</span>
+        <span class="n">geometry_prop_df</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;__padding_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">geometry_prop_df</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_encode_geometry_prop_df</span><span class="p">(</span><span class="n">geometry_prop_df</span><span class="p">,</span> <span class="n">geometry_cols</span><span class="p">,</span> <span class="n">property_specs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Encode the geometry and properties of the annotations into a single buffer.</span>
+
+<span class="sd">    Note: Replaces category columns of geometry_prop_df with their integer equivalents.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert our column dtypes to match property specs.</span>
+    <span class="n">dtypes</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">geometry_cols</span><span class="p">)}</span>
+    <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">property_specs</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;rgb&#39;</span><span class="p">,</span> <span class="s1">&#39;rgba&#39;</span><span class="p">):</span>
+            <span class="n">dtypes</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span>
+                <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+            <span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dtypes</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">dt</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">int8</span> <span class="k">for</span> <span class="n">dt</span> <span class="ow">in</span> <span class="n">dtypes</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">&quot;Old versions of neuroglancer don&#39;t support int8 properties, &quot;</span>
+            <span class="s2">&quot;so consider casting to uint8 or int16 if your annotations don&#39;t load.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Convert category columns to their integer equivalents</span>
+    <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">property_specs</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;rgb&#39;</span><span class="p">,</span> <span class="s1">&#39;rgba&#39;</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">geometry_prop_df</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="s1">&#39;category&#39;</span><span class="p">:</span>
+            <span class="n">geometry_prop_df</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">geometry_prop_df</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">codes</span>
+            <span class="n">dtypes</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Vectorized serialization</span>
+    <span class="n">records</span> <span class="o">=</span> <span class="n">geometry_prop_df</span><span class="o">.</span><span class="n">to_records</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">column_dtypes</span><span class="o">=</span><span class="n">dtypes</span><span class="p">)</span>
+    <span class="n">recsize</span> <span class="o">=</span> <span class="n">records</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="n">records</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">buf</span><span class="p">,</span> <span class="n">recsize</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Stuart Berg
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, HHMI.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

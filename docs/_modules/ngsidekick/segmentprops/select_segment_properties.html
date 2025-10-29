@@ -1,0 +1,530 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ngsidekick.segmentprops.select_segment_properties &#8212; ngsidekick  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ngsidekick/segmentprops/select_segment_properties';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ngsidekick  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../state_utils.html">State Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentprops.html">Segment Properties</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../annotations.html">Annotations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../local.html">annotations.local</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../precomputed.html">annotations.precomputed</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentcolors.html">Segment Colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../gcs.html">Google Cloud Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ngvideo_helper.html">NGVideo Helper</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for ngsidekick.segmentprops.select_segment_properties</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">string</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pandas.api.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_numeric_dtype</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ngsidekick.segmentprops.segmentprops</span><span class="w"> </span><span class="kn">import</span> <span class="n">segment_properties_to_dataframe</span><span class="p">,</span> <span class="n">segment_properties_json</span>
+
+
+<div class="viewcode-block" id="select_segment_properties">
+<a class="viewcode-back" href="../../../segmentprops.html#ngsidekick.segmentprops.select_segment_properties">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">select_segment_properties</span><span class="p">(</span>
+    <span class="n">info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">subset</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">scalar_expressions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="n">tag_expressions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given the JSON data from a neuroglancer segment properties &#39;info&#39; file,</span>
+<span class="sd">    select a subset of the properties and/or tags and return the reduced JSON info.</span>
+
+<span class="sd">    You can also add *new* properties and/or tags by providing expressions</span>
+<span class="sd">    (in pandas eval syntax) to be evaluated using the source data.</span>
+
+<span class="sd">    In addition to expressions, you can provide a template string to be evaluated</span>
+<span class="sd">    with Python string formatting.</span>
+
+<span class="sd">    The variables available to the expressions are the columns extracted from the</span>
+<span class="sd">    source data as produced via `segment_properties_to_dataframe()`.</span>
+<span class="sd">    The tag list is parsed into separate columns according to their prefixes</span>
+<span class="sd">    (assuming &#39;:&#39; delimits the prefix).</span>
+
+<span class="sd">    The &#39;label&#39; column is special: It is the one that will be displayed in the neuroglancer segment list.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        info:</span>
+<span class="sd">            The JSON data from a neuroglancer segment properties &#39;info&#39; file.</span>
+
+<span class="sd">        subset:</span>
+<span class="sd">            The subset of properties or tag categories to select.</span>
+<span class="sd">            Special values:</span>
+<span class="sd">            - &#39;_all&#39;: Select all properties and tags.</span>
+<span class="sd">            - &#39;_all_tags&#39;: Select all tag categories.</span>
+<span class="sd">            - &#39;_default&#39;: Select all properties and tags that have less than 1000 unique values.</span>
+<span class="sd">            - &#39;_default_tags&#39;: Select all tag categories that have less than 1000 unique values.</span>
+
+<span class="sd">        scalar_expressions:</span>
+<span class="sd">            Expressions to be evaluated using the source data to compute new properties.</span>
+
+<span class="sd">        tag_expressions:</span>
+<span class="sd">            Expressions to be evaluated using the source data to compute new tags.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The reduced/enhanced JSON data from a neuroglancer segment properties &#39;info&#39; file.</span>
+<span class="sd">    </span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        For the purpose of expression evaluation, we treat &#39;~&#39; and missing values (untagged) as &quot;&quot;.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        new_info = select_segment_properties(info, subset=[&#39;superclass&#39;, &#39;type&#39;])</span>
+<span class="sd">        new_info = select_segment_properties(</span>
+<span class="sd">            info,</span>
+<span class="sd">            scalar_expressions={</span>
+<span class="sd">                &#39;size&#39;: &#39;length * width * height&#39;,</span>
+<span class="sd">                &#39;label&#39;: &quot;{type} ({superclass})&quot;</span>
+<span class="sd">            },</span>
+<span class="sd">        )</span>
+<span class="sd">        new_info = select_segment_properties(</span>
+<span class="sd">            info,</span>
+<span class="sd">            tag_expressions={</span>
+<span class="sd">                &#39;is_left_hemilineage_01&#39;: &#39;hemilineage in (&quot;01A&quot;, &quot;01B&quot;) and soma_side == &quot;L&quot;&#39;</span>
+<span class="sd">            }</span>
+<span class="sd">        )</span>
+<span class="sd">    </span>
+<span class="sd">    See also:</span>
+<span class="sd">        The `ngsidekick-server &lt;https://github.com/janelia-flyem/ngsidekick-server&gt;`_</span>
+<span class="sd">        project wraps this function in a web service to enable dynamic segment property</span>
+<span class="sd">        selection directly in neuroglancer (via user-provided source URLs).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">scalar_df</span><span class="p">,</span> <span class="n">tags_df</span> <span class="o">=</span> <span class="n">segment_properties_to_dataframe</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">return_separate_tags</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># It&#39;s possible for a scalar column to also be used in the tags.</span>
+    <span class="c1"># We&#39;ll drop the scalar and just keep the one from the tags,</span>
+    <span class="c1"># since the tag column takes less RAM.</span>
+    <span class="n">scalar_df</span> <span class="o">=</span> <span class="n">scalar_df</span><span class="p">[[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">scalar_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tags_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]]</span>
+
+    <span class="n">full_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">scalar_df</span><span class="p">,</span> <span class="n">tags_df</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">new_df</span> <span class="o">=</span> <span class="n">_select_segment_properties_from_dataframe</span><span class="p">(</span><span class="n">full_df</span><span class="p">,</span> <span class="p">{</span><span class="o">**</span><span class="n">scalar_expressions</span><span class="p">,</span> <span class="o">**</span><span class="n">tag_expressions</span><span class="p">})</span>
+    <span class="n">new_tag_cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tag_expressions</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="s1">&#39;_all&#39;</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
+        <span class="n">subset</span> <span class="o">+=</span> <span class="p">[</span>
+            <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">full_df</span><span class="o">.</span><span class="n">columns</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">subset</span>
+        <span class="p">]</span>
+        <span class="n">subset</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;_all&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;_all_tags&#39;</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
+        <span class="n">subset</span> <span class="o">+=</span> <span class="p">[</span>
+            <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">full_df</span><span class="o">.</span><span class="n">columns</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">subset</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">full_df</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">subset</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;_all_tags&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;_default&#39;</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
+        <span class="n">counts</span> <span class="o">=</span> <span class="n">full_df</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+        <span class="n">subset</span> <span class="o">+=</span> <span class="p">[</span>
+            <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">full_df</span><span class="o">.</span><span class="n">columns</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">subset</span> <span class="ow">and</span> <span class="n">counts</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">1000</span>
+        <span class="p">]</span>
+        <span class="n">subset</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;_default&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;_default_tags&#39;</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
+        <span class="n">counts</span> <span class="o">=</span> <span class="n">full_df</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+        <span class="n">subset</span> <span class="o">+=</span> <span class="p">[</span>
+            <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">full_df</span><span class="o">.</span><span class="n">columns</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">subset</span> <span class="ow">and</span> <span class="n">counts</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">1000</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">full_df</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">subset</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;_default_tags&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">invalid_subset</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">tags_df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">scalar_df</span><span class="o">.</span><span class="n">columns</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid segment properties: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">invalid_subset</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">subset_tags_df</span> <span class="o">=</span> <span class="n">tags_df</span><span class="p">[[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">subset</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tags_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]]</span>
+    <span class="n">subset_scalar_df</span> <span class="o">=</span> <span class="n">scalar_df</span><span class="p">[[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">subset</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">scalar_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]]</span>
+    <span class="n">combined_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">new_df</span><span class="p">,</span> <span class="n">subset_scalar_df</span><span class="p">,</span> <span class="n">subset_tags_df</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">segment_properties_json</span><span class="p">(</span><span class="n">combined_df</span><span class="p">,</span> <span class="n">tag_cols</span><span class="o">=</span><span class="p">[</span><span class="o">*</span><span class="n">new_tag_cols</span><span class="p">,</span> <span class="o">*</span><span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">subset</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tags_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]])</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_select_segment_properties_from_dataframe</span><span class="p">(</span>
+    <span class="n">full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">expressions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">full_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">full_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">,</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;string&quot;</span><span class="p">):</span>
+            <span class="n">full_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">full_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># In some datasets, the segment properties use &#39;~&#39; to indicate an empty field</span>
+    <span class="c1"># instead of the empty string to avoid sorting empty types near the top of the ID list.</span>
+    <span class="c1"># For the purposes of expression evaluation, we treat &#39;~&#39; and &#39;&#39; as None.</span>
+    <span class="n">full_df_with_empty</span> <span class="o">=</span> <span class="n">full_df</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">new_df</span> <span class="o">=</span> <span class="n">full_df</span><span class="p">[[]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">expr</span> <span class="ow">in</span> <span class="n">expressions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">template_names</span> <span class="o">:=</span> <span class="n">string_template_names</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+            <span class="c1"># Only evaluate the expression for rows in which at least</span>
+            <span class="c1"># one of the referenced template names is not None.</span>
+            <span class="c1"># Other rows are not evaluated and get an empty string by default.</span>
+            <span class="c1"># (Special case: For the &#39;label&#39; column, it will be replaced with &#39;~&#39; later.)</span>
+            <span class="n">new_df</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">if</span> <span class="n">invalid_template_names</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">template_names</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">full_df_with_empty</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid segment properties: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">invalid_template_names</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">valid_rows</span> <span class="o">=</span> <span class="p">(</span><span class="n">full_df_with_empty</span><span class="p">[</span><span class="n">template_names</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># This list comprehension is faster than using df.apply() with a lambda.</span>
+            <span class="n">new_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">valid_rows</span><span class="p">,</span> <span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">expr</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">template_names</span><span class="p">,</span> <span class="n">row</span><span class="p">)),</span> <span class="nb">locals</span><span class="o">=</span><span class="p">{},</span> <span class="nb">globals</span><span class="o">=</span><span class="p">{})</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">full_df_with_empty</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">valid_rows</span><span class="p">,</span> <span class="n">template_names</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="p">]</span>
+        <span class="k">elif</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^[a-zA-Z_][a-zA-Z0-9_]*$&#39;</span><span class="p">,</span> <span class="n">expr</span><span class="p">):</span>
+            <span class="c1"># String appears not to be a template nor an expression;</span>
+            <span class="c1"># it must just be a column name.</span>
+            <span class="n">new_df</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">full_df</span><span class="p">[</span><span class="n">expr</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_df</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">full_df_with_empty</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span>
+                <span class="n">expr</span><span class="p">,</span>
+                <span class="n">local_dict</span><span class="o">=</span><span class="p">{},</span>
+                <span class="n">global_dict</span><span class="o">=</span><span class="p">{},</span>
+                <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;python&#39;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># We append the newly computed column to the input dataframe so it</span>
+        <span class="c1"># can be referenced in subsequent expressions if the user wants to.</span>
+        <span class="n">full_df_with_empty</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_df</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="c1"># It&#39;s annoying to have the empty labels sorted at the top of our ID list,</span>
+    <span class="c1"># so we replace the empty string with &#39;~&#39; here to shove them to the bottom.</span>
+    <span class="k">if</span> <span class="s1">&#39;label&#39;</span> <span class="ow">in</span> <span class="n">new_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">new_df</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_df</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;~&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_df</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">string_template_names</span><span class="p">(</span><span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">string</span><span class="o">.</span><span class="n">Formatter</span><span class="p">()</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">template</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Stuart Berg
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, HHMI.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

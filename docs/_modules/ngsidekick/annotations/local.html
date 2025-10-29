@@ -1,0 +1,741 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ngsidekick.annotations.local &#8212; ngsidekick  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/ngsidekick/annotations/local';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ngsidekick  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../state_utils.html">State Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentprops.html">Segment Properties</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../annotations.html">Annotations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../local.html">annotations.local</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../precomputed.html">annotations.precomputed</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentcolors.html">Segment Colors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../gcs.html">Google Cloud Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ngvideo_helper.html">NGVideo Helper</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for ngsidekick.annotations.local</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Functions for encoding or parsing data for ``local://annotations`` sources.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">textwrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">indent</span><span class="p">,</span> <span class="n">dedent</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..state_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_nglink</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotation_property_specs</span>
+
+<div class="viewcode-block" id="extract_local_annotations">
+<a class="viewcode-back" href="../../../local.html#ngsidekick.annotations.local.extract_local_annotations">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_local_annotations</span><span class="p">(</span><span class="n">link</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">link_index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">visible_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract local://annotations data from a neuroglancer link.</span>
+<span class="sd">    The annotation coordinates (point, pointA, pointB, radii) are extracted</span>
+<span class="sd">    into separate columns, named x,y,z/xa,ya,za/xb,yb,zb/rx,ry,rz</span>
+<span class="sd">    (consistent with local_annotation_json() in this file).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        link:</span>
+<span class="sd">            Either a neuroglancer JSON state (dict), or a neuroglancer link with embedded state,</span>
+<span class="sd">            or a neuroglancer link that references a JSON state file, such as</span>
+<span class="sd">            https://neuroglancer-demo.appspot.com/#!gs://flyem-views/hemibrain/v1.2/base.json</span>
+
+<span class="sd">        link_index:</span>
+<span class="sd">            Deprecated.</span>
+<span class="sd">            Adds a column named &#39;link_index&#39; populated with the provided value in all rows.</span>
+
+<span class="sd">        user:</span>
+<span class="sd">            Deprecated.</span>
+<span class="sd">            Adds a column named &#39;user&#39; populated with the provided value in all rows.</span>
+
+<span class="sd">        visible_only:</span>
+<span class="sd">            If True, do not extract annotations from layers that are not currently</span>
+<span class="sd">            visible in the given link state.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">link</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="n">parse_nglink</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+    <span class="n">annotation_layers</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">link</span><span class="p">[</span><span class="s1">&#39;layers&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">layer</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;annotation&quot;</span><span class="p">]</span>
+
+    <span class="n">dfs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">annotation_layers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">visible_only</span> <span class="ow">and</span> <span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;archived&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">layer</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;visible&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)):</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">layer</span><span class="p">[</span><span class="s1">&#39;annotations&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">_df</span><span class="p">[</span><span class="s1">&#39;layer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+        <span class="n">dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_df</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dfs</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;point&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="p">[</span><span class="o">*</span><span class="s1">&#39;xyz&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="s1">&#39;point&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s1">&#39;pointA&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;pointA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;xa&#39;</span><span class="p">,</span> <span class="s1">&#39;ya&#39;</span><span class="p">,</span> <span class="s1">&#39;za&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="s1">&#39;pointA&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s1">&#39;pointB&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;pointB&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;xb&#39;</span><span class="p">,</span> <span class="s1">&#39;yb&#39;</span><span class="p">,</span> <span class="s1">&#39;zb&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="s1">&#39;pointB&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s1">&#39;radii&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;radii&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;rx&#39;</span><span class="p">,</span> <span class="s1">&#39;ry&#39;</span><span class="p">,</span> <span class="s1">&#39;rz&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="s1">&#39;radii&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="c1"># Convert to int if possible.</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="o">*</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;xa&#39;</span><span class="p">,</span> <span class="s1">&#39;ya&#39;</span><span class="p">,</span> <span class="s1">&#39;za&#39;</span><span class="p">,</span> <span class="s1">&#39;xb&#39;</span><span class="p">,</span> <span class="s1">&#39;yb&#39;</span><span class="p">,</span> <span class="s1">&#39;zb&#39;</span><span class="p">,</span> <span class="s1">&#39;rx&#39;</span><span class="p">,</span> <span class="s1">&#39;ry&#39;</span><span class="p">,</span> <span class="s1">&#39;rz&#39;</span><span class="p">,</span> <span class="s1">&#39;radii&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span> <span class="ow">and</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">%</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">link_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;link_index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">link_index</span>
+    <span class="k">if</span> <span class="n">user</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;user&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">,</span> <span class="s1">&#39;pointA&#39;</span><span class="p">,</span> <span class="s1">&#39;pointB&#39;</span><span class="p">,</span> <span class="s1">&#39;radii&#39;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;link_index&#39;</span><span class="p">,</span> <span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="s1">&#39;layer&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="o">*</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;rx&#39;</span><span class="p">,</span> <span class="s1">&#39;ry&#39;</span><span class="p">,</span> <span class="s1">&#39;rz&#39;</span><span class="p">,</span> <span class="s1">&#39;xa&#39;</span><span class="p">,</span> <span class="s1">&#39;ya&#39;</span><span class="p">,</span> <span class="s1">&#39;za&#39;</span><span class="p">,</span> <span class="s1">&#39;xb&#39;</span><span class="p">,</span> <span class="s1">&#39;yb&#39;</span><span class="p">,</span> <span class="s1">&#39;zb&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]]</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<span class="c1"># Tip: Here&#39;s a nice repo with lots of colormaps implemented in GLSL.</span>
+<span class="c1"># https://github.com/kbinani/colormap-shaders</span>
+<span class="n">SHADER_FMT</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">    void main() {{</span>
+<span class="s2">        setColor(defaultColor());</span>
+<span class="s2">        setPointMarkerSize(</span><span class="si">{size:.1f}</span><span class="s2">);</span>
+<span class="s2">    }}</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+
+<span class="n">LOCAL_ANNOTATION_JSON</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;annotations&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;annotation&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;local://annotations&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;transform&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;outputDimensions&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="mf">8e-09</span><span class="p">,</span>
+                    <span class="s2">&quot;m&quot;</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="mf">8e-09</span><span class="p">,</span>
+                    <span class="s2">&quot;m&quot;</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="mf">8e-09</span><span class="p">,</span>
+                    <span class="s2">&quot;m&quot;</span>
+                <span class="p">]</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;tool&quot;</span><span class="p">:</span> <span class="s2">&quot;annotatePoint&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;shader&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">void main() {</span><span class="se">\n</span><span class="s2">  setColor(defaultColor());</span><span class="se">\n</span><span class="s2">  setPointMarkerSize(8.0);</span><span class="se">\n</span><span class="s2">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;panels&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;row&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;flex&quot;</span><span class="p">:</span> <span class="mf">1.22</span><span class="p">,</span>
+            <span class="s2">&quot;tab&quot;</span><span class="p">:</span> <span class="s2">&quot;annotations&quot;</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;annotations&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="c1"># {</span>
+        <span class="c1">#     &quot;point&quot;: [23367, 35249, 68171],</span>
+        <span class="c1">#     &quot;type&quot;: &quot;point&quot;,</span>
+        <span class="c1">#     &quot;id&quot;: &quot;149909688276769607&quot;,</span>
+        <span class="c1">#     &quot;description&quot;: &quot;soma&quot;</span>
+        <span class="c1"># },</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="local_annotation_json">
+<a class="viewcode-back" href="../../../local.html#ngsidekick.annotations.local.local_annotation_json">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">local_annotation_json</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;annotations&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#ffff00&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span> <span class="n">linkedSegmentationLayer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                          <span class="n">show_panel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">properties</span><span class="o">=</span><span class="p">[],</span> <span class="n">shader</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">res_nm_xyz</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construct the JSON data for a neuroglancer local annotations layer.</span>
+<span class="sd">    This does not result in a complete neuroglancer link; it results in something</span>
+<span class="sd">    that can be added to the layers list in the neuroglancer viewer JSON state.</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        This function&#39;s signature will likely change in the future.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df:</span>
+<span class="sd">            DataFrame containing the annotation data.</span>
+<span class="sd">            Which columns you must provide depends on which annotation type(s) you want to display.</span>
+
+<span class="sd">            - For point annotations, provide [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;]</span>
+<span class="sd">            - For line annotations or axis_aligned_bounding_box annotations,</span>
+<span class="sd">              provide [&#39;xa&#39;, &#39;ya&#39;, &#39;za&#39;, &#39;xb&#39;, &#39;yb&#39;, &#39;zb&#39;]</span>
+<span class="sd">            - For ellipsoid annotations, provide [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;, &#39;rx&#39;, &#39;ry&#39;, &#39;rz&#39;]</span>
+<span class="sd">              for the center point and radii.</span>
+
+<span class="sd">            You may also provide a column &#39;type&#39; to explicitly set the annotation type.</span>
+<span class="sd">            In some cases, &#39;type&#39; isn&#39;t needed since annotation type can be inferred from the</span>
+<span class="sd">            columns you provided. But in the case of line and box annotations, the input</span>
+<span class="sd">            columns are the same, so you must provide a &#39;type&#39; column.</span>
+
+<span class="sd">            You may also provide additional columns to use as annotation properties,</span>
+<span class="sd">            in which case they should be listed in the &#39;properties&#39; argument. (See below.)</span>
+
+<span class="sd">        name:</span>
+<span class="sd">            The name of the annotation layer</span>
+
+<span class="sd">        color:</span>
+<span class="sd">            The default color for annotations, which can be overridden by the annotation shader.</span>
+
+<span class="sd">        size:</span>
+<span class="sd">            The annotation size to hard-code into the default annotation shader used by this function.</span>
+<span class="sd">            (Only used for points and line endpoints.)</span>
+
+<span class="sd">        linkedSegmentationLayer:</span>
+<span class="sd">            If the annotations should be associated with another layer in the view,</span>
+<span class="sd">            this specifies the name of that layer.</span>
+<span class="sd">            This function sets the &#39;filterBySegmentation&#39; key to hide annotations from non-selected segments.</span>
+<span class="sd">            If you are providing a linkedSegmentationLayer, your dataframe should contain</span>
+<span class="sd">            a &#39;segments&#39; column to indicate which segments are associated with each annotation.</span>
+
+<span class="sd">        show_panel:</span>
+<span class="sd">            If True, the selection panel will be visible in the side bar by default.</span>
+
+<span class="sd">        properties:</span>
+<span class="sd">            The list column names to use as annotation properties.</span>
+<span class="sd">            Properties are visible in the selection panel when an annotation is selected,</span>
+<span class="sd">            and they can also be used in annotation shaders via special functions neuroglancer</span>
+<span class="sd">            defines for each property.  For example, for a property named &#39;confidence&#39;,</span>
+<span class="sd">            you could write setPointMarkerSize(prop_confidence()) in your annotation shader.</span>
+
+<span class="sd">            This function supports annotation color proprties via strings (e.g. &#39;#ffffff&#39;) and</span>
+<span class="sd">            also annotation &#39;enum&#39; properties if you pass them via pandas categorical columns.</span>
+
+<span class="sd">            By default, the annotation IDs are the same as the column names and the annotation types are inferred.</span>
+<span class="sd">            You can override the property &#39;spec&#39; by supplying a dict-of-dicts here instead of a list of columns:</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                properties={</span>
+<span class="sd">                    &quot;my_column&quot;: {</span>
+<span class="sd">                        &quot;id&quot;: &quot;my property&quot;,</span>
+<span class="sd">                        &quot;description&quot;: &quot;This is my annotation property.&quot;,</span>
+<span class="sd">                        &quot;type&quot;: &quot;float32&quot;,</span>
+<span class="sd">                        &quot;enum_values&quot;: [0.0, 0.5, 1.0],</span>
+<span class="sd">                        &quot;enum_labels&quot;: [&quot;nothing&quot;, &quot;something&quot;, &quot;everything&quot;],</span>
+<span class="sd">                    },</span>
+<span class="sd">                    &quot;another_column: {...}</span>
+<span class="sd">                }</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict (JSON data)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">_standardize_annotation_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">properties</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">properties</span> <span class="o">=</span> <span class="p">[</span><span class="n">properties</span><span class="p">]</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">LOCAL_ANNOTATION_JSON</span><span class="p">)</span>
+    <span class="n">res_m</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">res_nm_xyz</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-9</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">output_dim</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="p">[</span><span class="n">r</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="n">res_m</span><span class="p">)}</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">][</span><span class="s1">&#39;transform&#39;</span><span class="p">][</span><span class="s1">&#39;outputDimensions&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_dim</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;annotationColor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span>
+
+    <span class="k">if</span> <span class="n">shader</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">shader</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;shader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_default_shader</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">size</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">linkedSegmentationLayer</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;linkedSegmentationLayer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">linkedSegmentationLayer</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;filterBySegmentation&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;segments&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">show_panel</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;panels&#39;</span><span class="p">]</span>
+
+    <span class="n">prop_specs</span> <span class="o">=</span> <span class="n">annotation_property_specs</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">properties</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">prop_specs</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;annotationProperties&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">prop_specs</span>
+        <span class="n">properties</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prop_specs</span><span class="p">]</span>
+    
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;annotations&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;annotations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_annotation_list_json</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">linkedSegmentationLayer</span><span class="p">,</span> <span class="n">properties</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_annotation_list_json</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">linkedSegmentationLayer</span><span class="p">,</span> <span class="n">properties</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper for local_annotation_json().</span>
+
+<span class="sd">    Generate the list of annotations for an annotation layer,</span>
+<span class="sd">    assuming the input dataframe has already been pre-conditioned.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Replace categoricals with their integer codes.</span>
+    <span class="c1"># The corresponding enum_labels are already stored in the property specs</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">properties</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;category&quot;</span><span class="p">:</span>
+            <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">codes</span>
+
+    <span class="n">annotations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">itertuples</span><span class="p">():</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">type</span>
+        <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">id</span>
+        <span class="k">if</span> <span class="s1">&#39;description&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">description</span>
+
+        <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;point&#39;</span><span class="p">:</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">z</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">row</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="s1">&#39;axis_aligned_bounding_box&#39;</span><span class="p">):</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;pointA&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">xa</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">ya</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">za</span><span class="p">]</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;pointB&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">xb</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">yb</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">zb</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">row</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;ellipsoid&#39;</span><span class="p">:</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">z</span><span class="p">]</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;radii&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">rx</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">ry</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">rz</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Invalid annotation type: </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">linkedSegmentationLayer</span> <span class="ow">and</span> <span class="s1">&#39;segments&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">segments</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">segments</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="s1">&#39;__len__&#39;</span><span class="p">):</span>
+                <span class="n">segments</span> <span class="o">=</span> <span class="p">[</span><span class="n">segments</span><span class="p">]</span>
+            <span class="n">segments</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">]</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;segments&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">segments</span>
+
+        <span class="k">if</span> <span class="n">properties</span><span class="p">:</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;props&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">prop</span><span class="p">)</span> <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">properties</span><span class="p">]</span>
+
+        <span class="n">annotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">annotations</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_standardize_annotation_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper for local_annotation_json().</span>
+<span class="sd">    Add empty columns as needed until the dataframe</span>
+<span class="sd">    has all possible annotation columns.</span>
+
+<span class="sd">    Also populate the &#39;type&#39; column with inferred</span>
+<span class="sd">    annotation types based on the columns the user DID provide.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">id_cols</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;xa&#39;</span><span class="p">,</span> <span class="s1">&#39;ya&#39;</span><span class="p">,</span> <span class="s1">&#39;za&#39;</span><span class="p">,</span> <span class="s1">&#39;xb&#39;</span><span class="p">,</span> <span class="s1">&#39;yb&#39;</span><span class="p">,</span> <span class="s1">&#39;zb&#39;</span><span class="p">,</span> <span class="s1">&#39;rx&#39;</span><span class="p">,</span> <span class="s1">&#39;ry&#39;</span><span class="p">,</span> <span class="s1">&#39;rz&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">id_cols</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="nb">str</span><span class="p">(</span><span class="nb">hex</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">x</span><span class="p">)))))</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="n">id_cols</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="p">]</span>
+
+    <span class="n">is_point_or_ellipsoid</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="o">*</span><span class="s1">&#39;xyz&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">is_line_or_box</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;xa&#39;</span><span class="p">,</span> <span class="s1">&#39;ya&#39;</span><span class="p">,</span> <span class="s1">&#39;za&#39;</span><span class="p">,</span> <span class="s1">&#39;xb&#39;</span><span class="p">,</span> <span class="s1">&#39;yb&#39;</span><span class="p">,</span> <span class="s1">&#39;zb&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">notnull</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">is_point_or_ellipsoid</span> <span class="o">^</span> <span class="n">is_line_or_box</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> \
+        <span class="s2">&quot;You must supply either [x,y,z] or [xa,ya,za,xb,yb,zb] for every row (and not both).&quot;</span>
+
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;rx&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">map</span><span class="p">({</span>
+            <span class="kc">True</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="kc">False</span><span class="p">:</span> <span class="s1">&#39;ellipsoid&#39;</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+    <span class="c1"># We have no way of choosing between &#39;line&#39; and &#39;axis_aligned_bounding_box&#39;</span>
+    <span class="c1"># unless the user provides the &#39;type&#39; explicitly.</span>
+    <span class="c1"># We default to &#39;axis_aligned_bounding_box&#39; because it&#39;s harder to type than &#39;line&#39; :-)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">map</span><span class="p">({</span>
+            <span class="kc">True</span><span class="p">:</span> <span class="s1">&#39;axis_aligned_bounding_box&#39;</span><span class="p">,</span>
+            <span class="kc">False</span><span class="p">:</span> <span class="s1">&#39;point&#39;</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_default_shader</span><span class="p">(</span><span class="n">annotation_types</span><span class="p">,</span> <span class="n">default_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a default annotation shader that is pre-populated with</span>
+<span class="sd">    the annotation API functions so you don&#39;t have to look them up.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shader_body</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="s1">&#39;point&#39;</span> <span class="ow">in</span> <span class="n">annotation_types</span><span class="p">:</span>
+        <span class="c1"># Note:</span>
+        <span class="c1">#   In older versions of neuroglancer,</span>
+        <span class="c1">#   setPointMarkerColor(vec3) doesn&#39;t exist yet,</span>
+        <span class="c1">#   so we must use vec4.</span>
+        <span class="c1">#   https://github.com/google/neuroglancer/pull/475</span>
+        <span class="n">shader_body</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">            //</span>
+<span class="s2">            // Point Marker API</span>
+<span class="s2">            //</span>
+<span class="s2">            setPointMarkerSize(</span><span class="si">{</span><span class="n">default_size</span><span class="si">}</span><span class="s2">);</span>
+<span class="s2">            setPointMarkerColor(vec4(defaultColor(), 1.0));</span>
+<span class="s2">            setPointMarkerBorderWidth(1.0);</span>
+<span class="s2">            setPointMarkerBorderColor(defaultColor());</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;line&#39;</span> <span class="ow">in</span> <span class="n">annotation_types</span><span class="p">:</span>
+        <span class="n">shader_body</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">            //</span>
+<span class="s2">            // Line API</span>
+<span class="s2">            //</span>
+<span class="s2">            setLineColor(defaultColor());</span>
+<span class="s2">            setEndpointMarkerSize(</span><span class="si">{</span><span class="n">default_size</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">default_size</span><span class="si">}</span><span class="s2">);</span>
+<span class="s2">            setEndpointMarkerColor(defaultColor(), defaultColor());</span>
+<span class="s2">            setEndpointMarkerBorderWidth(1.0, 1.0);</span>
+<span class="s2">            setEndpointMarkerBorderColor(defaultColor(), defaultColor());</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;axis_aligned_bounding_box&#39;</span> <span class="ow">in</span> <span class="n">annotation_types</span><span class="p">:</span>
+        <span class="n">shader_body</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">            //</span>
+<span class="s2">            // Bounding Box API</span>
+<span class="s2">            //</span>
+<span class="s2">            setBoundingBoxBorderWidth(1.0);</span>
+<span class="s2">            setBoundingBoxBorderColor(defaultColor());</span>
+<span class="s2">            setBoundingBoxFillColor(vec4(defaultColor(), 0.5));</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s1">&#39;ellipsoid&#39;</span> <span class="ow">in</span> <span class="n">annotation_types</span><span class="p">:</span>
+        <span class="n">shader_body</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">            //</span>
+<span class="s2">            // Ellipsoid API</span>
+<span class="s2">            //</span>
+<span class="s2">            setEllipsoidFillColor(defaultColor());</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">shader_main</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">        void main() </span><span class="se">{{</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">indent</span><span class="p">(</span><span class="n">shader_body</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39; &#39;</span><span class="o">*</span><span class="mi">12</span><span class="p">)[</span><span class="mi">12</span><span class="p">:]</span><span class="si">}</span><span class="se">\</span>
+<span class="s2">        </span><span class="se">}}</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">shader_main</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Stuart Berg
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, HHMI.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
