@@ -336,7 +336,7 @@ The source code here in segmentcolors.py also includes a WebGL implementation
 of the same algorithm, suitable for neuroglancer annotation shaders.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.segmentcolors.hex_string_from_segment_id">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">hex_string_from_segment_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color_seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segment_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentcolors.html#hex_string_from_segment_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.hex_string_from_segment_id" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">hex_string_from_segment_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color_seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segment_id</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/segmentcolors.py#L31-L42"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.hex_string_from_segment_id" title="Link to this definition">#</a></dt>
 <dd><p>Return the hex color string for a segment
 given a color seed and the segment id.</p>
 <p>If color_seed and/or segment_id is an array, then they’ll be
@@ -345,7 +345,7 @@ broadcasted together and a list of colors will be returned.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.segmentcolors.rgb_from_segment_id">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">rgb_from_segment_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color_seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segment_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentcolors.html#rgb_from_segment_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.rgb_from_segment_id" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">rgb_from_segment_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color_seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segment_id</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/segmentcolors.py#L45-L53"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.rgb_from_segment_id" title="Link to this definition">#</a></dt>
 <dd><p>Hash the segment_id to an RGB array of uint8 according to the given color_seed.</p>
 <p>If color_seed and/or segment_id is an array, then they’ll be
 broadcasted together and a list of colors will be returned.</p>
@@ -353,7 +353,7 @@ broadcasted together and a list of colors will be returned.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.segmentcolors.unpack_color">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">unpack_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">packed_color</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentcolors.html#unpack_color"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.unpack_color" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">unpack_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">packed_color</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/segmentcolors.py#L56-L72"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.unpack_color" title="Link to this definition">#</a></dt>
 <dd><p>Unpack an array of packed colors with shape (…,) into an
 array of shape (…, 3) with r,g,b in the last dimension.
 Also works for a single packed color scalar.</p>
@@ -361,7 +361,7 @@ Also works for a single packed color scalar.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.segmentcolors.pack_color">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">pack_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rgb_vec</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentcolors.html#pack_color"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.pack_color" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">pack_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rgb_vec</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/segmentcolors.py#L90-L100"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.pack_color" title="Link to this definition">#</a></dt>
 <dd><p>Returns an integer formed
 by concatenating the channels of the input color vector.
 Python implementation of packColor in src/neuroglancer/util/color.ts</p>
@@ -369,7 +369,7 @@ Python implementation of packColor in src/neuroglancer/util/color.ts</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.segmentcolors.hash_function">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">hash_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentcolors.html#hash_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.hash_function" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">hash_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/segmentcolors.py#L103-L118"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.hash_function" title="Link to this definition">#</a></dt>
 <dd><p>Python implementation of hashCombine() function
 in src/neuroglancer/gpu_hash/hash_function.ts,
 a modified murmur hash</p>
@@ -377,7 +377,7 @@ a modified murmur hash</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.segmentcolors.hsv_to_rgb">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">hsv_to_rgb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/segmentcolors.html#hsv_to_rgb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.hsv_to_rgb" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.segmentcolors.</span></span><span class="sig-name descname"><span class="pre">hsv_to_rgb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/segmentcolors.py#L121-L145"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.segmentcolors.hsv_to_rgb" title="Link to this definition">#</a></dt>
 <dd><p>Convert H,S,V values to RGB values.
 Python implementation of hsvToRgb in src/neuroglancer/util/colorspace.ts</p>
 </dd></dl>

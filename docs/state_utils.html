@@ -329,7 +329,7 @@ document.write(`
 <p>Basic convenience functions for downloading and parsing neuroglancer states.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.state_utils.parse_nglink">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">parse_nglink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">link</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/state_utils.html#parse_nglink"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.parse_nglink" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">parse_nglink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">link</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/state_utils.py#L12-L31"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.parse_nglink" title="Link to this definition">#</a></dt>
 <dd><p>Given a neuroglancer link, return the corresponding JSON state.</p>
 <dl>
 <dt>Arg:</dt><dd><dl>
@@ -349,7 +349,7 @@ document.write(`
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.state_utils.download_ngstate">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">download_ngstate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">link</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/state_utils.html#download_ngstate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.download_ngstate" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">download_ngstate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">link</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/state_utils.py#L34-L62"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.download_ngstate" title="Link to this definition">#</a></dt>
 <dd><p>Given a neuroglancer link which references a JSON state file,
 download the file and return the enclosed JSON data.</p>
 <dl class="simple">
@@ -369,19 +369,19 @@ download the file and return the enclosed JSON data.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.state_utils.encode_ngstate">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">encode_ngstate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ng_server</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">link_json_settings</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/state_utils.html#encode_ngstate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.encode_ngstate" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">encode_ngstate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ng_server</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">link_json_settings</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/state_utils.py#L65-L69"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.encode_ngstate" title="Link to this definition">#</a></dt>
 <dd><p>Produce a fully expanded URL from a neuroglancer server and a JSON state.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.state_utils.layer_dict">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">layer_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/state_utils.html#layer_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.layer_dict" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">layer_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/state_utils.py#L72-L76"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.layer_dict" title="Link to this definition">#</a></dt>
 <dd><p>Given a neuroglancer JSON state, return a dictionary of the layer states, keyed by layer name.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.state_utils.layer_state">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">layer_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name_pattern</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/state_utils.html#layer_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.layer_state" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.state_utils.</span></span><span class="sig-name descname"><span class="pre">layer_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name_pattern</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/state_utils.py#L79-L92"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.state_utils.layer_state" title="Link to this definition">#</a></dt>
 <dd><p>Given a neuroglancer JSON state and a regex pattern,
 return the layer state whose name matches the pattern.
 If more than one layer matches the pattern, raise an error.</p>
