@@ -203,6 +203,7 @@ def write_precomputed_annotations(
     annotation_type = annotation_type.lower()
     property_specs = annotation_property_specs(df, properties)
     bounds = _get_bounds(df, coord_space, annotation_type)
+    output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
     # Construct a buffer for each annotation and additional buffers
