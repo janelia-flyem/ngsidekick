@@ -7,7 +7,13 @@ Tools for neuroglancer scenes.
 
 ## Installation
 
-- Using uv:
+Using pip:
+
+```bash
+pip install ngsidekick
+```
+
+Using uv:
 
 ```bash
 uv add ngsidekick
