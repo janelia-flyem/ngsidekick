@@ -265,12 +265,11 @@ document.write(`
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Python implementation of neuroglancer&#39;s pseudo-random segment color generator.</span>
 
-<span class="sd">Adapted from `Austin Hoag&#39;s implementation &lt;https://github.com/google/neuroglancer/blob/master/python/neuroglancer/segment_colors.py&gt;`_.</span>
-<span class="sd">This version is lightly refactored to support JIT-compilation and vectorization using numba.</span>
+<span class="sd">Adapted from Austin Hoag&#39;s implementation:</span>
 
-<span class="sd">See also:</span>
-<span class="sd">The source code here in segmentcolors.py also includes a WebGL implementation</span>
-<span class="sd">of the same algorithm, suitable for neuroglancer annotation shaders.</span>
+<span class="sd">    https://github.com/google/neuroglancer/blob/master/python/neuroglancer/segment_colors.py</span>
+
+<span class="sd">This version is lightly refactored and uses numba to JIT-compile and vectorize it.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="c1"># @license</span>
 <span class="c1"># Copyright 2017 Google Inc.</span>

@@ -308,11 +308,6 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle"><code class="docutils literal notranslate"><span class="pre">TableHandle</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle.df"><code class="docutils literal notranslate"><span class="pre">TableHandle.df</span></code></a></li>
-</ul>
-</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#precomputed-annotations">Precomputed Annotations</a></li>
 </ul>
             </nav>
@@ -327,162 +322,6 @@ document.write(`
                   
   <section id="module-ngsidekick.annotations.precomputed">
 <span id="annotations-precomputed"></span><h1>annotations.precomputed<a class="headerlink" href="#module-ngsidekick.annotations.precomputed" title="Link to this heading">#</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="ngsidekick.annotations.precomputed.write_precomputed_annotations">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.precomputed.</span></span><span class="sig-name descname"><span class="pre">write_precomputed_annotations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord_space</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annotation_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationships</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'annotations'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_sharded</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_relationship</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_spatial_chunk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_spatial_levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_chunk_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle_before_assigning_spatial_levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/annotations/precomputed/precomputed.html#write_precomputed_annotations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations" title="Link to this definition">#</a></dt>
-<dd><p>Export the data from a pandas DataFrame into neuroglancer’s precomputed annotations format
-as described in the <a class="reference external" href="https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md">neuroglancer spec</a>.</p>
-<p>A progress bar is shown when writing each portion of the export (annotation ID index, related ID indexes),
-but there may be a significant amount of preprocessing time that occurs before the actual writing begins.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Internally, the data will be copied during processing and again
-during writing, incurring significant RAM usage for large datasets.
-To save at least some RAM, you can wrap your dataframe in a TableHandle
-and then delete your own reference to the dataframe before calling this function.
-The TableHandle’s reference will be deleted internally as soon as possible
-(after the data is transformed for writing, before this function returns).</p>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a> | <a class="reference internal" href="#ngsidekick.annotations.precomputed.TableHandle" title="ngsidekick.annotations.precomputed._util.TableHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">TableHandle</span></code></a></span>) – <p>DataFrame or TableHandle.
-The index of the DataFrame is used as the annotation ID, so it must be unique.
-The required columns depend on the annotation_type and the coordinate space.
-For example, assuming <code class="docutils literal notranslate"><span class="pre">coord_space.names</span> <span class="pre">==</span> <span class="pre">['x',</span> <span class="pre">'y',</span> <span class="pre">'z']</span></code>,
-then provide the following columns:</p>
-<ul>
-<li><p>For point annotations, provide [‘x’, ‘y’, ‘z’]</p></li>
-<li><p>For line annotations or axis_aligned_bounding_box annotations,
-provide [‘xa’, ‘ya’, ‘za’, ‘xb’, ‘yb’, ‘zb’]</p></li>
-<li><p>For ellipsoid annotations, provide [‘x’, ‘y’, ‘z’, ‘rx’, ‘ry’, ‘rz’]
-for the center point and radii.</p></li>
-</ul>
-<p>You may also provide additional columns to use as annotation properties, in which
-case their column names should be listed in the ‘properties’ argument. (See below.)</p>
-<p>If you provide a TableHandle, the handle’s reference will be unset before this
-function returns, deleting your data if you didn’t retain a reference to it yourself.
-(If you do retain a reference, it defeats the point of using a TableHandle in the first place.)</p>
-</p></li>
-<li><p><strong>coord_space</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoordinateSpace</span></code> | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>] | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>]</span>) – <p><code class="docutils literal notranslate"><span class="pre">neuroglancer.coordinate_space.CoordinateSpace</span></code> or equivalent.
-The coordinate space of the annotations.
-Among other things, this determines which input columns represent the annotation geometry.
-For convenience, we accept a couple different formats for the coordinate space,
-assuming a default scale of 1 nm if no scale/units are provided.</p>
-<p>Examples (all equivalent):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">coord_space</span> <span class="o">=</span> <span class="s2">&quot;xyz&quot;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">coord_space</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">coord_space</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;names&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">]}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">coord_space</span> <span class="o">=</span> <span class="p">{</span>
-<span class="go">    &quot;names&quot;: [&#39;x&#39;, &#39;y&#39;, &#39;z&#39;],</span>
-<span class="go">    &quot;units&quot;: [&#39;nm&#39;, &#39;nm&#39;, &#39;nm&#39;],</span>
-<span class="go">    &quot;scales&quot;: [1, 1, 1]</span>
-<span class="go">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">coord_space</span> <span class="o">=</span> <span class="n">CoordinateSpace</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">],</span>
-<span class="gp">... </span>    <span class="n">scales</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
-<span class="gp">... </span>    <span class="n">units</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nm&#39;</span><span class="p">,</span> <span class="s1">&#39;nm&#39;</span><span class="p">,</span> <span class="s1">&#39;nm&#39;</span><span class="p">]</span>
-<span class="gp">... </span><span class="p">)</span>
-</pre></div>
-</div>
-</p></li>
-<li><p><strong>annotation_type</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<code class="docutils literal notranslate"><span class="pre">'point'</span></code>, <code class="docutils literal notranslate"><span class="pre">'line'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ellipsoid'</span></code>, <code class="docutils literal notranslate"><span class="pre">'axis_aligned_bounding_box'</span></code>]</span>) – Literal[‘point’, ‘line’, ‘ellipsoid’, ‘axis_aligned_bounding_box’]
-The type of annotation to export. Note that the columns you provide in
-the DataFrame depend on the annotation type.</p></li>
-<li><p><strong>properties</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>] | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">AnnotationPropertySpec</span></code>] | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">AnnotationPropertySpec</span></code>] | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>]</span>) – <p>If your dataframe contains columns for annotation properties,
-list the names of those columns here.</p>
-<p>Categorical columns will be automatically converted to integers with associated
-enum labels.</p>
-<p>To provide an rgb or rgba property such as ‘mycolor’, provide separate columns
-in your dataframe named ‘mycolor_r’, ‘mycolor_g’, ‘mycolor_b’ (and ‘mycolor_a’),
-and then include ‘mycolor’ in the properties list here.</p>
-<p>The full property spec for each property will be inferred from the column dtype,
-but if you want to explicitly override any property specs yourself, you can pass
-a list of AnnotationPropertySpec objects here instead of just listing column names.</p>
-<p>Property names must start with a lowercase letter and may contain only letters,
-numbers, and underscores.</p>
-</p></li>
-<li><p><strong>relationships</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – list[str]
-If your annotations have related segment IDs, such relationships can be provided
-in the columns of your DataFrame. Each relationship should be listed in a single column,
-whose values are lists of segment IDs.  In the special case where each annotation has
-exactly one related segment, the column may have dtype=np.uint64 instead of containing lists.</p></li>
-<li><p><strong>output_dir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – str
-The directory into which the exported annotations will be written.
-Subdirectories will be created for the “annotation ID index” and each
-“related object id index” as needed.</p></li>
-<li><p><strong>write_sharded</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – bool
-Whether to write the output as sharded files.
-The sharded format is preferable for most use cases.
-Without sharding, every annotation results in a separate file in the annotation ID index.
-Similarly, every related ID results in a separate file in the related ID index.</p></li>
-<li><p><strong>write_by_id</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – bool
-Whether to write the annotations to the “Annotation ID Index”.
-If False, skip writing.</p></li>
-<li><p><strong>write_relationships</strong> – bool
-Whether to write the relationships to the “Related Object ID Index”.
-If False, skip writing.</p></li>
-<li><p><strong>write_by_spatial_chunk</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – bool
-Whether to write the spatial index.</p></li>
-<li><p><strong>num_spatial_levels</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – int
-The maximum number of spatial index levels to write.
-If not all levels are needed (because all annotations fit within the first N levels),
-then the actual number of levels written will be less than this value.</p></li>
-<li><p><strong>target_chunk_limit</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – <p>int
-For the spatial index, this is how many annotations we aim to place in each
-chunk (regardless of the level).
-If there are more annotations than fit within the specified num_spacial_levels
-while (approximately) adhering to the target_chunk_limit at each level, then the
-extra annotations will be assigned to the last level.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Instead of specifying a valid limit here, you can disable subsampling in neuroglancer
-by setting this to the special value of 0.  In our implementation, this is only valid
-when num_spatial_levels=1.</p>
-</div>
-</p></li>
-<li><p><strong>shuffle_before_assigning_spatial_levels</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – bool
-Whether to shuffle the annotations before assigning spatial levels.
-By default, we shuffle the annotations to avoid any bias in the spatial
-assignment, which is what the neuroglancer spec recommends.
-However, in some use-cases a bias may be desirable (e.g. deliberately
-preferring to show larger annotations when zoomed out).
-So if this is False, the annotations will be assigned to spatial levels in
-the order they appear in the input dataframe, with earlier annotations
-assigned to coarser spatial levels.</p></li>
-<li><p><strong>description</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – str
-A description of the annotation collection.</p></li>
-<li><p><strong>write_by_relationship</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ngsidekick.annotations.precomputed.TableHandle">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.precomputed.</span></span><span class="sig-name descname"><span class="pre">TableHandle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ngsidekick/annotations/precomputed/_util.html#TableHandle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.annotations.precomputed.TableHandle" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<p>A wrapper for a pandas DataFrame that can be provided to transfer ownership
-of the DataFrame to <code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code>, which will delete
-the handle’s reference to the DataFrame as soon as possible to save RAM.</p>
-<p>Example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">handle</span> <span class="o">=</span> <span class="n">TableHandle</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">del</span> <span class="n">df</span>  <span class="c1"># Delete your own reference to the original data</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">write_precomputed_annotations</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;point&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><em>DataFrame</em></a><em> | </em><em>None</em>)</p>
-</dd>
-</dl>
-<dl class="py attribute">
-<dt class="sig sig-object py" id="ngsidekick.annotations.precomputed.TableHandle.df">
-<span class="sig-name descname"><span class="pre">df</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a> <span class="pre">|</span> <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#ngsidekick.annotations.precomputed.TableHandle.df" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 <section id="precomputed-annotations">
 <h2>Precomputed Annotations<a class="headerlink" href="#precomputed-annotations" title="Link to this heading">#</a></h2>
 <p>This module provides tools for working with precomputed annotation formats.</p>
@@ -534,11 +373,6 @@ the handle’s reference to the DataFrame as soon as possible to save RAM.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle"><code class="docutils literal notranslate"><span class="pre">TableHandle</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle.df"><code class="docutils literal notranslate"><span class="pre">TableHandle.df</span></code></a></li>
-</ul>
-</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#precomputed-annotations">Precomputed Annotations</a></li>
 </ul>
   </nav></div>
