@@ -1,7 +1,13 @@
 """
 neuroglancer-related utility functions
 """
-__version__ = "0.1.0"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("ngsidekick")
+except PackageNotFoundError:
+    # Package is not installed
+    __version__ = "unknown"
 
 from .storage import download_ngstate, upload_ngstate, upload_ngstates, upload_json, upload_to_bucket, make_bucket_public
 from .util import parse_nglink, format_nglink, layer_dict, layer_state

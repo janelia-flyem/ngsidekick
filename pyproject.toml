@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.27"]
+requires = ["hatchling>=1.27", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -43,7 +43,7 @@ test = ["pytest>=7"]
 gcs = ["google-cloud-storage"]
 
 [tool.hatch.version]
-path = "src/ngsidekick/__init__.py"
+source = "vcs"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
