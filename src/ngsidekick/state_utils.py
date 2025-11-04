@@ -88,5 +88,6 @@ def layer_state(state, name_pattern):
         if re.match(name_pattern, layer['name']):
             matches.append(layer)
     if len(matches) > 1:
-        raise RuntimeError(f"Found more than one layer matching to the regex '{name_pattern}'")
+        matched_names = [match['name'] for match in matches]
+        raise RuntimeError(f"Found more than one layer matching to the regex '{name_pattern}': {matched_names}")
     return matches[0]
