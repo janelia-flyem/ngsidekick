@@ -1,4 +1,5 @@
 import json
+import os
 from itertools import chain
 from collections.abc import Iterable, Mapping
 from typing import Optional, List, Dict, Union, Literal
@@ -220,6 +221,9 @@ def segment_properties_json(
     }
 
     if output_path:
+        if os.path.isdir(output_path):
+            output_path = os.path.join(output_path, 'info')
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, 'w') as f:
             json.dump(info, f)
 
