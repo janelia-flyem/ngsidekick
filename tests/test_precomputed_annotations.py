@@ -2,6 +2,7 @@ import pytest
 import weakref
 import numpy as np
 import pandas as pd
+from bokeh.palettes import Category10
 
 from neuroglancer.coordinate_space import CoordinateSpace
 from ngsidekick.annotations.precomputed import write_precomputed_annotations, TableHandle
@@ -31,7 +32,6 @@ def _point_testdata(
     points_df = pd.DataFrame(points, columns=[*'xyz'])
     points_df['cluster_id'] = np.repeat(np.arange(num_clusters), num_points_per_cluster).astype(np.uint32)
 
-    from bokeh.palettes import Category10
     colormap = pd.Series(Category10[10])
 
     def hex_to_rgb(h):
