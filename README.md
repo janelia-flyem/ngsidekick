@@ -1,11 +1,27 @@
 # NGSidekick
 
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://janelia-flyem.github.io/ngsidekick/docs/index.html)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)][docs]
 
-Tools for neuroglancer scenes.
+Tools for neuroglancer scenes.  [See docs.][docs]
+
+[docs]: https://janelia-flyem.github.io/ngsidekick/docs/index.html
 
 
 ## Installation
+
+Packages are available from both PyPI and conda-forge.
+
+Using `pixi`:
+
+```bash
+pixi add ngsidekick
+```
+
+Using `conda`:
+
+```bash
+conda install -c conda-forge ngsidekick
+```
 
 Using pip:
 
@@ -17,6 +33,7 @@ Using uv:
 
 ```bash
 uv add ngsidekick
+
 # or in an existing environment
 uv pip install ngsidekick
 ```
@@ -30,8 +47,3 @@ uv venv
 uv pip install -e .[test]
 pytest
 ```
-
-## License
-
-BSD-3-Clause; see `LICENSE`.
-
