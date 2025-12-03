@@ -87,6 +87,9 @@ def layer_state(state, name_pattern):
     for layer in state['layers']:
         if re.match(name_pattern, layer['name']):
             matches.append(layer)
+    if len(matches) == 0:
+        available_names = [layer['name'] for layer in state['layers']]
+        raise RuntimeError(f"No layer found matching to the regex '{name_pattern}'. Available layers: {available_names}")
     if len(matches) > 1:
         matched_names = [match['name'] for match in matches]
         raise RuntimeError(f"Found more than one layer matching to the regex '{name_pattern}': {matched_names}")
