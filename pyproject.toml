@@ -41,6 +41,7 @@ Issues = "https://github.com/janelia-flyem/ngsidekick/issues"
 [project.scripts]
 make-bucket-public = "ngsidekick:make_bucket_public"
 ngvideo-helper = "ngsidekick.ngvideo_helper:main"
+cors-webserver = "ngsidekick.bin.cors_webserver:main"
 
 
 [project.optional-dependencies]

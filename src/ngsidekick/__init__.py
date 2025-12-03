@@ -15,3 +15,4 @@ from .annotations.local import local_annotation_json, extract_local_annotations
 from .annotations.precomputed import write_precomputed_annotations
 from .segmentprops import segment_properties_json, segment_properties_to_dataframe
 from .segmentcolors import hex_string_from_segment_id
+from .cors_server import serve_directory

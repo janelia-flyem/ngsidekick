@@ -192,9 +192,8 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
     
     To run this test: pytest -s -m manual tests/test_precomputed_annotations.py
     """
-    import subprocess
     import json
-    from pathlib import Path
+    from ngsidekick import serve_directory
     
     # First, ensure all test data is written
     print("\nWriting test annotations to", test_output_dir)
@@ -210,18 +209,11 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
     print(f"\nStarting CORS webserver on http://{bind_addr}:{port}")
     print(f"Serving directory: {test_output_dir}")
     
-    cors_server_script = Path(__file__).parent / "cors_webserver.py"
-    server_process = subprocess.Popen(
-        [
-            "python",
-            str(cors_server_script),
-            "--port", str(port),
-            "--bind", bind_addr,
-            "--directory", str(test_output_dir)
-        ],
-        # Don't capture output so we can see Flask logs
-        stdout=None,
-        stderr=None
+    server_process = serve_directory(
+        test_output_dir,
+        port=port,
+        bind=bind_addr,
+        background=True
     )
     
     # Give server time to start

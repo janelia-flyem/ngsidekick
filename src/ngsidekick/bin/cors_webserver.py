@@ -54,7 +54,8 @@ def create_app(directory):
     return app
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the cors-webserver command."""
     ap = argparse.ArgumentParser(
         description="Serve local files with CORS and Range request support for Neuroglancer"
     )
@@ -76,3 +77,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nShutting down server...")
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
+
