@@ -14,8 +14,59 @@ import argparse
 import os
 import sys
 import mimetypes
-from flask import Flask, send_from_directory, after_this_request, request
+from pathlib import Path
+from flask import Flask, send_from_directory, after_this_request, request, Response
 from werkzeug.exceptions import NotFound
+
+
+def generate_directory_listing(dir_path, url_path):
+    """Generate an HTML directory listing for the given directory."""
+    entries = []
+    
+    # Add parent directory link if not at root
+    if url_path:
+        parent = str(Path(url_path).parent)
+        if parent == '.':
+            parent = ''
+        entries.append(f'<li><a href="/{parent}">../</a></li>')
+    
+    # List directory contents
+    try:
+        items = sorted(Path(dir_path).iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+        for item in items:
+            name = item.name
+            if item.is_dir():
+                name += '/'
+            href = f"/{url_path}/{name}" if url_path else f"/{name}"
+            entries.append(f'<li><a href="{href}">{name}</a></li>')
+    except PermissionError:
+        entries.append('<li>Permission denied</li>')
+    
+    display_path = f"/{url_path}" if url_path else "/"
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Directory listing for {display_path}</title>
+    <style>
+        body {{ font-family: monospace; margin: 2em; }}
+        h1 {{ font-size: 1.2em; }}
+        ul {{ list-style: none; padding: 0; }}
+        li {{ padding: 0.2em 0; }}
+        a {{ text-decoration: none; color: #0066cc; }}
+        a:hover {{ text-decoration: underline; }}
+    </style>
+</head>
+<body>
+    <h1>Directory listing for {display_path}</h1>
+    <hr>
+    <ul>
+        {''.join(entries)}
+    </ul>
+    <hr>
+</body>
+</html>"""
+    return html
 
 
 def create_app(directory):
@@ -42,13 +93,18 @@ def create_app(directory):
             print(f"Response: {response.status_code} for {path}", file=sys.stderr)
             return response
         
+        # Build full path and check if it's a directory
+        full_path = Path(directory) / path if path else Path(directory)
+        
+        if full_path.is_dir():
+            # Return directory listing
+            html = generate_directory_listing(full_path, path)
+            return Response(html, mimetype='text/html')
+        
         try:
             # send_from_directory automatically handles Range requests
             return send_from_directory(directory, path if path else '.')
         except NotFound:
-            # Try serving as index
-            if not path or path.endswith('/'):
-                return send_from_directory(directory, 'index.html')
             raise
     
     return app
