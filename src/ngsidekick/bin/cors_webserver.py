@@ -13,10 +13,38 @@ can connect to the web server.
 import argparse
 import os
 import sys
+import socket
 import mimetypes
 from pathlib import Path
 from flask import Flask, send_from_directory, after_this_request, request, Response
 from werkzeug.exceptions import NotFound
+
+
+def get_local_ip_addresses():
+    """Get all local IP addresses for this machine."""
+    ip_addresses = []
+    try:
+        # Get the hostname and try to resolve it
+        hostname = socket.gethostname()
+        # Get all addresses associated with the hostname
+        for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            ip = info[4][0]
+            if ip not in ip_addresses and not ip.startswith('127.'):
+                ip_addresses.append(ip)
+    except socket.gaierror:
+        pass
+    
+    # Also try connecting to an external address to find the default route IP
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(('8.8.8.8', 80))
+            ip = s.getsockname()[0]
+            if ip not in ip_addresses:
+                ip_addresses.insert(0, ip)
+    except OSError:
+        pass
+    
+    return ip_addresses if ip_addresses else ['127.0.0.1']
 
 
 def generate_directory_listing(dir_path, url_path):
@@ -118,13 +146,22 @@ def main():
     ap.add_argument(
         "-p", "--port", type=int, default=9000, help="TCP port to listen on"
     )
-    ap.add_argument("-a", "--bind", default="127.0.0.1", help="Bind address")
+    ap.add_argument("-a", "--bind", default="0.0.0.0", help="Bind address")
     ap.add_argument("-d", "--directory", default=".", help="Directory to serve")
 
     args = ap.parse_args()
     
     directory = os.path.abspath(args.directory)
-    print(f"Serving directory {directory} at http://{args.bind}:{args.port}")
+    print(f"Serving directory: {directory}")
+    
+    if args.bind == '0.0.0.0':
+        # Show all available addresses
+        print("Server available at:")
+        print(f"  http://localhost:{args.port}")
+        for ip in get_local_ip_addresses():
+            print(f"  http://{ip}:{args.port}")
+    else:
+        print(f"Server available at: http://{args.bind}:{args.port}")
     
     app = create_app(directory)
     
