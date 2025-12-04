@@ -30,6 +30,7 @@ dependencies = [
   "tensorstore",
   "neuroglancer",
   "requests",
+  "flask"
 ]
 dynamic = ["version"]
 
@@ -45,7 +46,7 @@ cors-webserver = "ngsidekick.bin.cors_webserver:main"
 
 
 [project.optional-dependencies]
-test = ["pytest>=7", "flask", "bokeh"]
+test = ["pytest>=7", "bokeh"]
 gcs = ["google-cloud-storage"]
 docs = [
   "sphinx>=7.0",
