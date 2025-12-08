@@ -559,7 +559,7 @@ def _disambiguate_tags(df):
     col_tags = [
         (col, tag)
         for col in df.columns
-        for tag in df[col].dtype.categories
+            for tag in df[col].dtype.categories
     ]
     col_tags = pd.DataFrame(col_tags, columns=['col', 'tag'])
 
@@ -602,7 +602,11 @@ def _tag_description_list(unique_tags, tag_descriptions):
     return td
 
 
-def segment_properties_to_dataframe(js: dict, consolidate_tags_by_prefix: bool = True, return_separate_tags: bool = False):
+def segment_properties_to_dataframe(
+    js: dict,
+    consolidate_tags_by_prefix: bool = True,
+    return_separate_tags: bool = False
+):
     """
     Converts segment properties info JSON to DataFrame.
 
@@ -698,9 +702,11 @@ def _convert_tags_to_dataframe(segment_ids, tags_props, consolidate_tags_by_pref
         tag_cat = pd.Categorical.from_codes(code_column, unique_tags)
         tag_cat = tag_cat.remove_unused_categories()
         tag_cat = tag_cat.rename_categories({
-            tag: tag.split(':', 1)[1] if ':' in tag else tag
+            tag: tag.split(':', 1)[1]
+            if ':' in tag else tag
             for tag in tag_cat.dtype.categories
         })
         tag_categoricals[prefix] = tag_cat
 
     return pd.DataFrame(tag_categoricals, segment_ids)
+
