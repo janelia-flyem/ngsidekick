@@ -687,7 +687,12 @@ def _convert_tags_to_dataframe(segment_ids, tags_props, consolidate_tags_by_pref
         flags_matrix[code_rows, flat_tag_codes] = True
         return pd.DataFrame(flags_matrix, segment_ids, unique_tags)
 
-    tag_prefixes = pd.Series([tag.split(':', 1)[0] for tag in unique_tags]).astype('category')
+
+    # Extract prefixes. Convert to categories (for speed), but preserve order
+    # among prefixes (as long as tags with the same prefix occur contiguously).
+    tag_prefixes = pd.Series([tag.split(':', 1)[0] for tag in unique_tags])
+    tag_prefixes = tag_prefixes.astype(pd.CategoricalDtype(categories=tag_prefixes.unique()))
+
     flat_prefixes = flat_tag_codes.map(tag_prefixes)
 
     # Assemble the flattened codes into a matrix (row per segment, column per prefix).
@@ -709,4 +714,3 @@ def _convert_tags_to_dataframe(segment_ids, tags_props, consolidate_tags_by_pref
         tag_categoricals[prefix] = tag_cat
 
     return pd.DataFrame(tag_categoricals, segment_ids)
-
