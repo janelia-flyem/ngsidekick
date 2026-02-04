@@ -5,7 +5,9 @@ import json
 import argparse
 import tempfile
 import subprocess
+from functools import partial
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from tqdm.auto import tqdm
 
 
 def upload_ngstates(bucket_dir, states, threads=0, processes=0, disable_cache=False, return_prefix='https://neuroglancer-demo.appspot.com'):
@@ -53,13 +55,13 @@ def upload_ngstates(bucket_dir, states, threads=0, processes=0, disable_cache=Fa
 
     if processes > 0:
         with ProcessPoolExecutor(max_workers=processes) as executor:
-            urls = list(executor.map(lambda args: upload_to_bucket(*args), args))
+            urls = list(tqdm(executor.map(partial(starcall, upload_to_bucket), args), total=len(args)))
     elif threads > 0:
         with ThreadPoolExecutor(max_workers=threads) as executor:
-            urls = list(executor.map(lambda args: upload_to_bucket(*args), args))
+            urls = list(tqdm(executor.map(partial(starcall, upload_to_bucket), args), total=len(args)))
     else:
         # Sequential execution
-        urls = [upload_to_bucket(*arg_tuple) for arg_tuple in args]
+        urls = list(tqdm(map(partial(starcall, upload_to_bucket), args), total=len(args)))
 
     if return_prefix:
         old_prefix = 'https://storage.googleapis.com/'
@@ -67,6 +69,10 @@ def upload_ngstates(bucket_dir, states, threads=0, processes=0, disable_cache=Fa
         return_prefix = return_prefix.rstrip('/') + '/#!gs://'
         urls = [url.replace(old_prefix, return_prefix) for url in urls]
     return urls
+
+
+def starcall(f, args):
+    return f(*args)
 
 
 def upload_ngstate(bucket_path, state, disable_cache=False, return_prefix='https://neuroglancer-demo.appspot.com'):
