@@ -189,6 +189,12 @@ def write_precomputed_annotations(
             str
             A description of the annotation collection.
     """
+    if write_by_spatial_chunk and num_spatial_levels == 0:
+        raise ValueError(
+            "If you want to write the spatial index, you must "
+            "specify a non-zero value for num_spatial_levels."
+        )
+
     if isinstance(df, TableHandle):
         # Take ownership of the dataframe.
         handle, df = df, df.df
