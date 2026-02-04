@@ -3,7 +3,7 @@ import shutil
 from dataclasses import dataclass
 from typing import Literal
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import tensorstore as ts
 
 from ._util import _encode_uint64_series
