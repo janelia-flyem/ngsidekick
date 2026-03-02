@@ -28,15 +28,16 @@ def serve_directory(
     directory,
     port=9000,
     bind="0.0.0.0",
+    host=None,
     background=False,
     capture_output=False,
     log_to_file=False
 ):
     """
     Serve files from a directory with CORS support for Neuroglancer.
-    
+
     This launches the cors-webserver script as a subprocess.
-    
+
     Parameters
     ----------
     directory : str or Path
@@ -45,6 +46,10 @@ def serve_directory(
         TCP port to listen on. Default is 9000.
     bind : str, optional
         Address to bind to. Default is "0.0.0.0" (all interfaces).
+    host : str, optional
+        Hostname to use in the returned URL. Default is "localhost".
+        Use "ip" to auto-detect the machine's LAN IP address,
+        which is useful when accessing the server from a remote browser.
     background : bool, optional
         If True, run the server in the background and return the subprocess.Popen
         object immediately. If False (default), block until the server is interrupted.
@@ -55,42 +60,46 @@ def serve_directory(
         If True, redirect all server output to a file in /tmp/.
         The file path will be available in the returned ServerInfo.log_file.
         Only useful when background=True.
-        
+
     Returns
     -------
     ServerInfo or int
         If background=True, returns a ServerInfo namedtuple with 'process' (Popen),
         'url' (str), and 'log_file' (str or None) attributes.
         If background=False, returns the exit code of the server process.
-        
+
     Examples
     --------
     Blocking usage (runs until Ctrl+C):
-    
+
     >>> serve_directory("/path/to/data", port=9000)
-    
+
     Background usage:
-    
+
     >>> server = serve_directory("/path/to/data", port=9000, background=True)
     >>> print(f"Server running at {server.url}")
     >>> # ... do other work ...
     >>> server.process.terminate()
     >>> server.process.wait(timeout=5)
+
+    Remote access (run notebook on a cluster, open viewer in local browser):
+
+    >>> server = serve_directory("/path/to/data", port=9000, host="ip", background=True)
     """
     directory = Path(directory).resolve()
-    
+
     cmd = [
         sys.executable, "-m", "ngsidekick.bin.cors_webserver",
         "--port", str(port),
         "--bind", bind,
         "--directory", str(directory)
     ]
-    
+
     if background:
         kwargs = {}
         log_file_path = None
         log_file_handle = None
-        
+
         if log_to_file:
             log_file_path = f"/tmp/cors_server_{port}.log"
             log_file_handle = open(log_file_path, 'w')
@@ -99,9 +108,13 @@ def serve_directory(
         elif capture_output:
             kwargs['stdout'] = subprocess.PIPE
             kwargs['stderr'] = subprocess.PIPE
-        
+
         proc = subprocess.Popen(cmd, **kwargs)
-        url = f"http://{_get_local_ip()}:{port}"
+        if host is None:
+            host = "localhost"
+        elif host == "ip":
+            host = _get_local_ip()
+        url = f"http://{host}:{port}"
         return ServerInfo(proc, url, log_file_path)
     else:
         result = subprocess.run(cmd)
