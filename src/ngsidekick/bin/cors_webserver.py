@@ -100,11 +100,20 @@ def generate_directory_listing(dir_path, url_path):
 def create_app(directory):
     """Create a Flask app that serves files from the given directory."""
     app = Flask(__name__)
-    
+
     # Add custom MIME types for neuroglancer
     mimetypes.add_type('application/json', '')  # Files without extension
     mimetypes.add_type('application/octet-stream', '.shard')
-    
+
+    @app.after_request
+    def add_cors_headers(response):
+        """Add CORS headers to ALL responses, including auto-generated OPTIONS."""
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Range'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Length, Content-Range, Accept-Ranges'
+        response.headers['Access-Control-Allow-Private-Network'] = 'true'
+        return response
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_file(path):
@@ -112,15 +121,12 @@ def create_app(directory):
         # Log the request
         range_header = request.headers.get('Range', 'no range')
         print(f"Request: {path} [{range_header}]", file=sys.stderr)
-        
+
         @after_this_request
-        def add_cors_headers(response):
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            response.headers['Access-Control-Allow-Headers'] = 'Range'
-            response.headers['Access-Control-Expose-Headers'] = 'Content-Length, Content-Range, Accept-Ranges'
+        def log_response(response):
             print(f"Response: {response.status_code} for {path}", file=sys.stderr)
             return response
-        
+
         # Build full path and check if it's a directory
         full_path = Path(directory) / path if path else Path(directory)
         
