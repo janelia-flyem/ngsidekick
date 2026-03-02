@@ -85,7 +85,7 @@ def upload_ngstate(bucket_path, state, disable_cache=False, return_prefix='https
 
     Args:
         bucket_path: str
-            The bucket directory to upload the state to, such as 'gs://mybucket/mydir'
+            The bucket directory and filenname to upload the state to, such as 'gs://mybucket/mydir/mystate.json'
         state: dict
             The neuroglancer state to upload.
         disable_cache: bool
