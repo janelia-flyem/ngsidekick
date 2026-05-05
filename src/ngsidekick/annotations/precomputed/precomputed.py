@@ -259,13 +259,6 @@ def write_precomputed_annotations(
         )
     
     # Write the top-level 'info' file for the annotation output directory.
-    # Check for NaN in bounds (which would produce invalid JSON)
-    if np.any(np.isnan(bounds[0])) or np.any(np.isnan(bounds[1])):
-        raise ValueError(
-            f"Bounds contain NaN values: lower={bounds[0]}, upper={bounds[1]}. "
-            "Check your input data for missing or invalid coordinate values."
-        )
-
     info = {
         "@type": "neuroglancer_annotations_v1",
         "dimensions": coord_space.to_json(),
@@ -336,10 +329,15 @@ def _get_bounds(df, coord_space, annotation_type):
     Inspect the geometry columns of the given dataframe to
     determine the overall upper and lower bounds of the annotations.
 
+    Also checks for the presence of NaN values in the geometry columns,
+    and raises a ValueError if any are found.
+
     Returns:
         lower_bound, upper_bound
         (both numpy arrays of length 3)
     """
+    bounds = None
+
     geometry_cols = _geometry_cols(coord_space.names, annotation_type)
     if not (required_cols := set(chain(*geometry_cols))) <= set(df.columns):
         raise ValueError(
@@ -349,28 +347,38 @@ def _get_bounds(df, coord_space, annotation_type):
 
     if annotation_type == 'point':
         points = df[geometry_cols[0]]
-        return (
-            points.min(axis=0).to_numpy(),
-            points.max(axis=0).to_numpy()
+        bounds = (
+            points.min(skipna=False).to_numpy(),
+            points.max(skipna=False).to_numpy()
         )
 
     if annotation_type in ('line', 'axis_aligned_bounding_box'):
         points_a = df[geometry_cols[0]]
         points_b = df[geometry_cols[1]]
-        return (
-            np.minimum(points_a.min().to_numpy(), points_b.min().to_numpy()),
-            np.maximum(points_a.max().to_numpy(), points_b.max().to_numpy())
+        bounds = (
+            np.minimum(points_a.min(skipna=False).to_numpy(), points_b.min(skipna=False).to_numpy()),
+            np.maximum(points_a.max(skipna=False).to_numpy(), points_b.max(skipna=False).to_numpy())
         )
 
     if annotation_type == 'ellipsoid':
         center = df[geometry_cols[0]].to_numpy()
         radii = df[geometry_cols[1]].to_numpy()
-        return np.asarray([
+        bounds = np.asarray([
             (center - radii).min(axis=0),
             (center + radii).max(axis=0)
         ])
 
-    raise ValueError(f"Annotation type {annotation_type} not supported")
+    if bounds is None:
+        raise ValueError(f"Annotation type {annotation_type} not supported")
+
+    # Check for NaN in bounds (which would produce invalid JSON in the info file)
+    if np.any(np.isnan(bounds[0])) or np.any(np.isnan(bounds[1])):
+        raise ValueError(
+            f"Bounds contain NaN values: lower={bounds[0]}, upper={bounds[1]}. "
+            "Check your input data for missing or invalid coordinate values."
+        )
+
+    return bounds
 
 
 def _encode_annotations(df, coord_space, annotation_type, property_specs, relationships):
