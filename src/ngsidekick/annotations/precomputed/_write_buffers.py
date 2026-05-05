@@ -57,6 +57,8 @@ def _write_buffers_unsharded(buf_series, output_dir, subdir):
     Returns:
         JSON metadata, always {"key": subdir}
     """
+    output_dir = os.path.abspath(output_dir)
+
     # In the unsharded format, the keys are just strings (e.g. decimal IDs).
     string_keys = buf_series.index.astype(str)
     buf_series = buf_series.set_axis(string_keys)
@@ -90,6 +92,8 @@ def _write_buffers_sharded(buf_series, output_dir, subdir):
     Returns:
         JSON metadata, including the output "key" (subdir) and sharding spec.
     """
+    output_dir = os.path.abspath(output_dir)
+
     # When writing sharded data, we must use encoded bigendian uint64 as the key.
     # https://github.com/google/neuroglancer/pull/522#issuecomment-1923137085
     bigendian_keys = _encode_uint64_series(buf_series.index, '>u8')
