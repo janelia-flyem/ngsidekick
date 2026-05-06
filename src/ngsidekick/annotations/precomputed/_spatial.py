@@ -322,13 +322,8 @@ def _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bo
     boxes[swap_mask] = boxes[:, ::-1, :][swap_mask]
 
     chunk_shapes = gridspec.chunk_shapes[df['level']]
-
-    # FIXME: would be faster to compute the spans in _grid_box_codes()
-    grid_spans = np.zeros_like(boxes, np.uint64)
-    grid_spans[:, 0] = np.floor((boxes[:, 0] - bounds[0]) / chunk_shapes).astype(np.uint64)
-    grid_spans[:, 1] = np.ceil((boxes[:, 1] - bounds[0]) / chunk_shapes).astype(np.uint64)
-
-    df[f'chunk_code'] = _box_grid_codes(grid_spans, gridspec.grid_shapes[df['level']])
+    grid_shapes = gridspec.grid_shapes[df['level']]
+    df[f'chunk_code'] = _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds)
 
     # Duplicate the annotations which span multiple chunks.
     df = df[['level', 'chunk_code', 'id_buf', 'ann_buf']].explode('chunk_code')
@@ -336,9 +331,13 @@ def _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bo
 
 
 @njit
-def _box_grid_codes(grid_spans, grid_shapes):
+def _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds):
+    D = len(bounds[0])
     lists = List()
-    for grid_span, grid_shape in zip(grid_spans, grid_shapes):
+    for box, chunk_shape, grid_shape in zip(boxes, chunk_shapes, grid_shapes):
+        grid_span = np.zeros((2, D), np.uint64)
+        grid_span[0] = np.floor((box[ 0] - bounds[0]) / chunk_shape).astype(np.uint64)
+        grid_span[1] = np.ceil((box[1] - bounds[0]) / chunk_shape).astype(np.uint64)
         grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
 
         # Switch to C order before computing compressed morton code.
