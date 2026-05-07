@@ -15,6 +15,7 @@ from ._util import _encode_uint64_series, _geometry_cols, TableHandle
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships, _encode_relationships
 from ._spatial import _write_annotations_by_spatial_chunk
+from ._write_buffers import _default_max_threads
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ def write_precomputed_annotations(
     num_spatial_levels: int = 7,
     target_chunk_limit: int = 10_000,
     shuffle_before_assigning_spatial_levels: bool = True,
+    max_threads: int | None = None,
+    max_shards_per_transaction: int | None = None,
     description: str = "",
 ):
     """
@@ -184,7 +187,26 @@ def write_precomputed_annotations(
             So if this is False, the annotations will be assigned to spatial levels in
             the order they appear in the input dataframe, with earlier annotations
             assigned to coarser spatial levels.
-        
+
+        max_threads:
+            int or None
+            Caps tensorstore's internal thread pool (data-copy and file-I/O
+            concurrency) when writing. Defaults to ``LSB_DJOB_NUMPROC`` on
+            LSF clusters, otherwise ``multiprocessing.cpu_count()``.
+
+        max_shards_per_transaction:
+            int or None
+            (Sharded mode only.) Caps the number of shards committed in a
+            single tensorstore transaction. Tensorstore parallelizes the
+            per-shard work (encode, compress, write) inside a transaction
+            across its internal thread pool, so this knob trades RAM (more
+            shards staged in memory at once) for throughput and effective
+            CPU utilization (more parallel work available at commit).
+
+            Defaults to ``max_threads`` so each transaction can saturate
+            the available threads. Set higher for better throughput at
+            extra RAM cost, or lower to reduce peak RAM.
+
         description:
             str
             A description of the annotation collection.
@@ -193,6 +215,18 @@ def write_precomputed_annotations(
         raise ValueError(
             "If you want to write the spatial index, you must "
             "specify a non-zero value for num_spatial_levels."
+        )
+
+    # Resolve concurrency parameters once so all index writes share the
+    # same batching and thread-cap behavior.
+    if max_threads is None:
+        max_threads = _default_max_threads()
+    if max_shards_per_transaction is None:
+        max_shards_per_transaction = max_threads
+    if write_sharded:
+        logger.info(
+            f"Sharded writes will use up to {max_shards_per_transaction} "
+            f"shards per transaction with up to {max_threads} tensorstore threads."
         )
 
     if isinstance(df, TableHandle):
@@ -222,7 +256,9 @@ def write_precomputed_annotations(
         by_id_metadata = _write_annotations_by_id(
             df,
             output_dir,
-            write_sharded
+            write_sharded,
+            max_shards_per_transaction,
+            max_threads,
         )
 
     if write_by_relationship:
@@ -236,12 +272,14 @@ def write_precomputed_annotations(
     del df
 
     by_rel_metadata = []
-    if write_by_relationship:    
+    if write_by_relationship:
         by_rel_metadata = _write_annotations_by_relationships(
             df_handle_for_rel,
             relationships,
             output_dir,
-            write_sharded
+            write_sharded,
+            max_shards_per_transaction,
+            max_threads,
         )
 
     spatial_metadata = []
@@ -255,7 +293,9 @@ def write_precomputed_annotations(
             target_chunk_limit,
             shuffle_before_assigning_spatial_levels,
             output_dir,
-            write_sharded
+            write_sharded,
+            max_shards_per_transaction,
+            max_threads,
         )
     
     # Write the top-level 'info' file for the annotation output directory.

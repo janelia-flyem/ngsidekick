@@ -85,7 +85,7 @@ def _encode_related_ids(related_ids):
         return np.array(encoded_ids, dtype=object)
 
 
-def _write_annotations_by_relationships(df_handle: TableHandle, relationships, output_dir, write_sharded):
+def _write_annotations_by_relationships(df_handle: TableHandle, relationships, output_dir, write_sharded, max_shards_per_transaction, max_threads):
     """
     Write the annotations to a "Related Object ID Index" for each relationship.
     Each relationship is written to a separate subdirectory of output_dir.
@@ -105,6 +105,9 @@ def _write_annotations_by_relationships(df_handle: TableHandle, relationships, o
         write_sharded:
             Whether to write the annotations in sharded format.
 
+        max_shards_per_transaction, max_threads:
+            See :func:`._write_buffers._write_buffers`.
+
     Returns:
         JSON metadata to be written under the 'relationships' key in the top-level 'info' file,
         consisting of a list of JSON objects (one for each relationship).
@@ -120,14 +123,16 @@ def _write_annotations_by_relationships(df_handle: TableHandle, relationships, o
             df_handle,
             relationship,
             output_dir,
-            write_sharded
+            write_sharded,
+            max_shards_per_transaction,
+            max_threads,
         )
         by_rel_metadata.append(metadata)
 
     return by_rel_metadata
 
 
-def _write_annotations_by_relationship(df_handle: TableHandle, relationship, output_dir, write_sharded):
+def _write_annotations_by_relationship(df_handle: TableHandle, relationship, output_dir, write_sharded, max_shards_per_transaction, max_threads):
     """
     Write the annotations to a "Related Object ID Index" for a single relationship.
 
@@ -155,7 +160,9 @@ def _write_annotations_by_relationship(df_handle: TableHandle, relationship, out
         bufs_by_segment['combined_buf'],
         output_dir,
         f"by_rel_{relationship}",
-        write_sharded
+        write_sharded,
+        max_shards_per_transaction,
+        max_threads,
     )
     metadata['id'] = relationship
     return metadata

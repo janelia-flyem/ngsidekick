@@ -1,5 +1,7 @@
 import os
+import logging
 import shutil
+import multiprocessing
 from dataclasses import dataclass
 from typing import Literal
 
@@ -10,8 +12,24 @@ import tensorstore as ts
 from ._util import _encode_uint64_series
 from ._shard_hash import shards_for_keys
 
+logger = logging.getLogger(__name__)
 
-def _write_buffers(buf_series, output_dir, subdir, write_sharded):
+
+def _default_max_threads():
+    """
+    Process-level default for the number of CPU threads we'll let
+    tensorstore use during sharded writes.
+
+    On LSF clusters, ``LSB_DJOB_NUMPROC`` reflects the actual job slot
+    count and is preferred over ``multiprocessing.cpu_count()`` (which
+    would otherwise see all hardware cores even on a smaller slot).
+    """
+    if (n := os.environ.get('LSB_DJOB_NUMPROC')):
+        return int(n)
+    return multiprocessing.cpu_count()
+
+
+def _write_buffers(buf_series, output_dir, subdir, write_sharded, max_shards_per_transaction, max_threads):
     """
     Write the buffers to the appropriate subdirectory of output_dir,
     in sharded or unsharded format.
@@ -35,6 +53,17 @@ def _write_buffers(buf_series, output_dir, subdir, write_sharded):
             If True, write the buffers in sharded format.
             If False, write one file per item.
 
+        max_shards_per_transaction:
+            int
+            (Sharded mode only.) Caps the number of shards committed in a
+            single tensorstore transaction, controlling the RAM/throughput
+            tradeoff.
+
+        max_threads:
+            int
+            Caps tensorstore's internal data-copy and file-I/O thread pool
+            via the ``ts.Context`` constructed when opening the kvstore.
+
     Returns:
         JSON metadata for the written data, including the key (subdir)
         and sharding spec if applicable.
@@ -43,12 +72,12 @@ def _write_buffers(buf_series, output_dir, subdir, write_sharded):
         shutil.rmtree(f"{output_dir}/{subdir}")
 
     if write_sharded:
-        return _write_buffers_sharded(buf_series, output_dir, subdir)
+        return _write_buffers_sharded(buf_series, output_dir, subdir, max_shards_per_transaction, max_threads)
     else:
-        return _write_buffers_unsharded(buf_series, output_dir, subdir)
+        return _write_buffers_unsharded(buf_series, output_dir, subdir, max_threads)
 
 
-def _write_buffers_unsharded(buf_series, output_dir, subdir):
+def _write_buffers_unsharded(buf_series, output_dir, subdir, max_threads):
     """
     Write the buffers to the appropriate subdirectory of output_dir,
     in unsharded format, i.e. one file per item.
@@ -69,7 +98,11 @@ def _write_buffers_unsharded(buf_series, output_dir, subdir):
     # standard Python open() and write() here for each key.
     # Using tensorstore here is mostly just a matter of taste, but it will
     # become useful if we ever support alternative storage backends such as gcs.
-    kvstore = ts.KvStore.open(f"file://{output_dir}/{subdir}/").result()
+    context = ts.Context({
+        "data_copy_concurrency": {"limit": max_threads},
+        "file_io_concurrency": {"limit": max_threads},
+    })
+    kvstore = ts.KvStore.open(f"file://{output_dir}/{subdir}/", context=context).result()
 
     # Using a transaction here is not necessary, at least for plain files.
     # I'm not sure if it helps or hurts, but it probably doesn't matter much
@@ -83,13 +116,33 @@ def _write_buffers_unsharded(buf_series, output_dir, subdir):
     return metadata
 
 
-def _write_buffers_sharded(buf_series, output_dir, subdir):
+def _write_buffers_sharded(buf_series, output_dir, subdir, max_shards_per_transaction, max_threads):
     """
     Write the buffers to the appropriate subdirectory of output_dir,
     in sharded format.
 
     The index of buf_series is used as the key for each item,
     after being encoded as a bigendian uint64.
+
+    Args:
+        buf_series, output_dir, subdir:
+            See :func:`_write_buffers`.
+
+        max_shards_per_transaction:
+            int
+            Caps how many shards' worth of data may be staged in a single
+            tensorstore transaction. Within a single transaction tensorstore
+            parallelizes encoding, compression, and writing across its
+            internal thread pool — so a transaction containing many shards
+            saturates the available cores at commit, while a transaction
+            containing one shard leaves them idle. The tradeoff is RAM:
+            tensorstore holds every staged shard's data in memory until
+            commit.
+
+        max_threads:
+            int
+            Caps tensorstore's internal data-copy and file-I/O thread pool
+            via the ``ts.Context`` constructed when opening the kvstore.
 
     Returns:
         JSON metadata, including the output "key" (subdir) and sharding spec.
@@ -107,16 +160,18 @@ def _write_buffers_sharded(buf_series, output_dir, subdir):
         "metadata": shard_spec.to_json(),
         "base": f"file://{output_dir}/{subdir}",
     }
-    kvstore = ts.KvStore.open(spec).result()
+    context = ts.Context({
+        "data_copy_concurrency": {"limit": max_threads},
+        "file_io_concurrency": {"limit": max_threads},
+    })
+    kvstore = ts.KvStore.open(spec, context=context).result()
 
-    # Tensorstore writes shards in transaction-commit order, holding all
-    # pending shard data in RAM until commit. Wrapping all writes in a
-    # single transaction therefore forces every shard to live in memory
-    # simultaneously, which can balloon to hundreds of GB for large inputs.
-    #
-    # We instead pre-compute which shard each key will land in (replicating
-    # tensorstore's hash) and use one transaction per shard. Each shard's
-    # data leaves RAM as soon as that shard's transaction commits.
+    # Pre-compute which shard each key will land in (replicating tensorstore's
+    # hash) so we can group writes into shard-aligned batches and commit each
+    # batch as its own transaction. This caps peak RAM (tensorstore buffers
+    # every staged shard until commit) while still letting tensorstore
+    # parallelize the per-shard commit work across its thread pool: each
+    # transaction owns up to ``max_shards_per_transaction`` distinct shards.
     shard_assignments = shards_for_keys(buf_series.index, shard_spec)
 
     # Now re-encode the index as bigendian-uint64 byte buffers, as tensorstore's
@@ -125,8 +180,15 @@ def _write_buffers_sharded(buf_series, output_dir, subdir):
     bigendian_keys = _encode_uint64_series(buf_series.index, '>u8')
     buf_series = buf_series.set_axis(bigendian_keys)
 
+    # Bucket adjacent shard numbers into batches. Shard numbers occupy
+    # [0, 2**shard_bits), so integer-dividing by max_shards_per_transaction
+    # yields up to ``max_shards_per_transaction`` distinct shards per batch.
+    # When ``max_shards_per_transaction`` >= 2**shard_bits all data lands in
+    # one batch (matching the prior single-transaction behavior).
+    batches = shard_assignments // np.uint64(max_shards_per_transaction)
+
     with tqdm(total=len(buf_series)) as pbar:
-        for _shard, group in buf_series.groupby(shard_assignments, sort=False):
+        for _batch, group in buf_series.groupby(batches, sort=False):
             with ts.Transaction() as txn:
                 txn_kv = kvstore.with_transaction(txn)
                 for key, buf in group.items():

@@ -24,7 +24,9 @@ def _write_annotations_by_spatial_chunk(
         target_chunk_limit,
         shuffle_before_assigning_spatial_levels,
         output_dir,
-        write_sharded
+        write_sharded,
+        max_shards_per_transaction,
+        max_threads,
 ):
     """
     Write the annotations to the spatial index.
@@ -101,7 +103,9 @@ def _write_annotations_by_spatial_chunk(
         gridspec,
         (target_chunk_limit == 0),
         output_dir,
-        write_sharded
+        write_sharded,
+        max_shards_per_transaction,
+        max_threads,
     )
     return metadata
 
@@ -541,7 +545,7 @@ def _line_chunk_overlap(point_a, point_b, grid_origin, cell_shape, grid_index):
     return max_t >= min_t
 
 
-def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_subsampling, output_dir, write_sharded):
+def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_subsampling, output_dir, write_sharded, max_shards_per_transaction, max_threads):
     """
     Write the spatial index, given a dataframe in which the 'level'
     and grid chunk codes for each annotation have already been assigned.
@@ -559,6 +563,8 @@ def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_su
             Subdirectories will be created for each level of the spatial index.
         write_sharded:
             Whether to write the annotations in sharded format.
+        max_shards_per_transaction, max_threads:
+            See :func:`._write_buffers._write_buffers`.
 
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
@@ -600,7 +606,9 @@ def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_su
             level_bufs['combined_buf'],
             output_dir,
             f"by_spatial_level_{level}",
-            write_sharded
+            write_sharded,
+            max_shards_per_transaction,
+            max_threads,
         )
         level_metadata['chunk_size'] = gridspec.chunk_shapes[level].tolist()
         level_metadata['grid_shape'] = gridspec.grid_shapes[level].tolist()

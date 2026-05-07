@@ -137,6 +137,66 @@ def test_shards_for_keys_set_matches_tensorstore(spec, tmp_path):
     assert _shard_files(tmp_path) == predicted
 
 
+@pytest.mark.parametrize("max_shards_per_transaction", [1, 4, 32, 1024])
+def test_max_shards_per_transaction_roundtrip(tmp_path, max_shards_per_transaction):
+    """
+    Regardless of how aggressively we batch shards into transactions, every
+    written value must be readable, and the produced shard files must match
+    the predicted set. Covers both the per-shard end of the spectrum
+    (max=1) and the single-transaction end (max>=num_shards).
+    """
+    from ngsidekick.annotations.precomputed._write_buffers import _write_buffers_sharded
+
+    rng = np.random.default_rng(11)
+    n = 5_000
+    ids = rng.choice(np.arange(1, 10_000_000), size=n, replace=False).astype(np.uint64)
+    bufs = [bytes(rng.integers(0, 256, size=rng.integers(20, 100), dtype=np.uint8)) for _ in range(n)]
+    truth = dict(zip(ids.tolist(), bufs))
+    buf_series = pd.Series(bufs, index=pd.Index(ids, name='id'))
+
+    # Force a non-trivial multi-shard layout so the batching parameter is
+    # actually exercised at all values of max_shards_per_transaction.
+    orig_choose = wb._choose_output_spec
+    def force_multi_shard(*args, **kwargs):
+        spec = orig_choose(*args, **kwargs)
+        spec.shard_bits = 4   # 16 shards
+        spec.minishard_bits = 2
+        return spec
+    wb._choose_output_spec = force_multi_shard
+    try:
+        metadata = _write_buffers_sharded(
+            buf_series, str(tmp_path), "sub",
+            max_shards_per_transaction,
+            max_threads=2,
+        )
+    finally:
+        wb._choose_output_spec = orig_choose
+
+    sharding = metadata['sharding']
+    spec = _shard_spec(
+        hash=sharding['hash'],
+        preshift_bits=sharding['preshift_bits'],
+        shard_bits=sharding['shard_bits'],
+        minishard_bits=sharding['minishard_bits'],
+        data_encoding=sharding['data_encoding'],
+        minishard_index_encoding=sharding['minishard_index_encoding'],
+    )
+
+    sub_dir = tmp_path / "sub"
+    predicted = {int(s) for s in shards_for_keys(ids, spec)}
+    assert _shard_files(sub_dir) == predicted
+
+    # Round-trip every value via tensorstore.
+    kv = ts.KvStore.open({
+        "driver": "neuroglancer_uint64_sharded",
+        "metadata": sharding,
+        "base": f"file://{sub_dir}",
+    }).result()
+    for k, v_truth in truth.items():
+        rr = kv.read(_be_key(int(k))).result()
+        assert rr.state == 'value' and bytes(rr.value) == v_truth, f"id {k} bad"
+
+
 def test_write_precomputed_annotations_shard_placement(tmp_path, monkeypatch):
     """
     End-to-end: write point annotations via the public
