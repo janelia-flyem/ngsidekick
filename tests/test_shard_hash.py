@@ -1,0 +1,220 @@
+"""
+Tests for our re-implementation of tensorstore's neuroglancer_uint64_sharded
+key-to-shard mapping, and for the per-shard batched write path that depends
+on it.
+
+The shard-prediction logic in ``_shard_hash.py`` exists to let us split
+a single huge tensorstore transaction into per-shard transactions, which
+cuts peak RAM by an order of magnitude on large writes. If our prediction
+ever diverges from tensorstore's actual placement, sharded writes could
+silently land in the wrong file (or, more likely, just lose the RAM
+benefit of being shard-aligned). These tests are the safety net for that.
+"""
+import os
+import json
+import glob
+
+import numpy as np
+import pandas as pd
+import pytest
+import tensorstore as ts
+
+from neuroglancer.coordinate_space import CoordinateSpace
+
+from ngsidekick.annotations.precomputed import write_precomputed_annotations
+from ngsidekick.annotations.precomputed import _write_buffers as wb
+from ngsidekick.annotations.precomputed._shard_hash import (
+    shards_for_keys,
+    _murmurhash3_x86_128_low64,
+)
+from ngsidekick.annotations.precomputed._write_buffers import ShardSpec
+
+
+def _be_key(uint64_value):
+    """
+    Encode a single uint64 as 8 bigendian bytes — the only key form accepted
+    by the tensorstore neuroglancer_uint64_sharded driver.
+    """
+    return np.array([uint64_value], dtype=np.uint64).astype('>u8').tobytes()
+
+
+def _shard_spec(hash, preshift_bits, shard_bits, minishard_bits,
+                data_encoding="raw", minishard_index_encoding="raw"):
+    return ShardSpec(
+        type="neuroglancer_uint64_sharded_v1",
+        hash=hash,
+        preshift_bits=preshift_bits,
+        shard_bits=shard_bits,
+        minishard_bits=minishard_bits,
+        data_encoding=data_encoding,
+        minishard_index_encoding=minishard_index_encoding,
+    )
+
+
+def _shard_files(base_dir):
+    """Return the set of shard numbers for which a .shard file exists."""
+    return {
+        int(os.path.basename(f).split('.')[0], 16)
+        for f in glob.glob(os.path.join(str(base_dir), "*.shard"))
+    }
+
+
+# Golden vectors copied verbatim from tensorstore's
+# tensorstore/kvstore/neuroglancer_uint64_sharded/murmurhash3_test.cc
+# (the rows where the test starts with h[0..3] = 0).
+@pytest.mark.parametrize("input_val,expected_h0,expected_h1", [
+    (0,  0xe028ae41, 0x4772b084),
+    (1,  0x16d4ce9a, 0xe8bd67d6),
+    (42, 0x5119f47a, 0xc20b94f9),
+])
+def test_murmurhash3_golden_vectors(input_val, expected_h0, expected_h1):
+    expected = (expected_h1 << 32) | expected_h0
+    got = int(_murmurhash3_x86_128_low64(np.uint64(input_val)))
+    assert got == expected
+
+
+@pytest.mark.parametrize("spec", [
+    # A spread of murmur and identity configurations, including
+    # edge cases (shard_bits == 0, big preshift, etc).
+    _shard_spec("murmurhash3_x86_128", preshift_bits=0,  shard_bits=4, minishard_bits=3),
+    _shard_spec("murmurhash3_x86_128", preshift_bits=2,  shard_bits=5, minishard_bits=4),
+    _shard_spec("murmurhash3_x86_128", preshift_bits=10, shard_bits=0, minishard_bits=4),
+    _shard_spec("identity",            preshift_bits=0,  shard_bits=4, minishard_bits=3),
+    _shard_spec("identity",            preshift_bits=8,  shard_bits=3, minishard_bits=2),
+])
+def test_shards_for_keys_per_key_matches_tensorstore(spec, tmp_path):
+    """
+    Per-key strict check: write each key into its own (fresh) sharded
+    kvstore and verify that the shard file tensorstore created has the
+    shard number we predicted. This is the strongest possible verification
+    short of parsing the shard files ourselves.
+    """
+    rng = np.random.default_rng(2026)
+    keys = rng.integers(0, 2**63, size=20, dtype=np.uint64)
+    predicted = shards_for_keys(keys, spec)
+
+    for k, pred_shard in zip(keys, predicted):
+        kvdir = tmp_path / f"k{int(k)}"
+        kv = ts.KvStore.open({
+            "driver": "neuroglancer_uint64_sharded",
+            "metadata": spec.to_json(),
+            "base": f"file://{kvdir}",
+        }).result()
+        with ts.Transaction() as txn:
+            kv.with_transaction(txn)[_be_key(int(k))] = b"v"
+
+        actual = _shard_files(kvdir)
+        assert actual == {int(pred_shard)}, (
+            f"key={int(k)} ({int(k):#x}): predicted shard {int(pred_shard)}, "
+            f"tensorstore wrote to {actual}"
+        )
+
+
+@pytest.mark.parametrize("spec", [
+    _shard_spec("murmurhash3_x86_128", preshift_bits=0, shard_bits=6, minishard_bits=4),
+    _shard_spec("murmurhash3_x86_128", preshift_bits=4, shard_bits=5, minishard_bits=3),
+    _shard_spec("identity",            preshift_bits=4, shard_bits=4, minishard_bits=3),
+])
+def test_shards_for_keys_set_matches_tensorstore(spec, tmp_path):
+    """
+    Bulk check: write many keys to a single kvstore in one transaction and
+    confirm the set of shards we predicted matches the set of .shard files
+    tensorstore actually produced.
+    """
+    rng = np.random.default_rng(7)
+    keys = rng.integers(0, 2**63, size=5_000, dtype=np.uint64)
+    predicted = {int(s) for s in shards_for_keys(keys, spec)}
+
+    kv = ts.KvStore.open({
+        "driver": "neuroglancer_uint64_sharded",
+        "metadata": spec.to_json(),
+        "base": f"file://{tmp_path}",
+    }).result()
+    with ts.Transaction() as txn:
+        for k in keys:
+            kv.with_transaction(txn)[_be_key(int(k))] = b"x"
+
+    assert _shard_files(tmp_path) == predicted
+
+
+def test_write_precomputed_annotations_shard_placement(tmp_path, monkeypatch):
+    """
+    End-to-end: write point annotations via the public
+    write_precomputed_annotations() API with a controlled set of
+    annotation IDs, then verify (a) that the by_id shard files line up
+    with what shards_for_keys() predicts for those IDs, and (b) that
+    each annotation reads back from the shard file we predicted.
+
+    To force a multi-shard layout (and therefore actually exercise the
+    per-shard transaction loop) without ballooning the test to hundreds
+    of MB, we shrink _choose_output_spec's shard target via monkeypatch.
+    """
+    # Force a multi-shard sharding spec for this test.
+    orig_choose = wb._choose_output_spec
+    def force_multi_shard(*args, **kwargs):
+        spec = orig_choose(*args, **kwargs)
+        spec.shard_bits = 4   # 16 shards
+        spec.minishard_bits = 2
+        return spec
+    monkeypatch.setattr(wb, '_choose_output_spec', force_multi_shard)
+
+    n = 5_000
+    rng = np.random.default_rng(123)
+    # Use explicit annotation IDs so we can predict exactly which shards
+    # they should land in. The IDs are the chunk_ids of the by_id index.
+    ids = rng.choice(np.arange(1, 10_000_000), size=n, replace=False).astype(np.uint64)
+    df = pd.DataFrame({
+        'x': rng.normal(0, 100, n),
+        'y': rng.normal(0, 100, n),
+        'z': rng.normal(0, 100, n),
+    }, index=pd.Index(ids, name='id'))
+
+    output_dir = tmp_path / "annotations"
+    write_precomputed_annotations(
+        df,
+        coord_space=CoordinateSpace(
+            names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1]
+        ),
+        annotation_type='point',
+        output_dir=str(output_dir),
+        write_sharded=True,
+        write_by_relationship=False,
+        write_by_spatial_chunk=False,
+    )
+
+    # Recover the resolved sharding spec from the info file.
+    info = json.loads((output_dir / "info").read_text())
+    sharding = info['by_id']['sharding']
+    spec = _shard_spec(
+        hash=sharding['hash'],
+        preshift_bits=sharding['preshift_bits'],
+        shard_bits=sharding['shard_bits'],
+        minishard_bits=sharding['minishard_bits'],
+        data_encoding=sharding['data_encoding'],
+        minishard_index_encoding=sharding['minishard_index_encoding'],
+    )
+    assert spec.shard_bits == 4, (
+        "Expected the monkeypatch to give us 16 shards, "
+        "otherwise this test isn't actually verifying multi-shard placement."
+    )
+
+    # (a) Set of shard files matches the set of predicted shards.
+    by_id_dir = output_dir / "by_id"
+    predicted_shards = {int(s) for s in shards_for_keys(ids, spec)}
+    assert _shard_files(by_id_dir) == predicted_shards
+
+    # (b) Spot-check: a sample of annotations reads back, and the
+    #     specific shard file we predicted for each one exists.
+    kv = ts.KvStore.open({
+        "driver": "neuroglancer_uint64_sharded",
+        "metadata": sharding,
+        "base": f"file://{by_id_dir}",
+    }).result()
+    sample_idx = rng.choice(n, size=50, replace=False)
+    sample_ids = ids[sample_idx]
+    sample_predicted = shards_for_keys(sample_ids, spec)
+    width = max(1, (spec.shard_bits + 3) // 4)
+    for k, pred in zip(sample_ids, sample_predicted):
+        rr = kv.read(_be_key(int(k))).result()
+        assert rr.state == 'value', f"id {int(k)} not readable from kvstore"
+        assert (by_id_dir / f"{int(pred):0{width}x}.shard").exists()

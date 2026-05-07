@@ -3,10 +3,12 @@ import shutil
 from dataclasses import dataclass
 from typing import Literal
 
+import numpy as np
 from tqdm.auto import tqdm
 import tensorstore as ts
 
 from ._util import _encode_uint64_series
+from ._shard_hash import shards_for_keys
 
 
 def _write_buffers(buf_series, output_dir, subdir, write_sharded):
@@ -94,11 +96,6 @@ def _write_buffers_sharded(buf_series, output_dir, subdir):
     """
     output_dir = os.path.abspath(output_dir)
 
-    # When writing sharded data, we must use encoded bigendian uint64 as the key.
-    # https://github.com/google/neuroglancer/pull/522#issuecomment-1923137085
-    bigendian_keys = _encode_uint64_series(buf_series.index, '>u8')
-    buf_series = buf_series.set_axis(bigendian_keys)
-
     shard_spec = _choose_output_spec(
         total_count=len(buf_series),
         total_bytes=buf_series.map(len).sum(),  # fixme, might be slow
@@ -112,12 +109,29 @@ def _write_buffers_sharded(buf_series, output_dir, subdir):
     }
     kvstore = ts.KvStore.open(spec).result()
 
-    # Note:
-    #   At the time of this writing, tensorstore uses a
-    #   surprising amount of RAM to perform these writes.
-    with ts.Transaction() as txn:
-        for segment_key, buf in tqdm(buf_series.items(), total=len(buf_series)):
-            kvstore.with_transaction(txn)[segment_key] = buf
+    # Tensorstore writes shards in transaction-commit order, holding all
+    # pending shard data in RAM until commit. Wrapping all writes in a
+    # single transaction therefore forces every shard to live in memory
+    # simultaneously, which can balloon to hundreds of GB for large inputs.
+    #
+    # We instead pre-compute which shard each key will land in (replicating
+    # tensorstore's hash) and use one transaction per shard. Each shard's
+    # data leaves RAM as soon as that shard's transaction commits.
+    shard_assignments = shards_for_keys(buf_series.index, shard_spec)
+
+    # Now re-encode the index as bigendian-uint64 byte buffers, as tensorstore's
+    # neuroglancer_uint64_sharded driver requires.
+    # https://github.com/google/neuroglancer/pull/522#issuecomment-1923137085
+    bigendian_keys = _encode_uint64_series(buf_series.index, '>u8')
+    buf_series = buf_series.set_axis(bigendian_keys)
+
+    with tqdm(total=len(buf_series)) as pbar:
+        for _shard, group in buf_series.groupby(shard_assignments, sort=False):
+            with ts.Transaction() as txn:
+                txn_kv = kvstore.with_transaction(txn)
+                for key, buf in group.items():
+                    txn_kv[key] = buf
+            pbar.update(len(group))
 
     metadata = {
         "key": subdir,
