@@ -146,7 +146,7 @@ def _assign_spatial_chunks(
         logger.info("Shuffling annotations before assigning spatial grid levels")
         df = df.sample(frac=1.0)
 
-    logger.info("Assigning spatial grid chunks")
+    logger.info("Assigning spatial grid chunks...")
     df['level'] = np.repeat(
         range(num_levels),
         level_annotation_counts.astype(int)
@@ -310,7 +310,7 @@ def _assign_spatial_chunks_for_points(df, geometry_cols, bounds, gridspec):
     # df[[f'{c}b' for c in coord_names]] = (grid_indices + 1) * gridspec.chunk_shapes[df['level']] + bounds[0]
     # feather.write_feather(df.drop(columns=['id_buf', 'ann_buf']), '/tmp/points.feather')
     
-    return df[['level', 'chunk_code', 'id_buf', 'ann_buf']]
+    return df[['level', 'id_buf', 'ann_buf', 'chunk_code']]
 
 
 def _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec):
@@ -323,27 +323,39 @@ def _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bo
 
     chunk_shapes = gridspec.chunk_shapes[df['level']]
     grid_shapes = gridspec.grid_shapes[df['level']]
-    df[f'chunk_code'] = _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds)
 
-    # Duplicate the annotations which span multiple chunks.
-    df = df[['level', 'chunk_code', 'id_buf', 'ann_buf']].explode('chunk_code')
+    logger.info(f"Computing grid codes for {len(df)} boxes")
+    rows, codes = _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds)
+
+    # Duplicate the annotations which span multiple chunks
+    # and therefore have multiple codes.
+    logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
+    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
+    df.loc[df.index[rows], 'chunk_code'] = codes
     return df
 
 
 @njit
 def _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds):
     D = len(bounds[0])
-    lists = List()
-    for box, chunk_shape, grid_shape in zip(boxes, chunk_shapes, grid_shapes):
+    rows = List()
+    codes = List()
+    for row, (box, chunk_shape, grid_shape) in enumerate(zip(boxes, chunk_shapes, grid_shapes)):
         grid_span = np.zeros((2, D), np.uint64)
-        grid_span[0] = np.floor((box[ 0] - bounds[0]) / chunk_shape).astype(np.uint64)
+        grid_span[0] = np.floor((box[0] - bounds[0]) / chunk_shape).astype(np.uint64)
         grid_span[1] = np.ceil((box[1] - bounds[0]) / chunk_shape).astype(np.uint64)
         grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
 
         # Switch to C order before computing compressed morton code.
-        codes = compressed_morton_code_no_broadcast(grid_indices[:, ::-1], grid_shape[::-1])
-        lists.append(List(codes))
-    return lists
+        row_codes = compressed_morton_code_no_broadcast(grid_indices[:, ::-1], grid_shape[::-1])
+        rows.extend(np.uint64(row) * np.ones_like(row_codes))
+        codes.extend(row_codes)
+
+
+    # Return as arrays rather than reflecting into Python lists.
+    rows = np.asarray(rows, dtype=np.int64)
+    codes = np.asarray(codes, dtype=np.uint64)
+    return rows, codes
 
 
 def _assign_spatial_chunks_for_ellipsoids(df, geometry_cols, bounds, gridspec):
@@ -353,7 +365,8 @@ def _assign_spatial_chunks_for_ellipsoids(df, geometry_cols, bounds, gridspec):
     boxes = np.concatenate([centroids - radii, centroids + radii], axis=1).reshape(len(df), 2, -1)
     boxes = boxes - bounds[0]
 
-    df[f'chunk_code'] = _ellipsoid_grid_codes(
+    logger.info(f"Computing grid codes for {len(df)} ellipsoids")
+    rows, codes = _ellipsoid_grid_codes(
         centroids,
         radii,
         df['level'].to_numpy(),
@@ -362,16 +375,20 @@ def _assign_spatial_chunks_for_ellipsoids(df, geometry_cols, bounds, gridspec):
         gridspec.chunk_shapes
     )
 
-    # Duplicate the annotations which span multiple chunks.
-    df = df[['level', 'chunk_code', 'id_buf', 'ann_buf']].explode('chunk_code')
+    # Duplicate the annotations which span multiple chunks
+    # and therefore have multiple codes.
+    logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
+    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
+    df.loc[df.index[rows], 'chunk_code'] = codes
     return df
 
 
 @njit
 def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, grid_shapes, chunk_shapes):
     D = len(grid_shapes[0])
-    lists = List()
-    for centroid, radius, level in zip(centroids, radii, levels):
+    rows = List()
+    codes = List()
+    for row, (centroid, radius, level) in enumerate(zip(centroids, radii, levels)):
         grid_shape = grid_shapes[level]
         chunk_shape = chunk_shapes[level]
 
@@ -380,14 +397,18 @@ def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, grid_shapes, ch
         grid_span[1] = np.ceil((centroid + radius - grid_origin) / chunk_shape)
 
         grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
-        codes = List()
+
         for grid_index in grid_indices:
             if _ellipsoid_chunk_overlap(centroid, radius, grid_origin, chunk_shape, grid_index):
                 # Switch to C order before computing compressed morton code.
                 code = compressed_morton_code_no_broadcast(grid_index[::-1], grid_shape[::-1])
+                rows.append(row)
                 codes.append(code)
-        lists.append(codes)
-    return lists
+
+    # Return as arrays rather than reflecting into Python lists.
+    rows = np.asarray(rows, dtype=np.int64)
+    codes = np.asarray(codes, dtype=np.uint64)
+    return rows, codes
 
 
 @njit
@@ -429,7 +450,8 @@ def _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec):
     swap_mask = np.concatenate([swap_mask, swap_mask], axis=1)
     endpoints[swap_mask] = endpoints[:, ::-1, :][swap_mask]
 
-    df[f'chunk_code'] = _line_grid_codes(
+    logger.info(f"Computing grid codes for {len(df)} lines")
+    rows, codes = _line_grid_codes(
         endpoints,
         df['level'].to_numpy(),
         bounds[0],
@@ -437,16 +459,20 @@ def _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec):
         gridspec.chunk_shapes
     )
 
-    # Duplicate the annotations which span multiple chunks.
-    df = df[['level', 'chunk_code', 'id_buf', 'ann_buf']].explode('chunk_code')
+    # Duplicate the annotations which span multiple chunks
+    # and therefore have multiple codes.
+    logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
+    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
+    df.loc[df.index[rows], 'chunk_code'] = codes
     return df
 
 
 @njit
 def _line_grid_codes(endpoints, levels, grid_origin, grid_shapes, chunk_shapes):
     D = len(grid_shapes[0])
-    lists = List()
-    for (point_a, point_b), level in zip(endpoints, levels):
+    rows = List()
+    codes = List()
+    for row, ((point_a, point_b), level) in enumerate(zip(endpoints, levels)):
         grid_shape = grid_shapes[level]
         chunk_shape = chunk_shapes[level]
 
@@ -454,15 +480,18 @@ def _line_grid_codes(endpoints, levels, grid_origin, grid_shapes, chunk_shapes):
         grid_span[0] = np.floor((point_a - grid_origin) / chunk_shape)
         grid_span[1] = np.ceil((point_b - grid_origin) / chunk_shape)
 
-        codes = List()
         grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
         for grid_index in grid_indices:
             if _line_chunk_overlap(point_a, point_b, grid_origin, chunk_shape, grid_index):
                 # Switch to C order before computing compressed morton code.
                 code = compressed_morton_code_no_broadcast(grid_index[::-1], grid_shape[::-1])
+                rows.append(row)
                 codes.append(code)
-        lists.append(codes)
-    return lists
+
+    # Return as arrays rather than reflecting into Python lists.
+    rows = np.asarray(rows, dtype=np.int64)
+    codes = np.asarray(codes, dtype=np.uint64)
+    return rows, codes
 
 
 @njit
