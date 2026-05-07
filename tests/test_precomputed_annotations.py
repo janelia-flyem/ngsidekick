@@ -193,7 +193,7 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
     To run this test: pytest -s -m manual tests/test_precomputed_annotations.py
     """
     import json
-    from ngsidekick import serve_directory
+    import ngsidekick as ngsk
     
     # First, ensure all test data is written
     print("\nWriting test annotations to", test_output_dir)
@@ -203,13 +203,13 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
     test_ellipsoid_annotations(ellipsoid_testdata, test_output_dir)
     
     # Start CORS webserver in background
-    port = 9000
+    port = 9010
     bind_addr = "127.0.0.1"
     
     print(f"\nStarting CORS webserver on http://{bind_addr}:{port}")
     print(f"Serving directory: {test_output_dir}")
     
-    server_process = serve_directory(
+    server_process, NGSK_SERVER_ADDRESS, log_file = ngsk.serve_directory(
         test_output_dir,
         port=port,
         bind=bind_addr,
@@ -220,9 +220,6 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
     import time
     time.sleep(1)
     
-    # Construct neuroglancer state with all annotation layers
-    base_url = f"http://{bind_addr}:{port}"
-    
     ng_state = {
         "dimensions": {"x": [1, "m"], "y": [1, "m"], "z": [1, "m"]},
         "position": [0, 0, 0],
@@ -232,28 +229,28 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
         "layers": [
             {
                 "type": "annotation",
-                "source": f"precomputed://{base_url}/test-point-annotations",
+                "source": f"precomputed://{NGSK_SERVER_ADDRESS}/test-point-annotations",
                 "shader": """\nvoid main() {\n  setColor(prop_cluster_color());\n}\n""",
                 "name": "points",
                 "annotations": []
             },
             {
                 "type": "annotation",
-                "source": f"precomputed://{base_url}/test-line-annotations",
+                "source": f"precomputed://{NGSK_SERVER_ADDRESS}/test-line-annotations",
                 "shader": """\nvoid main() {\n  setColor(prop_cluster_color());\n}\n""",
                 "name": "lines",
                 "annotations": []
             },
             {
                 "type": "annotation",
-                "source": f"precomputed://{base_url}/test-box-annotations",
+                "source": f"precomputed://{NGSK_SERVER_ADDRESS}/test-box-annotations",
                 "shader": """\nvoid main() {\n  setColor(prop_cluster_color());\n}\n""",
                 "name": "boxes",
                 "annotations": []
             },
             {
                 "type": "annotation",
-                "source": f"precomputed://{base_url}/test-ellipsoid-annotations",
+                "source": f"precomputed://{NGSK_SERVER_ADDRESS}/test-ellipsoid-annotations",
                 "shader": """\nvoid main() {\n  setColor(prop_cluster_color());\n}\n""",
                 "name": "ellipsoids",
                 "annotations": []
@@ -287,4 +284,4 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
 
 
 if __name__ == "__main__":
-    pytest.main(['-s', 'test_precomputed_annotations.py'])
+    pytest.main(['-s', '-m', 'manual', 'test_precomputed_annotations.py'])
