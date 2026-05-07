@@ -152,6 +152,7 @@ def _write_buffers_sharded(buf_series, output_dir, subdir, max_shards_per_transa
     shard_spec = _choose_output_spec(
         total_count=len(buf_series),
         total_bytes=buf_series.map(len).sum(),  # fixme, might be slow
+        max_key=int(buf_series.index.max()),
         hashtype='murmurhash3_x86_128',
         gzip_compress=True
     )
@@ -231,12 +232,21 @@ class ShardSpec:
 def _choose_output_spec(
     total_count,
     total_bytes,
+    max_key=2**64 - 1,
     hashtype: Literal["murmurhash3_x86_128", "identity_hash"] = "murmurhash3_x86_128",
     gzip_compress=True,
 ):
     """
-    Copied from Forrest Collman's PR:
+    Adapted from Forrest Collman's PR:
     https://github.com/google/neuroglancer/pull/522
+
+    Deviations from the original:
+        - Accepts ``max_key`` (the largest chunk ID that will be written) so
+          that ``preshift_bits`` is capped at the actual keyspace headroom.
+          Without this cap, a small dense keyspace (e.g. spatial-index
+          chunk codes that span only 9 bits) would have its low bits
+          shifted away and every key would hash to the same shard, defeating
+          the chosen ``shard_bits``.
     """
     import tensorstore as ts
     MINISHARD_TARGET_COUNT = 1000
@@ -263,11 +273,20 @@ def _choose_output_spec(
     while (total_bytes >> shard_bits) > SHARD_TARGET_SIZE:
         shard_bits += 1
 
-    preshift_bits = 0
-    while MINISHARD_TARGET_COUNT >> preshift_bits:
-        preshift_bits += 1
-
     minishard_bits = total_minishard_bits - min(total_minishard_bits, shard_bits)
+
+    # The original heuristic strips ~log2(MINISHARD_TARGET_COUNT) low bits
+    # so that runs of adjacent chunk IDs co-locate in one minishard. That
+    # only makes sense if the keyspace has enough bits to spare: after
+    # preshifting we still need at least 2**(shard_bits + minishard_bits)
+    # distinct shifted values, otherwise every key collapses to the same
+    # shard. ``keyspace_cap`` enforces that.
+    target_preshift = 0
+    while MINISHARD_TARGET_COUNT >> target_preshift:
+        target_preshift += 1
+    keyspace_cap = max(0, int(max_key).bit_length() - shard_bits - minishard_bits)
+    preshift_bits = min(target_preshift, keyspace_cap)
+
     data_encoding: Literal["raw", "gzip"] = "raw"
     minishard_index_encoding: Literal["raw", "gzip"] = "raw"
 

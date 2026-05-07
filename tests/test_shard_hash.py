@@ -137,6 +137,106 @@ def test_shards_for_keys_set_matches_tensorstore(spec, tmp_path):
     assert _shard_files(tmp_path) == predicted
 
 
+def test_choose_output_spec_caps_preshift_for_small_keyspace():
+    """
+    Regression test for the bug where ``_choose_output_spec`` always
+    returned ``preshift_bits=10``, which collapses every key in a
+    sub-1024 keyspace (e.g. a small spatial-index level) to chunk_id 0
+    after preshifting — producing one shard regardless of the chosen
+    ``shard_bits``.
+
+    For a keyspace that needs all of its bits to fill the requested
+    shard layout, ``preshift_bits`` must be 0.
+    """
+    from ngsidekick.annotations.precomputed._write_buffers import _choose_output_spec
+
+    # Mirrors by_spatial_level_6 from the bug report: 192 chunks, ~14 GB
+    # of compressed data, max chunk code = 511 (9 bits, dense).
+    spec = _choose_output_spec(
+        total_count=192,
+        total_bytes=14_000_000_000,
+        max_key=511,
+    )
+    assert spec.shard_bits == 9, "test premise: heuristic should still pick shard_bits=9"
+    assert spec.preshift_bits == 0, (
+        f"preshift_bits={spec.preshift_bits} would shift every 9-bit key to 0 "
+        f"and collapse all keys into a single shard"
+    )
+
+    # And the canonical wide-keyspace case still gets the historical preshift
+    # (so we know the fix is targeted, not blanket).
+    spec = _choose_output_spec(
+        total_count=300_000_000,
+        total_bytes=30_000_000_000,
+        max_key=2**40,
+    )
+    assert spec.preshift_bits == 10
+
+
+def test_choose_output_spec_default_max_key_is_unrestrictive():
+    """
+    With no ``max_key`` supplied, ``_choose_output_spec`` should fall back
+    to the original heuristic (preshift_bits=10 for any non-trivial spec)
+    so this remains a drop-in replacement for callers that haven't been
+    updated yet.
+    """
+    from ngsidekick.annotations.precomputed._write_buffers import _choose_output_spec
+    spec = _choose_output_spec(
+        total_count=192,
+        total_bytes=14_000_000_000,
+    )
+    assert spec.preshift_bits == 10
+
+
+def test_dense_small_keyspace_actually_multishards(tmp_path):
+    """
+    End-to-end check: writing 192 buffers under dense Morton-code-style
+    keys [0, 192) with a multi-shard spec must produce more than one
+    .shard file (the symptom of the original bug was exactly one).
+    Also verifies the shard files line up with what shards_for_keys
+    predicts for the new spec.
+    """
+    from ngsidekick.annotations.precomputed._write_buffers import _write_buffers_sharded
+
+    n = 192
+    ids = np.arange(n, dtype=np.uint64)
+    rng = np.random.default_rng(0)
+    # Each value is large enough that the 50 MB/shard target picks
+    # shard_bits > 0. A 1 MB buffer per item gives ~192 MB total.
+    bufs = [bytes(rng.integers(0, 256, size=1_000_000, dtype=np.uint8)) for _ in range(n)]
+    buf_series = pd.Series(bufs, index=pd.Index(ids, name='chunk_code'))
+
+    metadata = _write_buffers_sharded(
+        buf_series, str(tmp_path), "sub",
+        max_shards_per_transaction=8,
+        max_threads=2,
+    )
+    sharding = metadata['sharding']
+    assert sharding['shard_bits'] >= 1, "test premise: spec must request multiple shards"
+    # The fix limits preshift_bits to the keyspace headroom so that not
+    # every key collapses to chunk_id 0. (Concretely, with 8-bit keys and
+    # shard_bits=2 we expect preshift to be at most 8-2 = 6.)
+    keyspace_bits = (n - 1).bit_length()
+    assert sharding['preshift_bits'] <= keyspace_bits - sharding['shard_bits'] - sharding['minishard_bits']
+
+    spec = _shard_spec(
+        hash=sharding['hash'],
+        preshift_bits=sharding['preshift_bits'],
+        shard_bits=sharding['shard_bits'],
+        minishard_bits=sharding['minishard_bits'],
+        data_encoding=sharding['data_encoding'],
+        minishard_index_encoding=sharding['minishard_index_encoding'],
+    )
+    sub_dir = tmp_path / "sub"
+    actual = _shard_files(sub_dir)
+    predicted = {int(s) for s in shards_for_keys(ids, spec)}
+    assert actual == predicted
+    assert len(actual) > 1, (
+        "fix in effect: a dense small keyspace with shard_bits>0 should "
+        "produce multiple shard files"
+    )
+
+
 @pytest.mark.parametrize("max_shards_per_transaction", [1, 4, 32, 1024])
 def test_max_shards_per_transaction_roundtrip(tmp_path, max_shards_per_transaction):
     """
