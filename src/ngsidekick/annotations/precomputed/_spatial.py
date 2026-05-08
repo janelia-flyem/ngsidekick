@@ -570,15 +570,14 @@ def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_su
         JSON metadata to write into the 'spatial' key of the info file.
     """
     logger.info(f"Concatenating annotations by spatial chunk")
+    df = df_handle.df[['level', 'chunk_code', 'id_buf', 'ann_buf']]
+    df_handle.df = None
     bufs_by_grid = (
-        df_handle.df[['level', 'chunk_code', 'id_buf', 'ann_buf']]
+        df
         .groupby(['level', 'chunk_code'], sort=False)
         .agg({'id_buf': ['count', b''.join], 'ann_buf': b''.join})
     )
-
-    # We're done with the original input; delete it to save
-    # RAM before writing (which takes a lot of RAM).
-    df_handle.df = None
+    del df
 
     logger.info(f"Combining annotation and ID buffers for spatial index")
     bufs_by_grid.columns = ['count', 'id_buf', 'ann_buf']
