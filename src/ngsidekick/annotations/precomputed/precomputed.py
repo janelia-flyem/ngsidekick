@@ -241,6 +241,8 @@ def write_precomputed_annotations(
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
+    df = _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships)
+
     # Construct a buffer for each annotation and additional buffers
     # for each annotation's relationships, stored in new columns of df.
     df = _encode_annotations(
@@ -316,6 +318,32 @@ def write_precomputed_annotations(
 
     with open(f"{output_dir}/info", 'w') as f:
         json.dump(info, f)
+
+
+def _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships):
+    """
+    Return a view of ``df`` containing only the columns this exporter
+    actually consumes (geometry, properties, relationships). Logs a notice
+    listing any dropped columns.
+    """
+    geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
+
+    prop_cols = []
+    for spec in property_specs:
+        p = spec['id']
+        if spec['type'] == 'rgb':
+            prop_cols.extend([f'{p}_r', f'{p}_g', f'{p}_b'])
+        elif spec['type'] == 'rgba':
+            prop_cols.extend([f'{p}_r', f'{p}_g', f'{p}_b', f'{p}_a'])
+        else:
+            prop_cols.append(p)
+
+    used = {*geom_cols, *prop_cols, *relationships}
+    keep = [c for c in df.columns if c in used]
+    drop = [c for c in df.columns if c not in used]
+    if drop:
+        logger.info(f"Ignoring {len(drop)} unused input column(s): {drop}")
+    return df[keep]
 
 
 def _construct_coord_space(coord_space):
