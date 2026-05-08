@@ -9,7 +9,6 @@ import numpy as np
 from tqdm.auto import tqdm
 import tensorstore as ts
 
-from ._util import _encode_uint64_series
 from ._shard_hash import shards_for_keys
 
 logger = logging.getLogger(__name__)
@@ -175,12 +174,6 @@ def _write_buffers_sharded(buf_series, output_dir, subdir, max_shards_per_transa
     # transaction owns up to ``max_shards_per_transaction`` distinct shards.
     shard_assignments = shards_for_keys(buf_series.index, shard_spec)
 
-    # Now re-encode the index as bigendian-uint64 byte buffers, as tensorstore's
-    # neuroglancer_uint64_sharded driver requires.
-    # https://github.com/google/neuroglancer/pull/522#issuecomment-1923137085
-    bigendian_keys = _encode_uint64_series(buf_series.index, '>u8')
-    buf_series = buf_series.set_axis(bigendian_keys)
-
     # Bucket adjacent shard numbers into batches. Shard numbers occupy
     # [0, 2**shard_bits), so integer-dividing by max_shards_per_transaction
     # yields up to ``max_shards_per_transaction`` distinct shards per batch.
@@ -188,12 +181,15 @@ def _write_buffers_sharded(buf_series, output_dir, subdir, max_shards_per_transa
     # one batch (matching the prior single-transaction behavior).
     batches = shard_assignments // np.uint64(max_shards_per_transaction)
 
+    # Tensorstore's neuroglancer_uint64_sharded driver requires keys to be
+    # the bigendian-uint64 encoding of the chunk ID
+    # (https://github.com/google/neuroglancer/pull/522#issuecomment-1923137085).
     with tqdm(total=len(buf_series)) as pbar:
         for _batch, group in buf_series.groupby(batches, sort=False):
             with ts.Transaction() as txn:
                 txn_kv = kvstore.with_transaction(txn)
                 for key, buf in group.items():
-                    txn_kv[key] = buf
+                    txn_kv[int(key).to_bytes(8, 'big')] = buf
             pbar.update(len(group))
 
     metadata = {
