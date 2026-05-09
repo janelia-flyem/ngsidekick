@@ -253,6 +253,11 @@ def write_precomputed_annotations(
         relationships
     )
 
+    # The property columns have been folded into ``ann_buf`` and aren't
+    # needed by any downstream writer. Drop them now to release potentially
+    # tens of GB of property-column arrays before by_id/by_rel/by_spatial.
+    df = df.drop(columns=_property_column_names(property_specs))
+
     by_id_metadata = {}
     if write_by_id:
         by_id_metadata = _write_annotations_by_id(
@@ -320,6 +325,24 @@ def write_precomputed_annotations(
         json.dump(info, f)
 
 
+def _property_column_names(property_specs):
+    """
+    Return the dataframe column names that back the given property specs.
+    For numeric/categorical/string properties this is the property id itself;
+    for rgb/rgba properties the value comes from ``{p}_r``, ``{p}_g``, etc.
+    """
+    cols = []
+    for spec in property_specs:
+        p = spec['id']
+        if spec['type'] == 'rgb':
+            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b'])
+        elif spec['type'] == 'rgba':
+            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b', f'{p}_a'])
+        else:
+            cols.append(p)
+    return cols
+
+
 def _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships):
     """
     Return a view of ``df`` containing only the columns this exporter
@@ -327,16 +350,7 @@ def _drop_unused_columns(df, coord_space, annotation_type, property_specs, relat
     listing any dropped columns.
     """
     geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
-
-    prop_cols = []
-    for spec in property_specs:
-        p = spec['id']
-        if spec['type'] == 'rgb':
-            prop_cols.extend([f'{p}_r', f'{p}_g', f'{p}_b'])
-        elif spec['type'] == 'rgba':
-            prop_cols.extend([f'{p}_r', f'{p}_g', f'{p}_b', f'{p}_a'])
-        else:
-            prop_cols.append(p)
+    prop_cols = _property_column_names(property_specs)
 
     used = {*geom_cols, *prop_cols, *relationships}
     keep = [c for c in df.columns if c in used]
