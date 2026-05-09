@@ -2,17 +2,16 @@
 Tests for the spatial-index assignment helpers in
 ``ngsidekick.annotations.precomputed._spatial``.
 """
+from collections import Counter
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from ngsidekick.annotations.precomputed._spatial import (
-    _assign_spatial_chunks_for_axis_aligned_bounding_boxes,
-    _assign_spatial_chunks_for_ellipsoids,
-    _assign_spatial_chunks_for_lines,
-    _box_grid_codes,
-    _ellipsoid_grid_codes,
-    _line_grid_codes,
+    _compute_grid_codes_for_axis_aligned_bounding_boxes,
+    _compute_grid_codes_for_ellipsoids,
+    _compute_grid_codes_for_lines,
     GridSpec,
 )
 
@@ -30,9 +29,9 @@ def _single_level_gridspec(grid_shape=(4, 4, 4), bounds_upper=1.0):
 def test_lines_spanning_multiple_chunks_are_duplicated():
     """
     Annotations whose geometry crosses chunk boundaries must produce one
-    output row per chunk they span. Regression test for a bug where the
-    wrapper used ``df.loc[df.index[rows], 'chunk_code'] = codes``, which
-    silently kept only the last code per duplicate row label.
+    output entry per chunk they span. Regression test for a bug where the
+    old wrapper used ``df.loc[df.index[rows], 'chunk_code'] = codes``,
+    which silently kept only the last code per duplicate row label.
     """
     bounds = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]])
     gridspec = _single_level_gridspec((4, 4, 4))
@@ -46,22 +45,20 @@ def test_lines_spanning_multiple_chunks_are_duplicated():
         'xb': [0.2, 0.6, 0.9],
         'yb': [0.2, 0.1, 0.1],
         'zb': [0.2, 0.1, 0.1],
-        'level': [0, 0, 0],
-        'id_buf': [b'A', b'B', b'C'],
-        'ann_buf': [b'a', b'b', b'c'],
     }, index=[100, 200, 300])
+    per_row_levels = np.zeros(len(df), dtype=np.uint64)
 
-    result = _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec)
-
-    counts = result['id_buf'].value_counts().to_dict()
-    assert counts == {b'A': 1, b'B': 3, b'C': 4}, (
-        f"Expected one output row per chunk spanned, got: {counts}"
+    rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
+    counts = Counter(rows.tolist())
+    assert counts == {0: 1, 1: 3, 2: 4}, (
+        f"Expected one output row per chunk spanned, got: {dict(counts)}"
     )
-    assert result['chunk_code'].nunique() >= 4
-    # And no chunk_code duplicates within the same id (they should be in
-    # distinct chunks).
-    for id_, group in result.groupby('id_buf', sort=False):
-        assert group['chunk_code'].is_unique, f"chunk_code duplicates for id {id_!r}"
+    # And the codes within each row must be unique (distinct chunks).
+    for r in {0, 1, 2}:
+        per_row_codes = codes[rows == r]
+        assert len(set(per_row_codes.tolist())) == len(per_row_codes), (
+            f"chunk_code duplicates for row {r}"
+        )
 
 
 def test_boxes_spanning_multiple_chunks_are_duplicated():
@@ -78,14 +75,12 @@ def test_boxes_spanning_multiple_chunks_are_duplicated():
         'xb': [0.20, 0.30],
         'yb': [0.20, 0.30],
         'zb': [0.20, 0.20],
-        'level': [0, 0],
-        'id_buf': [b'A', b'B'],
-        'ann_buf': [b'a', b'b'],
     }, index=[10, 20])
+    per_row_levels = np.zeros(len(df), dtype=np.uint64)
 
-    result = _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec)
-    counts = result['id_buf'].value_counts().to_dict()
-    assert counts == {b'A': 1, b'B': 4}, counts
+    rows, codes = _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec, per_row_levels)
+    counts = Counter(rows.tolist())
+    assert counts == {0: 1, 1: 4}, counts
 
 
 def test_ellipsoids_spanning_multiple_chunks_are_duplicated():
@@ -101,22 +96,20 @@ def test_ellipsoids_spanning_multiple_chunks_are_duplicated():
         'rx': [0.05, 0.3],
         'ry': [0.05, 0.3],
         'rz': [0.05, 0.3],
-        'level': [0, 0],
-        'id_buf': [b'A', b'B'],
-        'ann_buf': [b'a', b'b'],
     }, index=[10, 20])
+    per_row_levels = np.zeros(len(df), dtype=np.uint64)
 
-    result = _assign_spatial_chunks_for_ellipsoids(df, geometry_cols, bounds, gridspec)
-    counts = result['id_buf'].value_counts().to_dict()
-    assert counts[b'A'] == 1
-    assert counts[b'B'] > 1, (
+    rows, codes = _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_row_levels)
+    counts = Counter(rows.tolist())
+    assert counts[0] == 1
+    assert counts[1] > 1, (
         f"A 0.6-diameter ellipsoid centred mid-grid should overlap multiple "
-        f"0.25-wide chunks, but produced {counts[b'B']} rows"
+        f"0.25-wide chunks, but produced {counts[1]} entries"
     )
 
 
-def test_short_annotation_inside_one_chunk_produces_single_row():
-    """Round-trip sanity: a single-chunk annotation must still emit exactly one row."""
+def test_short_annotation_inside_one_chunk_produces_single_entry():
+    """Round-trip sanity: a single-chunk annotation must still emit exactly one entry."""
     bounds = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]])
     gridspec = _single_level_gridspec((4, 4, 4))
     geometry_cols = [['xa', 'ya', 'za'], ['xb', 'yb', 'zb']]
@@ -124,11 +117,9 @@ def test_short_annotation_inside_one_chunk_produces_single_row():
     df = pd.DataFrame({
         'xa': [0.1], 'ya': [0.1], 'za': [0.1],
         'xb': [0.15], 'yb': [0.15], 'zb': [0.15],
-        'level': [0],
-        'id_buf': [b'A'],
-        'ann_buf': [b'a'],
     }, index=[42])
+    per_row_levels = np.zeros(len(df), dtype=np.uint64)
 
-    result = _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec)
-    assert len(result) == 1
-    assert result['id_buf'].iloc[0] == b'A'
+    rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
+    assert rows.tolist() == [0]
+    assert len(codes) == 1

@@ -14,7 +14,7 @@ from ..util import annotation_property_specs
 from ._util import _encode_uint64_series, _geometry_cols, TableHandle
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships, _encode_relationships
-from ._spatial import _write_annotations_by_spatial_chunk
+from ._spatial import _compute_spatial_assignment, _write_annotations_by_spatial_chunk
 from ._write_buffers import _default_max_threads
 
 logger = logging.getLogger(__name__)
@@ -258,6 +258,23 @@ def write_precomputed_annotations(
     # tens of GB of property-column arrays before by_id/by_rel/by_spatial.
     df = df.drop(columns=_property_column_names(property_specs))
 
+    # Compute the spatial assignment up-front (while geometry is still
+    # available), then drop the geometry columns. The much smaller
+    # (rows, codes, levels) arrays carry through the by_id and by_rel
+    # phases instead of the full geometry, releasing further GB of RAM.
+    if write_by_spatial_chunk:
+        spatial_assignment = _compute_spatial_assignment(
+            df,
+            coord_space,
+            annotation_type,
+            bounds,
+            num_spatial_levels,
+            target_chunk_limit,
+            shuffle_before_assigning_spatial_levels,
+        )
+        geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
+        df = df.drop(columns=geom_cols)
+
     by_id_metadata = {}
     if write_by_id:
         by_id_metadata = _write_annotations_by_id(
@@ -293,16 +310,12 @@ def write_precomputed_annotations(
     if write_by_spatial_chunk:
         spatial_metadata = _write_annotations_by_spatial_chunk(
             df_handle_for_spatial,
-            coord_space,
-            annotation_type,
-            bounds,
-            num_spatial_levels,
-            target_chunk_limit,
-            shuffle_before_assigning_spatial_levels,
-            output_dir,
-            write_sharded,
-            max_shards_per_transaction,
-            max_threads,
+            spatial_assignment,
+            disable_subsampling=(target_chunk_limit == 0),
+            output_dir=output_dir,
+            write_sharded=write_sharded,
+            max_shards_per_transaction=max_shards_per_transaction,
+            max_threads=max_threads,
         )
     
     # Write the top-level 'info' file for the annotation output directory.
