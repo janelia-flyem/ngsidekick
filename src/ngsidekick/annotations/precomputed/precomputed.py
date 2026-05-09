@@ -285,11 +285,14 @@ def write_precomputed_annotations(
             max_threads,
         )
 
+    # Done with rel_buf (only needed when writing by_id).
+    df = df.drop(columns=['rel_buf'], errors='ignore')
+
     if write_by_relationship:
         df_handle_for_rel = TableHandle(df)
 
     if write_by_spatial_chunk:
-        df_handle_for_spatial = TableHandle(df)
+        df_handle_for_spatial = TableHandle(df.drop(columns=list(relationships)))
 
     # Delete our reference to df.
     # The TableHandles own the data now.
