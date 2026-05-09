@@ -112,8 +112,10 @@ def _write_annotations_by_relationships(df_handle: TableHandle, relationships, o
         JSON metadata to be written under the 'relationships' key in the top-level 'info' file,
         consisting of a list of JSON objects (one for each relationship).
     """
+    # Give each handle only the columns it needs so they can be deallocated after they're used.
     handles = {
-        r: TableHandle(df_handle.df) for r in relationships
+        r: TableHandle(df_handle.df[['id_buf', 'ann_buf', r]])
+        for r in relationships
     }
     df_handle.df = None
 
@@ -140,7 +142,7 @@ def _write_annotations_by_relationship(df_handle: TableHandle, relationship, out
         JSON metadata for the relationship, including the key and sharding spec if applicable.
     """
     logger.info(f"Grouping annotations by relationship {relationship}")
-    df = df_handle.df[['id_buf', 'ann_buf', relationship]]
+    df = df_handle.df
     df_handle.df = None
     bufs_by_segment = (
         df
