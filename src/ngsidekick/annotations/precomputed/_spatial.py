@@ -173,8 +173,11 @@ def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
         grid_shapes.append(grid_shape)
 
     # Convert from physical units back to coordinate units.
-    chunk_shapes = np.array(chunk_shapes, dtype=np.float64) / coord_space.scales
-    grid_shapes = np.array(grid_shapes, dtype=np.uint64)
+    chunk_shapes = np.array(chunk_shapes) / coord_space.scales
+    chunk_shapes = chunk_shapes.astype(np.float32)
+
+    grid_shapes = np.array(grid_shapes)
+    grid_shapes = grid_shapes.astype(np.min_scalar_type(grid_shapes.max()))
 
     return GridSpec(chunk_shapes, grid_shapes)
 
@@ -226,10 +229,10 @@ def _compute_grid_codes_for_points(df, geometry_cols, bounds, gridspec, per_row_
     chunk_shape_per_row = gridspec.chunk_shapes[per_row_levels]
     grid_shape_per_row = gridspec.grid_shapes[per_row_levels]
     grid_indices = (df[[*coord_names]] - bounds[0]) // chunk_shape_per_row
-    grid_indices = grid_indices.astype(np.int32)
 
     # Make sure annotations at the exact upper bound get valid grid coordinates.
-    grid_indices = np.minimum(grid_indices, grid_shape_per_row.astype(np.int32) - 1)
+    grid_indices = np.minimum(grid_indices, grid_shape_per_row - 1)
+    grid_indices = grid_indices.astype(gridspec.grid_shapes.dtype)
 
     # Switch to C order before computing compressed morton code.
     codes = compressed_morton_code(
@@ -248,29 +251,34 @@ def _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bound
     swap_mask = np.concatenate([swap_mask, swap_mask], axis=1)
     boxes[swap_mask] = boxes[:, ::-1, :][swap_mask]
 
-    chunk_shapes = gridspec.chunk_shapes[per_row_levels]
-    grid_shapes = gridspec.grid_shapes[per_row_levels]
-
     logger.info(f"Computing grid codes for {len(df)} boxes")
-    return _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds)
+    return _box_grid_codes(
+        boxes,
+        per_row_levels,
+        bounds[0],
+        gridspec.grid_shapes,
+        gridspec.chunk_shapes,
+    )
 
 
 @njit
-def _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds):
-    D = len(bounds[0])
+def _box_grid_codes(boxes, levels, grid_origin, grid_shapes, chunk_shapes):
+    D = len(grid_shapes[0])
     rows = List()
     codes = List()
-    for row, (box, chunk_shape, grid_shape) in enumerate(zip(boxes, chunk_shapes, grid_shapes)):
+    for row, (box, level) in enumerate(zip(boxes, levels)):
+        grid_shape = grid_shapes[level]
+        chunk_shape = chunk_shapes[level]
+
         grid_span = np.zeros((2, D), np.uint64)
-        grid_span[0] = np.floor((box[0] - bounds[0]) / chunk_shape).astype(np.uint64)
-        grid_span[1] = np.ceil((box[1] - bounds[0]) / chunk_shape).astype(np.uint64)
+        grid_span[0] = np.floor((box[0] - grid_origin) / chunk_shape).astype(np.uint64)
+        grid_span[1] = np.ceil((box[1] - grid_origin) / chunk_shape).astype(np.uint64)
         grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
 
         # Switch to C order before computing compressed morton code.
         row_codes = compressed_morton_code_no_broadcast(grid_indices[:, ::-1], grid_shape[::-1])
         rows.extend(np.uint64(row) * np.ones_like(row_codes))
         codes.extend(row_codes)
-
 
     # Return as arrays rather than reflecting into Python lists.
     rows = np.asarray(rows, dtype=np.uint32)
