@@ -27,7 +27,13 @@ def _encode_uint64_series(s, dtype='<u8'):
     """
     Encode a pandas Series (or Index) of N values
     into a numpy array of N buffers (bytes objects).
+
+    ``dtype`` must be a uint64 dtype (i.e. itemsize 8); the slicing step
+    below assumes 8-byte stride.
     """
+    assert np.dtype(dtype).itemsize == 8, \
+        f"_encode_uint64_series requires an 8-byte dtype, got {dtype!r} (itemsize={np.dtype(dtype).itemsize})"
+
     id_buf = s.to_numpy(dtype).tobytes()
     id_bufs = [
         id_buf[offset:(offset+8)]
