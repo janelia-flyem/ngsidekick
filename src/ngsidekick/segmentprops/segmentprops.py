@@ -569,7 +569,7 @@ def _disambiguate_tags(df):
 
     # Prefix must not contain spaces (forbidden by neuroglancer)
     # or colons (because we use ':' as the separator).
-    prefixes = col_tags['col'].str.replace(r'[: ]', '_')
+    prefixes = col_tags['col'].str.replace(r'[: ]', '_', regex=True)
     col_tags['new_tag'] = prefixes + ':' + col_tags['tag']
 
     for col, old_new_df in col_tags.groupby('col')[['tag', 'new_tag']]:
