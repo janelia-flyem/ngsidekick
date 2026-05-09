@@ -18,7 +18,7 @@ GridSpec = NamedTuple("GridSpec", [('chunk_shapes', np.ndarray), ('grid_shapes',
 SpatialAssignment = NamedTuple("SpatialAssignment", [
     # Each entry of (rows, codes, levels) is a single (annotation, chunk)
     # pairing. ``rows`` may contain duplicates (multi-chunk annotations).
-    ('rows', np.ndarray),       # int64; positional index into the input df
+    ('rows', np.ndarray),       # uint32; positional index into the input df
     ('codes', np.ndarray),      # uint64; chunk_code at the assigned level
     ('levels', np.ndarray),     # uint64; level at which this entry lives
     ('gridspec', GridSpec),
@@ -237,7 +237,7 @@ def _compute_grid_codes_for_points(df, geometry_cols, bounds, gridspec, per_row_
         grid_shape_per_row[:, ::-1],
     )
     # Points always fall in exactly one chunk, so rows is simply [0..N).
-    return np.arange(len(df), dtype=np.int64), np.asarray(codes, dtype=np.uint64)
+    return np.arange(len(df), dtype=np.uint32), np.asarray(codes, dtype=np.uint64)
 
 
 def _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec, per_row_levels):
@@ -273,7 +273,7 @@ def _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds):
 
 
     # Return as arrays rather than reflecting into Python lists.
-    rows = np.asarray(rows, dtype=np.int64)
+    rows = np.asarray(rows, dtype=np.uint32)
     codes = np.asarray(codes, dtype=np.uint64)
     return rows, codes
 
@@ -316,7 +316,7 @@ def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, grid_shapes, ch
                 codes.append(code)
 
     # Return as arrays rather than reflecting into Python lists.
-    rows = np.asarray(rows, dtype=np.int64)
+    rows = np.asarray(rows, dtype=np.uint32)
     codes = np.asarray(codes, dtype=np.uint64)
     return rows, codes
 
@@ -392,7 +392,7 @@ def _line_grid_codes(endpoints, levels, grid_origin, grid_shapes, chunk_shapes):
                 codes.append(code)
 
     # Return as arrays rather than reflecting into Python lists.
-    rows = np.asarray(rows, dtype=np.int64)
+    rows = np.asarray(rows, dtype=np.uint32)
     codes = np.asarray(codes, dtype=np.uint64)
     return rows, codes
 
