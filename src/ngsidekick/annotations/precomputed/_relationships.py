@@ -144,15 +144,20 @@ def _write_annotations_by_relationship(df_handle: TableHandle, relationship, out
     logger.info(f"Grouping annotations by relationship {relationship}")
     df = df_handle.df
     df_handle.df = None
-    bufs_by_segment = (
-        df
-        .dropna(subset=relationship)
-        .explode(relationship)
-        .groupby(relationship, sort=False)
+    if pd.api.types.is_integer_dtype(df[relationship]):
+        grouped = df.groupby(relationship, sort=False)
+    else:
+        grouped = (
+            df
+            .dropna(subset=relationship)
+            .explode(relationship)
+            .groupby(relationship, sort=False)
+        )
+    bufs_by_segment = grouped.agg(
         # Use b''.join() instead of 'sum' to avoid O(N^2) performance for large groups.
-        .agg({'id_buf': ['count', b''.join], 'ann_buf': b''.join})
+        {'id_buf': ['count', b''.join], 'ann_buf': b''.join}
     )
-    del df
+    del df, grouped
 
     bufs_by_segment.columns = ['count', 'id_buf', 'ann_buf']
     bufs_by_segment['count_buf'] = _encode_uint64_series(bufs_by_segment['count'])
