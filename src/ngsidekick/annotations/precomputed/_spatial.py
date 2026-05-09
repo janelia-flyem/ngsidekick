@@ -506,10 +506,8 @@ def _write_annotations_by_spatial_chunk(df_handle, spatial_assignment, disable_s
     )
     del df
 
-    logger.info(f"Combining annotation and ID buffers for spatial index")
     bufs_by_grid.columns = ['count', 'id_buf', 'ann_buf']
     bufs_by_grid['count_buf'] = _encode_uint64_series(bufs_by_grid['count'])
-    bufs_by_grid['combined_buf'] = bufs_by_grid[['count_buf', 'ann_buf', 'id_buf']].sum(axis=1)
 
     bufs_by_grid = bufs_by_grid.reset_index()
 
@@ -529,7 +527,9 @@ def _write_annotations_by_spatial_chunk(df_handle, spatial_assignment, disable_s
             level_bufs.index = list(map('_'.join, grid_coords.astype(str)))
 
         level_metadata = _write_buffers(
-            level_bufs['combined_buf'],
+            # _write_buffers concatenates these columns row-wise inline; no
+            # need to materialize a precomputed combined-buffer column.
+            level_bufs[['count_buf', 'ann_buf', 'id_buf']],
             output_dir,
             f"by_spatial_level_{level}",
             write_sharded,

@@ -152,14 +152,14 @@ def _write_annotations_by_relationship(df_handle: TableHandle, relationship, out
     )
     del df
 
-    logger.info(f"Combining annotation and ID buffers for relationship '{relationship}'")
     bufs_by_segment.columns = ['count', 'id_buf', 'ann_buf']
     bufs_by_segment['count_buf'] = _encode_uint64_series(bufs_by_segment['count'])
-    bufs_by_segment['combined_buf'] = bufs_by_segment[['count_buf', 'ann_buf', 'id_buf']].sum(axis=1)
 
     logger.info(f"Writing annotations to 'by_rel_{relationship}' index")
     metadata = _write_buffers(
-        bufs_by_segment['combined_buf'],
+        # _write_buffers concatenates these columns row-wise inline; no need
+        # to materialize a precomputed combined-buffer column.
+        bufs_by_segment[['count_buf', 'ann_buf', 'id_buf']],
         output_dir,
         f"by_rel_{relationship}",
         write_sharded,
