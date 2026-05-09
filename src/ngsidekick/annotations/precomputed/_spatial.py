@@ -332,10 +332,12 @@ def _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bo
     rows, codes = _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds)
 
     # Duplicate the annotations which span multiple chunks
-    # and therefore have multiple codes.
+    # and therefore have multiple codes. ``rows`` may contain repeated
+    # positional indices; iloc-based selection produces one output row
+    # per entry in ``rows``, which is what we want.
     logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
-    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
-    df.loc[df.index[rows], 'chunk_code'] = codes
+    df = df[['level', 'id_buf', 'ann_buf']].iloc[rows]
+    df['chunk_code'] = codes
     return df
 
 
@@ -380,10 +382,12 @@ def _assign_spatial_chunks_for_ellipsoids(df, geometry_cols, bounds, gridspec):
     )
 
     # Duplicate the annotations which span multiple chunks
-    # and therefore have multiple codes.
+    # and therefore have multiple codes. ``rows`` may contain repeated
+    # positional indices; iloc-based selection produces one output row
+    # per entry in ``rows``, which is what we want.
     logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
-    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
-    df.loc[df.index[rows], 'chunk_code'] = codes
+    df = df[['level', 'id_buf', 'ann_buf']].iloc[rows]
+    df['chunk_code'] = codes
     return df
 
 
@@ -464,10 +468,12 @@ def _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec):
     )
 
     # Duplicate the annotations which span multiple chunks
-    # and therefore have multiple codes.
+    # and therefore have multiple codes. ``rows`` may contain repeated
+    # positional indices; iloc-based selection produces one output row
+    # per entry in ``rows``, which is what we want.
     logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
-    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
-    df.loc[df.index[rows], 'chunk_code'] = codes
+    df = df[['level', 'id_buf', 'ann_buf']].iloc[rows]
+    df['chunk_code'] = codes
     return df
 
 
