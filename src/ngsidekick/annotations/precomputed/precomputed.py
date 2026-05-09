@@ -14,7 +14,7 @@ from ..util import annotation_property_specs
 from ._util import _encode_uint64_series, _geometry_cols, TableHandle
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships, _encode_relationships
-from ._spatial import _write_annotations_by_spatial_chunk
+from ._spatial import _compute_spatial_assignment, _write_annotations_by_spatial_chunk
 from ._write_buffers import _default_max_threads
 
 logger = logging.getLogger(__name__)
@@ -241,6 +241,8 @@ def write_precomputed_annotations(
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
+    df = _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships)
+
     # Construct a buffer for each annotation and additional buffers
     # for each annotation's relationships, stored in new columns of df.
     df = _encode_annotations(
@@ -250,6 +252,28 @@ def write_precomputed_annotations(
         property_specs,
         relationships
     )
+
+    # The property columns have been folded into ``ann_buf`` and aren't
+    # needed by any downstream writer. Drop them now to release potentially
+    # tens of GB of property-column arrays before by_id/by_rel/by_spatial.
+    df = df.drop(columns=_property_column_names(property_specs))
+
+    # Compute the spatial assignment up-front (while geometry is still
+    # available), then drop the geometry columns. The much smaller
+    # (rows, codes, levels) arrays carry through the by_id and by_rel
+    # phases instead of the full geometry, releasing further GB of RAM.
+    if write_by_spatial_chunk:
+        spatial_assignment = _compute_spatial_assignment(
+            df,
+            coord_space,
+            annotation_type,
+            bounds,
+            num_spatial_levels,
+            target_chunk_limit,
+            shuffle_before_assigning_spatial_levels,
+        )
+        geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
+        df = df.drop(columns=geom_cols)
 
     by_id_metadata = {}
     if write_by_id:
@@ -286,16 +310,12 @@ def write_precomputed_annotations(
     if write_by_spatial_chunk:
         spatial_metadata = _write_annotations_by_spatial_chunk(
             df_handle_for_spatial,
-            coord_space,
-            annotation_type,
-            bounds,
-            num_spatial_levels,
-            target_chunk_limit,
-            shuffle_before_assigning_spatial_levels,
-            output_dir,
-            write_sharded,
-            max_shards_per_transaction,
-            max_threads,
+            spatial_assignment,
+            disable_subsampling=(target_chunk_limit == 0),
+            output_dir=output_dir,
+            write_sharded=write_sharded,
+            max_shards_per_transaction=max_shards_per_transaction,
+            max_threads=max_threads,
         )
     
     # Write the top-level 'info' file for the annotation output directory.
@@ -316,6 +336,41 @@ def write_precomputed_annotations(
 
     with open(f"{output_dir}/info", 'w') as f:
         json.dump(info, f)
+
+
+def _property_column_names(property_specs):
+    """
+    Return the dataframe column names that back the given property specs.
+    For numeric/categorical/string properties this is the property id itself;
+    for rgb/rgba properties the value comes from ``{p}_r``, ``{p}_g``, etc.
+    """
+    cols = []
+    for spec in property_specs:
+        p = spec['id']
+        if spec['type'] == 'rgb':
+            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b'])
+        elif spec['type'] == 'rgba':
+            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b', f'{p}_a'])
+        else:
+            cols.append(p)
+    return cols
+
+
+def _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships):
+    """
+    Return a view of ``df`` containing only the columns this exporter
+    actually consumes (geometry, properties, relationships). Logs a notice
+    listing any dropped columns.
+    """
+    geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
+    prop_cols = _property_column_names(property_specs)
+
+    used = {*geom_cols, *prop_cols, *relationships}
+    keep = [c for c in df.columns if c in used]
+    drop = [c for c in df.columns if c not in used]
+    if drop:
+        logger.info(f"Ignoring {len(drop)} unused input column(s): {drop}")
+    return df[keep]
 
 
 def _construct_coord_space(coord_space):

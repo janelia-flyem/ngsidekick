@@ -140,24 +140,26 @@ def _write_annotations_by_relationship(df_handle: TableHandle, relationship, out
         JSON metadata for the relationship, including the key and sharding spec if applicable.
     """
     logger.info(f"Grouping annotations by relationship {relationship}")
+    df = df_handle.df[['id_buf', 'ann_buf', relationship]]
+    df_handle.df = None
     bufs_by_segment = (
-        df_handle.df[['id_buf', 'ann_buf', relationship]]
+        df
         .dropna(subset=relationship)
         .explode(relationship)
         .groupby(relationship, sort=False)
         # Use b''.join() instead of 'sum' to avoid O(N^2) performance for large groups.
         .agg({'id_buf': ['count', b''.join], 'ann_buf': b''.join})
     )
-    df_handle.df = None
+    del df
 
-    logger.info(f"Combining annotation and ID buffers for relationship '{relationship}'")
     bufs_by_segment.columns = ['count', 'id_buf', 'ann_buf']
     bufs_by_segment['count_buf'] = _encode_uint64_series(bufs_by_segment['count'])
-    bufs_by_segment['combined_buf'] = bufs_by_segment[['count_buf', 'ann_buf', 'id_buf']].sum(axis=1)
 
     logger.info(f"Writing annotations to 'by_rel_{relationship}' index")
     metadata = _write_buffers(
-        bufs_by_segment['combined_buf'],
+        # _write_buffers concatenates these columns row-wise inline; no need
+        # to materialize a precomputed combined-buffer column.
+        bufs_by_segment[['count_buf', 'ann_buf', 'id_buf']],
         output_dir,
         f"by_rel_{relationship}",
         write_sharded,

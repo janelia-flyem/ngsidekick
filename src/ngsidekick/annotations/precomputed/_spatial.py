@@ -3,6 +3,7 @@ from itertools import chain
 from typing import NamedTuple
 
 import numpy as np
+import pandas as pd
 from numba import njit
 from numba.typed import List
 
@@ -14,162 +15,89 @@ logger = logging.getLogger(__name__)
 
 GridSpec = NamedTuple("GridSpec", [('chunk_shapes', np.ndarray), ('grid_shapes', np.ndarray)])
 
-
-def _write_annotations_by_spatial_chunk(
-        df_handle: TableHandle,
-        coord_space,
-        annotation_type,
-        bounds,
-        num_levels,
-        target_chunk_limit,
-        shuffle_before_assigning_spatial_levels,
-        output_dir,
-        write_sharded,
-        max_shards_per_transaction,
-        max_threads,
-):
-    """
-    Write the annotations to the spatial index.
-
-    Args:
-        df_handle:
-            TableHandle.  The handle's reference will be unset before this function returns.
-            The enclosed DataFrame must have columns ['id_buf', 'ann_buf', *geometry_cols].
-            Internally, the data will be copied during processing and again
-            during writing, incurring significant RAM usage for large datasets.
-            The caller can save some RAM by deleting their own reference to the input
-            after constructing the TableHandle (but before calling this function).
-
-        coord_space:
-            CoordinateSpace.
-            The coordinate space of the annotations.
-
-        annotation_type:
-            Literal['point', 'axis_aligned_bounding_box', 'ellipsoid', 'line']
-            The type of annotation to export.
-
-        bounds:
-            np.ndarray, shape (2, D)
-            Lower and upper bounds of the union of all annotations.
-            The bounds are in coordinate units.
-
-        num_levels:
-            The number of spatial index levels. Must be at least 1.
-
-        target_chunk_limit:
-            The maximum number of annotations to place in each chunk.
-            (The same target is used for all levels.)
-            Since the spatial annotations are not distributed uniformly in space,
-            we will likely end up undershooting and overshooting the target for various
-            chunks within a level.
-            The final maximum number of annotations per chunk we end up with at each
-            level will be emitted in the the 'limit' setting of the metadata for each level.
-
-            Note:
-                Instead of specifying a valid limit here, you can disable subsampling in neuroglancer
-                by setting this to the special value of 0.  This is only valid when num_levels=1.
-
-        shuffle_before_assigning_spatial_levels:
-            Whether to shuffle the annotations before assigning spatial levels.
-            If False, the annotations will be assigned to spatial levels in the order
-            they appear in the input dataframe, with earlier annotations assigned to
-            coarser spatial levels.
-            By default, we shuffle the annotations to avoid any bias in the spatial
-            assignment, which is what the neuroglancer spec recommends.
-
-        output_dir:
-            Directory to write the annotations to.
-            Subdirectories for each level of the spatial index will be created in output_dir,
-            named 'by_spatial_level_<level>'.
-
-        write_sharded:
-            Whether to write the annotations in sharded format.
-
-    Returns:
-        JSON metadata to write into the 'spatial' key of the info file.
-    """
-    df_handle, gridspec = _assign_spatial_chunks(
-        df_handle,
-        coord_space,
-        annotation_type,
-        bounds,
-        num_levels,
-        target_chunk_limit,
-        shuffle_before_assigning_spatial_levels
-    )
-
-    metadata = _write_assigned_annotations_by_spatial_chunk(
-        df_handle,
-        gridspec,
-        (target_chunk_limit == 0),
-        output_dir,
-        write_sharded,
-        max_shards_per_transaction,
-        max_threads,
-    )
-    return metadata
+SpatialAssignment = NamedTuple("SpatialAssignment", [
+    # Each entry of (rows, codes, levels) is a single (annotation, chunk)
+    # pairing. ``rows`` may contain duplicates (multi-chunk annotations).
+    ('rows', np.ndarray),       # uint32; positional index into the input df
+    ('codes', np.ndarray),      # uint64; chunk_code at the assigned level
+    ('levels', np.ndarray),     # uint64; level at which this entry lives
+    ('gridspec', GridSpec),
+])
 
 
-def _assign_spatial_chunks(
-    df_handle: TableHandle,
+def _compute_spatial_assignment(
+    df,
     coord_space,
     annotation_type,
     bounds,
     num_levels,
     target_chunk_limit,
-    shuffle_before_assigning_spatial_levels
+    shuffle_before_assigning_spatial_levels,
 ):
     """
-    Assign each annotation to a spatial grid cell.
-    If an annotation intersects multiple grid cells, we duplicate
-    its row so we can assign it to all of the intersecting cells.
+    Compute a :class:`SpatialAssignment` for ``df`` without modifying it
+    or building a duplicated dataframe.
+
+    Splitting this step out from the actual writing lets the caller
+    drop the geometry columns from ``df`` as soon as this returns,
+    holding only the much smaller ``(rows, codes, levels)`` arrays
+    until the spatial index is finally written.
 
     Args:
-        df_handle:
-            TableHandle.  The handle's reference will be unset before this function returns.
-        ...
+        df:
+            DataFrame containing the geometry columns appropriate for
+            ``annotation_type``. Other columns are ignored. Row order is
+            preserved.
+
+        coord_space, annotation_type, bounds, num_levels, target_chunk_limit:
+            See :func:`write_precomputed_annotations`.
+
+        shuffle_before_assigning_spatial_levels:
+            If True, level assignments are randomized across df rows
+            (per the neuroglancer spec recommendation). The shuffle is
+            tracked via a permutation array; ``df`` itself is not
+            modified.
 
     Returns:
-        df, gridspec
-
-        - df is a shuffled copy of the input df with all columns removed except
-          'ann_buf' and 'id_buf', and with additional columns for 'level' and 'chunk_code'.
-          Some rows from the original dataframe may be duplicated if those annotations
-          span across multiple chunks (at the level we selected them to reside in).
-        - gridspec: chunk_shapes and grid_shapes.  See _define_spatial_grids() for details.
+        SpatialAssignment.
     """
-    df = df_handle.df
-    df_handle.df = None
-
     geometry_cols = _geometry_cols(coord_space.names, annotation_type)
-    df = df[[*chain(*geometry_cols), 'ann_buf', 'id_buf']].copy(deep=False)
     gridspec = _define_spatial_grids(bounds, coord_space, num_levels)
-    level_annotation_counts = _compute_target_annotations_per_level(len(df), gridspec, target_chunk_limit)
+    level_counts = _compute_target_annotations_per_level(len(df), gridspec, target_chunk_limit)
 
+    # Levels are assigned by *position* in a (possibly randomly permuted)
+    # ordering of df. Computing the permutation explicitly lets us derive
+    # the per-row level array without mutating df.
     if shuffle_before_assigning_spatial_levels:
         logger.info("Shuffling annotations before assigning spatial grid levels")
-        df = df.sample(frac=1.0)
+        perm = np.random.permutation(len(df))
+    else:
+        perm = np.arange(len(df))
+    levels_by_perm_position = np.repeat(range(num_levels), level_counts.astype(int)).astype(np.uint64)
+    per_row_levels = np.empty(len(df), dtype=np.uint64)
+    per_row_levels[perm] = levels_by_perm_position
+    del perm, levels_by_perm_position
 
     logger.info("Assigning spatial grid chunks...")
-    df['level'] = np.repeat(
-        range(num_levels),
-        level_annotation_counts.astype(int)
-    ).astype(np.uint64)
-    
     match annotation_type:
         case 'point':
-            df = _assign_spatial_chunks_for_points(df, geometry_cols, bounds, gridspec)
+            rows, codes = _compute_grid_codes_for_points(df, geometry_cols, bounds, gridspec, per_row_levels)
         case 'axis_aligned_bounding_box':
-            df = _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec)
+            rows, codes = _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec, per_row_levels)
         case 'ellipsoid':
-            df = _assign_spatial_chunks_for_ellipsoids(df, geometry_cols, bounds, gridspec)
+            rows, codes = _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_row_levels)
         case 'line':
-            df = _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec)
+            rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
         case _:
             raise NotImplementedError(f"Spatial indexing for {annotation_type} annotations is not implemented")
-
     logger.info("Done assigning spatial grid chunks")
-    return TableHandle(df), gridspec
+
+    return SpatialAssignment(
+        rows=rows,
+        codes=codes,
+        levels=per_row_levels[rows],
+        gridspec=gridspec,
+    )
 
 
 def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
@@ -245,8 +173,11 @@ def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
         grid_shapes.append(grid_shape)
 
     # Convert from physical units back to coordinate units.
-    chunk_shapes = np.array(chunk_shapes, dtype=np.float64) / coord_space.scales
-    grid_shapes = np.array(grid_shapes, dtype=np.uint64)
+    chunk_shapes = np.array(chunk_shapes) / coord_space.scales
+    chunk_shapes = chunk_shapes.astype(np.float32)
+
+    grid_shapes = np.array(grid_shapes)
+    grid_shapes = grid_shapes.astype(np.min_scalar_type(grid_shapes.max()))
 
     return GridSpec(chunk_shapes, grid_shapes)
 
@@ -293,31 +224,26 @@ def _compute_target_annotations_per_level(num_annotations, gridspec, target_chun
     return annotation_counts
 
 
-def _assign_spatial_chunks_for_points(df, geometry_cols, bounds, gridspec):
+def _compute_grid_codes_for_points(df, geometry_cols, bounds, gridspec, per_row_levels):
     coord_names = geometry_cols[0]
-    grid_indices = (df[[*coord_names]] - bounds[0]) // gridspec.chunk_shapes[df['level']]
-    grid_indices = grid_indices.astype(np.int32)
+    chunk_shape_per_row = gridspec.chunk_shapes[per_row_levels]
+    grid_shape_per_row = gridspec.grid_shapes[per_row_levels]
+    grid_indices = (df[[*coord_names]] - bounds[0]) // chunk_shape_per_row
 
     # Make sure annotations at the exact upper bound get valid grid coordinates.
-    grid_indices = np.minimum(grid_indices, gridspec.grid_shapes[df['level']].astype(np.int32) - 1)
+    grid_indices = np.minimum(grid_indices, grid_shape_per_row - 1)
+    grid_indices = grid_indices.astype(gridspec.grid_shapes.dtype)
 
     # Switch to C order before computing compressed morton code.
-    df['chunk_code'] = compressed_morton_code(
+    codes = compressed_morton_code(
         grid_indices.to_numpy()[:, ::-1],
-        gridspec.grid_shapes[df['level']][:, ::-1]
+        grid_shape_per_row[:, ::-1],
     )
-    
-    # FIXME: remove this debug code or put it somewhere else.
-    # import pyarrow.feather as feather
-    # df[[f'grid_{c}' for c in coord_names]] = grid_indices
-    # df[[f'{c}a' for c in coord_names]] =  grid_indices * gridspec.chunk_shapes[df['level']] + bounds[0]
-    # df[[f'{c}b' for c in coord_names]] = (grid_indices + 1) * gridspec.chunk_shapes[df['level']] + bounds[0]
-    # feather.write_feather(df.drop(columns=['id_buf', 'ann_buf']), '/tmp/points.feather')
-    
-    return df[['level', 'id_buf', 'ann_buf', 'chunk_code']]
+    # Points always fall in exactly one chunk, so rows is simply [0..N).
+    return np.arange(len(df), dtype=np.uint32), np.asarray(codes, dtype=np.uint64)
 
 
-def _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec):
+def _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec, per_row_levels):
     boxes = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy().reshape(len(df), 2, -1)
 
     # Ensure start < end
@@ -325,29 +251,28 @@ def _assign_spatial_chunks_for_axis_aligned_bounding_boxes(df, geometry_cols, bo
     swap_mask = np.concatenate([swap_mask, swap_mask], axis=1)
     boxes[swap_mask] = boxes[:, ::-1, :][swap_mask]
 
-    chunk_shapes = gridspec.chunk_shapes[df['level']]
-    grid_shapes = gridspec.grid_shapes[df['level']]
-
     logger.info(f"Computing grid codes for {len(df)} boxes")
-    rows, codes = _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds)
-
-    # Duplicate the annotations which span multiple chunks
-    # and therefore have multiple codes.
-    logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
-    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
-    df.loc[df.index[rows], 'chunk_code'] = codes
-    return df
+    return _box_grid_codes(
+        boxes,
+        per_row_levels,
+        bounds[0],
+        gridspec.grid_shapes,
+        gridspec.chunk_shapes,
+    )
 
 
 @njit
-def _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds):
-    D = len(bounds[0])
+def _box_grid_codes(boxes, levels, grid_origin, grid_shapes, chunk_shapes):
+    D = len(grid_shapes[0])
     rows = List()
     codes = List()
-    for row, (box, chunk_shape, grid_shape) in enumerate(zip(boxes, chunk_shapes, grid_shapes)):
+    for row, (box, level) in enumerate(zip(boxes, levels)):
+        grid_shape = grid_shapes[level]
+        chunk_shape = chunk_shapes[level]
+
         grid_span = np.zeros((2, D), np.uint64)
-        grid_span[0] = np.floor((box[0] - bounds[0]) / chunk_shape).astype(np.uint64)
-        grid_span[1] = np.ceil((box[1] - bounds[0]) / chunk_shape).astype(np.uint64)
+        grid_span[0] = np.floor((box[0] - grid_origin) / chunk_shape).astype(np.uint64)
+        grid_span[1] = np.ceil((box[1] - grid_origin) / chunk_shape).astype(np.uint64)
         grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
 
         # Switch to C order before computing compressed morton code.
@@ -355,36 +280,25 @@ def _box_grid_codes(boxes, chunk_shapes, grid_shapes, bounds):
         rows.extend(np.uint64(row) * np.ones_like(row_codes))
         codes.extend(row_codes)
 
-
     # Return as arrays rather than reflecting into Python lists.
-    rows = np.asarray(rows, dtype=np.int64)
+    rows = np.asarray(rows, dtype=np.uint32)
     codes = np.asarray(codes, dtype=np.uint64)
     return rows, codes
 
 
-def _assign_spatial_chunks_for_ellipsoids(df, geometry_cols, bounds, gridspec):
+def _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_row_levels):
     centroids = df[geometry_cols[0]].to_numpy()
     radii = df[geometry_cols[1]].to_numpy()
 
-    boxes = np.concatenate([centroids - radii, centroids + radii], axis=1).reshape(len(df), 2, -1)
-    boxes = boxes - bounds[0]
-
     logger.info(f"Computing grid codes for {len(df)} ellipsoids")
-    rows, codes = _ellipsoid_grid_codes(
+    return _ellipsoid_grid_codes(
         centroids,
         radii,
-        df['level'].to_numpy(),
+        per_row_levels,
         bounds[0],
         gridspec.grid_shapes,
-        gridspec.chunk_shapes
+        gridspec.chunk_shapes,
     )
-
-    # Duplicate the annotations which span multiple chunks
-    # and therefore have multiple codes.
-    logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
-    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
-    df.loc[df.index[rows], 'chunk_code'] = codes
-    return df
 
 
 @njit
@@ -410,7 +324,7 @@ def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, grid_shapes, ch
                 codes.append(code)
 
     # Return as arrays rather than reflecting into Python lists.
-    rows = np.asarray(rows, dtype=np.int64)
+    rows = np.asarray(rows, dtype=np.uint32)
     codes = np.asarray(codes, dtype=np.uint64)
     return rows, codes
 
@@ -446,7 +360,7 @@ def _ellipsoid_chunk_overlap(center, radii, grid_origin, cell_shape, grid_index)
     return min_sum <= 1.0
 
 
-def _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec):
+def _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels):
     endpoints = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy().reshape(len(df), 2, -1)
 
     # Ensure start < end
@@ -455,20 +369,13 @@ def _assign_spatial_chunks_for_lines(df, geometry_cols, bounds, gridspec):
     endpoints[swap_mask] = endpoints[:, ::-1, :][swap_mask]
 
     logger.info(f"Computing grid codes for {len(df)} lines")
-    rows, codes = _line_grid_codes(
+    return _line_grid_codes(
         endpoints,
-        df['level'].to_numpy(),
+        per_row_levels,
         bounds[0],
         gridspec.grid_shapes,
-        gridspec.chunk_shapes
+        gridspec.chunk_shapes,
     )
-
-    # Duplicate the annotations which span multiple chunks
-    # and therefore have multiple codes.
-    logger.info("Assigning chunk codes to annotations (duplicating annotations as needed)")
-    df = df.reindex(columns=['level', 'id_buf', 'ann_buf'])
-    df.loc[df.index[rows], 'chunk_code'] = codes
-    return df
 
 
 @njit
@@ -493,7 +400,7 @@ def _line_grid_codes(endpoints, levels, grid_origin, grid_shapes, chunk_shapes):
                 codes.append(code)
 
     # Return as arrays rather than reflecting into Python lists.
-    rows = np.asarray(rows, dtype=np.int64)
+    rows = np.asarray(rows, dtype=np.uint32)
     codes = np.asarray(codes, dtype=np.uint64)
     return rows, codes
 
@@ -545,45 +452,70 @@ def _line_chunk_overlap(point_a, point_b, grid_origin, cell_shape, grid_index):
     return max_t >= min_t
 
 
-def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_subsampling, output_dir, write_sharded, max_shards_per_transaction, max_threads):
+def _write_annotations_by_spatial_chunk(df_handle, spatial_assignment, disable_subsampling, output_dir, write_sharded, max_shards_per_transaction, max_threads):
     """
-    Write the spatial index, given a dataframe in which the 'level'
-    and grid chunk codes for each annotation have already been assigned.
+    Write the spatial index, given a precomputed :class:`SpatialAssignment`
+    and a dataframe holding the encoded annotations.
 
     Args:
         df_handle:
-            TableHandle.  The handle's reference will be unset before this function returns.
-        gridspec:
-            GridSpec object defining the spatial index.
+            TableHandle wrapping a DataFrame with ``id_buf`` and
+            ``ann_buf`` columns. The handle's reference will be unset
+            before this function returns. The dataframe is indexed
+            positionally by ``spatial_assignment.rows``.
+
+        spatial_assignment:
+            Output of :func:`_compute_spatial_assignment`. Holds the
+            (row, chunk_code, level) tuples that determine which
+            annotations land in which spatial cells; supplied here in
+            preference to recomputing it because the caller can drop the
+            input geometry columns once the assignment is known.
+
         disable_subsampling:
-            Whether to disable subsampling by seeting "limit" to 1 in the info file.
-            (See inline comments.)
+            Whether to disable subsampling by setting "limit" to 1 in
+            the info file. (See inline comments.)
+
         output_dir:
             Directory to write the annotations to.
-            Subdirectories will be created for each level of the spatial index.
+            Subdirectories for each level of the spatial index will be
+            created in output_dir, named ``by_spatial_level_<level>``.
+
         write_sharded:
             Whether to write the annotations in sharded format.
+
         max_shards_per_transaction, max_threads:
             See :func:`._write_buffers._write_buffers`.
 
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
     """
+    rows = spatial_assignment.rows
+    codes = spatial_assignment.codes
+    levels = spatial_assignment.levels
+    gridspec = spatial_assignment.gridspec
+
+    # Build the per-(level, chunk_code, annotation) frame by gathering
+    # id_buf and ann_buf at the assignment's row positions. Numpy fancy
+    # indexing on the underlying object arrays just produces parallel
+    # arrays of pointers to the same bytes objects — no buffer data is
+    # copied — so the cost is one pointer per (annotation, chunk) pair.
     logger.info(f"Concatenating annotations by spatial chunk")
+    df = pd.DataFrame({
+        'level': levels,
+        'chunk_code': codes,
+        'id_buf': df_handle.df['id_buf'].values[rows],
+        'ann_buf': df_handle.df['ann_buf'].values[rows],
+    })
+    df_handle.df = None
     bufs_by_grid = (
-        df_handle.df[['level', 'chunk_code', 'id_buf', 'ann_buf']]
+        df
         .groupby(['level', 'chunk_code'], sort=False)
         .agg({'id_buf': ['count', b''.join], 'ann_buf': b''.join})
     )
+    del df
 
-    # We're done with the original input; delete it to save
-    # RAM before writing (which takes a lot of RAM).
-    df_handle.df = None
-
-    logger.info(f"Combining annotation and ID buffers for spatial index")
     bufs_by_grid.columns = ['count', 'id_buf', 'ann_buf']
     bufs_by_grid['count_buf'] = _encode_uint64_series(bufs_by_grid['count'])
-    bufs_by_grid['combined_buf'] = bufs_by_grid[['count_buf', 'ann_buf', 'id_buf']].sum(axis=1)
 
     bufs_by_grid = bufs_by_grid.reset_index()
 
@@ -603,7 +535,9 @@ def _write_assigned_annotations_by_spatial_chunk(df_handle, gridspec, disable_su
             level_bufs.index = list(map('_'.join, grid_coords.astype(str)))
 
         level_metadata = _write_buffers(
-            level_bufs['combined_buf'],
+            # _write_buffers concatenates these columns row-wise inline; no
+            # need to materialize a precomputed combined-buffer column.
+            level_bufs[['count_buf', 'ann_buf', 'id_buf']],
             output_dir,
             f"by_spatial_level_{level}",
             write_sharded,
