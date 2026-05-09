@@ -29,6 +29,37 @@ def _default_max_threads():
     return multiprocessing.cpu_count()
 
 
+_TOTAL_BYTES_SAMPLE_SIZE = 10_000
+
+
+def _estimate_total_bytes(bufs):
+    """
+    Estimate the total byte size of every value in ``bufs`` (a Series or
+    DataFrame of bytes-like objects).
+
+    Used by :func:`_write_buffers_sharded` only as input to the shard-spec
+    heuristic, which is itself logarithmic in ``total_bytes`` -- a few
+    percent of estimation error is harmless. The exact computation
+    (``bufs.map(len).sum()``) is a Python-level loop over every cell, so
+    on a 300M-row export it costs minutes; sampling cuts it to
+    milliseconds. The sample is drawn with a fixed seed so the chosen
+    sharding spec is deterministic across runs of the same input.
+    """
+    n = len(bufs)
+    if n == 0:
+        return 0
+    if n <= _TOTAL_BYTES_SAMPLE_SIZE:
+        # Cheap enough to measure exactly; also guarantees correctness
+        # for small inputs where sampling bias would dominate.
+        exact = bufs.map(len).sum()
+        # Series.sum() returns a scalar; DataFrame.sum() returns a Series.
+        return int(exact.sum() if isinstance(exact, pd.Series) else exact)
+    sample = bufs.sample(n=_TOTAL_BYTES_SAMPLE_SIZE, random_state=0)
+    sample_total = sample.map(len).sum()
+    sample_total = sample_total.sum() if isinstance(sample_total, pd.Series) else sample_total
+    return int(round(sample_total * n / _TOTAL_BYTES_SAMPLE_SIZE))
+
+
 def _write_buffers(bufs, output_dir, subdir, write_sharded, max_shards_per_transaction, max_threads):
     """
     Write the buffers to the appropriate subdirectory of output_dir,
@@ -175,7 +206,7 @@ def _write_buffers_sharded(bufs, output_dir, subdir, max_shards_per_transaction,
 
     shard_spec = _choose_output_spec(
         total_count=len(bufs),
-        total_bytes=bufs.map(len).sum().sum(),  # fixme, might be slow
+        total_bytes=_estimate_total_bytes(bufs),
         max_key=int(bufs.index.max()),
         hashtype='murmurhash3_x86_128',
         gzip_compress=True
