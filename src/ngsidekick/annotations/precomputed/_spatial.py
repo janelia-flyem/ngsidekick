@@ -333,9 +333,10 @@ def _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_
 
 @njit
 def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, chunk_shapes, axis_bits_per_level):
-    n = len(centroids)
     D = centroids.shape[1]
 
+    # Pre-allocate these and reuse them on each loop iteration
+    # to avoid heap allocations in the loop.
     grid_span = np.zeros((2, D), dtype=np.uint64)
     grid_span_shape = np.empty(D, dtype=np.uint64)
     grid_index = np.empty(D, dtype=np.uint64)
@@ -343,10 +344,7 @@ def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, chunk_shapes, a
 
     rows = List()
     codes = List()
-    for row in range(n):
-        centroid = centroids[row]
-        radius = radii[row]
-        level = levels[row]
+    for row, (centroid, radius, level) in enumerate(zip(centroids, radii, levels)):
         chunk_shape = chunk_shapes[level]
         ab = axis_bits_per_level[level]
 
@@ -429,9 +427,10 @@ def _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_l
 
 @njit
 def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per_level):
-    n = len(endpoints)
     D = endpoints.shape[2]
 
+    # Pre-allocate these and reuse them on each loop iteration
+    # to avoid heap allocations in the loop.
     grid_span = np.zeros((2, D), dtype=np.uint64)
     grid_span_shape = np.empty(D, dtype=np.uint64)
     grid_index = np.empty(D, dtype=np.uint64)
@@ -439,10 +438,7 @@ def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per
 
     rows = List()
     codes = List()
-    for row in range(n):
-        point_a = endpoints[row, 0]
-        point_b = endpoints[row, 1]
-        level = levels[row]
+    for row, ((point_a, point_b), level) in enumerate(zip(endpoints, levels)):
         chunk_shape = chunk_shapes[level]
         ab = axis_bits_per_level[level]
 
