@@ -144,28 +144,64 @@ def _write_annotations_by_relationship(df_handle: TableHandle, relationship, out
     logger.info(f"Grouping annotations by relationship {relationship}")
     df = df_handle.df
     df_handle.df = None
+
+    # It would be nice to do this with a short bit of pandas operations,
+    # but that requires creating a ton of little pd.Series.
+    # Instead, below we use numpy to pre-sort the buffers and slice into them directly.
+    ## grouped = (
+    ##     df
+    ##     .dropna(subset=relationship)
+    ##     .explode(relationship)
+    ##     .groupby(relationship, sort=False)
+    ## )
+    ## bufs_by_segment = grouped.agg(
+    ##     # Use b''.join() instead of 'sum' to avoid O(N^2) performance for large groups.
+    ##     {'id_buf': ['count', b''.join], 'ann_buf': b''.join}
+    ## )
+    ## del df, grouped
+    ## bufs_by_segment.columns = ['count', 'id_buf', 'ann_buf']
+
     if pd.api.types.is_integer_dtype(df[relationship]):
-        grouped = df.groupby(relationship, sort=False)
+        df = df.sort_values(relationship, kind='stable')
     else:
-        grouped = (
+        df = (
             df
             .dropna(subset=relationship)
             .explode(relationship)
-            .groupby(relationship, sort=False)
+            .sort_values(relationship, kind='stable')
         )
-    bufs_by_segment = grouped.agg(
-        # Use b''.join() instead of 'sum' to avoid O(N^2) performance for large groups.
-        {'id_buf': ['count', b''.join], 'ann_buf': b''.join}
-    )
-    del df, grouped
 
-    bufs_by_segment.columns = ['count', 'id_buf', 'ann_buf']
+    rel_values = df[relationship].to_numpy()
+    id_bufs = df['id_buf'].to_numpy()
+    ann_bufs = df['ann_buf'].to_numpy()
+    del df
+
+    if len(rel_values) == 0:
+        boundaries = np.array([0], dtype=np.int64)
+    else:
+        boundaries = np.concatenate((
+            [0],
+            np.flatnonzero(rel_values[1:] != rel_values[:-1]) + 1,
+            [len(rel_values)],
+        ))
+    starts = boundaries[:-1]
+    ends = boundaries[1:]
+
+    counts = ends - starts
+    unique_rels = rel_values[starts]
+    joined_id = np.array([b''.join(id_bufs[s:e]) for s, e in zip(starts, ends)], dtype=object)
+    joined_ann = np.array([b''.join(ann_bufs[s:e]) for s, e in zip(starts, ends)], dtype=object)
+    del rel_values, id_bufs, ann_bufs
+
+    bufs_by_segment = pd.DataFrame({
+        'count': counts,
+        'id_buf': joined_id,
+        'ann_buf': joined_ann,
+    }, index=pd.Index(unique_rels, name=relationship))
     bufs_by_segment['count_buf'] = _encode_uint64_series(bufs_by_segment['count'])
 
     logger.info(f"Writing annotations to 'by_rel_{relationship}' index")
     metadata = _write_buffers(
-        # _write_buffers concatenates these columns row-wise inline; no need
-        # to materialize a precomputed combined-buffer column.
         bufs_by_segment[['count_buf', 'ann_buf', 'id_buf']],
         output_dir,
         f"by_rel_{relationship}",
