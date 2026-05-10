@@ -329,7 +329,7 @@ def _scalar_property_types(df, label_col, description_col, string_cols, number_c
     if (
         len(df.columns) == 1
         and not prop_types
-        and (df.dtypes.iloc[0] == 'string' or not np.issubdtype(df.dtypes.iloc[0], np.number))
+        and (df.dtypes.iloc[0] == 'string' or not pd.api.types.is_numeric_dtype(df.dtypes.iloc[0]))
     ):
         prop_types = {df.columns[0]: 'label'}
 
@@ -337,7 +337,7 @@ def _scalar_property_types(df, label_col, description_col, string_cols, number_c
     for name, dtype in df.dtypes.items():
         if dtype in (bool, 'boolean') and prop_types.get(name) != 'tags':  # noqa: E721
             raise RuntimeError(f"Column '{name}': Boolean columns are only valid as tag_cols")
-        elif prop_types.get(name) == 'number' and not np.issubdtype(dtype, np.number):
+        elif prop_types.get(name) == 'number' and not pd.api.types.is_numeric_dtype(dtype):
             raise RuntimeError(f"Column '{name}': Not valid as number_cols (dtype: {dtype})")
         elif name in prop_types:
             continue
@@ -347,7 +347,7 @@ def _scalar_property_types(df, label_col, description_col, string_cols, number_c
             prop_types['description'] = 'description'
         elif dtype in ("object", "string"):
             prop_types[name] = 'string'
-        elif np.issubdtype(dtype, np.number):
+        elif pd.api.types.is_numeric_dtype(dtype):
             prop_types[name] = 'number'
         else:
             prop_types[name] = 'string'
@@ -391,7 +391,7 @@ def _scalar_number_property_json(s, description):
     if s.dtype in (np.int64, np.uint64):
         dtype_name = _select_int64_downcast(s)
 
-    if np.issubdtype(s.dtype, np.floating):
+    if pd.api.types.is_float_dtype(s):
         dtype_name = 'float32'
         if s.isnull().any():
             raise RuntimeError(f"Numeric column '{s.name}' contains NaN.")
