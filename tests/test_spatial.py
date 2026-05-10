@@ -12,18 +12,109 @@ from ngsidekick.annotations.precomputed._spatial import (
     _compute_grid_codes_for_axis_aligned_bounding_boxes,
     _compute_grid_codes_for_ellipsoids,
     _compute_grid_codes_for_lines,
+    _compute_grid_codes_for_points,
     GridSpec,
 )
 
 
 def _single_level_gridspec(grid_shape=(4, 4, 4), bounds_upper=1.0):
-    """A trivial single-level cubic grid in [0, bounds_upper]^3."""
+    """A trivial single-level cubic grid in [0, bounds_upper]^len(grid_shape)."""
     grid_shapes = np.array([grid_shape], dtype=np.uint64)
     chunk_shapes = np.array(
         [[bounds_upper / s for s in grid_shape]],
         dtype=np.float64,
     )
     return GridSpec(chunk_shapes=chunk_shapes, grid_shapes=grid_shapes)
+
+
+def test_2d_lines_span_multiple_chunks():
+    """
+    The kernels are documented to be agnostic to coordinate-space
+    dimensionality. Verify with a 2-D coord space that line annotations
+    spanning multiple cells produce one entry per cell.
+    """
+    bounds = np.array([[0.0, 0.0], [1.0, 1.0]])
+    gridspec = _single_level_gridspec((4, 4))
+    geometry_cols = [['xa', 'ya'], ['xb', 'yb']]
+
+    df = pd.DataFrame({
+        'xa': [0.1, 0.1, 0.1],
+        'ya': [0.1, 0.1, 0.1],
+        'xb': [0.2, 0.6, 0.9],   # spans 1, 3, and 4 cells along x
+        'yb': [0.2, 0.1, 0.1],
+    })
+    per_row_levels = np.zeros(len(df), dtype=np.uint64)
+
+    rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
+    counts = Counter(rows.tolist())
+    assert counts == {0: 1, 1: 3, 2: 4}, counts
+
+
+def test_2d_points_get_correct_chunk_codes():
+    """Points in a 2-D coord space hash to a single chunk each."""
+    bounds = np.array([[0.0, 0.0], [1.0, 1.0]])
+    gridspec = _single_level_gridspec((4, 4))
+
+    df = pd.DataFrame({'x': [0.1, 0.6, 0.9], 'y': [0.1, 0.5, 0.9]})
+    per_row_levels = np.zeros(len(df), dtype=np.uint64)
+    rows, codes = _compute_grid_codes_for_points(df, [['x', 'y']], bounds, gridspec, per_row_levels)
+    assert rows.tolist() == [0, 1, 2]
+    # All chunk codes distinct (each point is in its own cell).
+    assert len(set(codes.tolist())) == 3
+
+
+def test_2d_boxes_span_multiple_chunks():
+    bounds = np.array([[0.0, 0.0], [1.0, 1.0]])
+    gridspec = _single_level_gridspec((4, 4))
+    df = pd.DataFrame({
+        'xa': [0.05, 0.05],
+        'ya': [0.05, 0.05],
+        'xb': [0.20, 0.30],
+        'yb': [0.20, 0.30],
+    })
+    per_row_levels = np.zeros(len(df), dtype=np.uint64)
+    rows, codes = _compute_grid_codes_for_axis_aligned_bounding_boxes(df, [['xa', 'ya'], ['xb', 'yb']], bounds, gridspec, per_row_levels)
+    counts = Counter(rows.tolist())
+    # Box 0 fits in 1 cell. Box 1 spans 2x2 cells = 4.
+    assert counts == {0: 1, 1: 4}, counts
+
+
+def test_4d_lines_round_trip_via_public_api():
+    """
+    End-to-end check via write_precomputed_annotations that a 4-D coord
+    space produces a valid spatial index. Catches regressions in any
+    stage that hardcodes a 3-D assumption (geometry encoder, spatial
+    kernels, gridspec construction).
+    """
+    import json
+    import tempfile
+    from neuroglancer.coordinate_space import CoordinateSpace
+    from ngsidekick.annotations.precomputed import write_precomputed_annotations
+
+    n = 100
+    rng = np.random.default_rng(0)
+    ids = rng.choice(2**40, size=n, replace=False).astype(np.uint64)
+    df = pd.DataFrame({
+        'xa': rng.normal(0, 5, n), 'ya': rng.normal(0, 5, n),
+        'za': rng.normal(0, 5, n), 'ta': rng.normal(0, 5, n),
+        'xb': rng.normal(0, 5, n), 'yb': rng.normal(0, 5, n),
+        'zb': rng.normal(0, 5, n), 'tb': rng.normal(0, 5, n),
+    }, index=pd.Index(ids))
+
+    cs = CoordinateSpace(names=['x', 'y', 'z', 't'], units=['nm']*4, scales=[1, 1, 1, 1])
+    with tempfile.TemporaryDirectory() as tmpdir:
+        write_precomputed_annotations(
+            df, cs, annotation_type='line',
+            output_dir=f"{tmpdir}/l4",
+            write_sharded=True, write_by_relationship=False,
+            num_spatial_levels=3, target_chunk_limit=10,
+        )
+        info = json.loads(open(f"{tmpdir}/l4/info").read())
+        assert list(info['dimensions'].keys()) == ['x', 'y', 'z', 't']
+        # Each level's grid_shape should have 4 entries (one per dimension).
+        for level_meta in info['spatial']:
+            assert len(level_meta['grid_shape']) == 4
+            assert len(level_meta['chunk_size']) == 4
 
 
 def test_lines_spanning_multiple_chunks_are_duplicated():

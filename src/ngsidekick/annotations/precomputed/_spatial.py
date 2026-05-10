@@ -7,9 +7,9 @@ import pandas as pd
 from numba import njit
 from numba.typed import List
 
-from .compressed_morton import compressed_morton_code, compressed_morton_decode, compressed_morton_code_no_broadcast
+from .compressed_morton import compressed_morton_code, compressed_morton_decode, _compressed_morton_code_no_alloc
 from ._write_buffers import _write_buffers
-from ._util import _encode_uint64_series, _geometry_cols, _ndindex_array, TableHandle
+from ._util import _encode_uint64_series, _geometry_cols, _unravel_index, TableHandle
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +182,15 @@ def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
     return GridSpec(chunk_shapes, grid_shapes)
 
 
+def _axis_bits_c_order(grid_shapes):
+    """
+    Return ``ceil(log2(grid_shape))`` per axis, in C-order (slowest-varying
+    first), for every level. Suitable for passing to ``_compressed_morton_code_no_alloc``
+    together with C-order grid coordinates.
+    """
+    return np.ceil(np.log2(grid_shapes[:, ::-1])).astype(np.int8)
+
+
 def _compute_target_annotations_per_level(num_annotations, gridspec, target_chunk_limit: int):
     """
     Compute the TOTAL number of annotations at each level of the spatial index.
@@ -256,29 +265,50 @@ def _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bound
         boxes,
         per_row_levels,
         bounds[0],
-        gridspec.grid_shapes,
         gridspec.chunk_shapes,
+        _axis_bits_c_order(gridspec.grid_shapes),
     )
 
 
 @njit
-def _box_grid_codes(boxes, levels, grid_origin, grid_shapes, chunk_shapes):
-    D = len(grid_shapes[0])
+def _box_grid_codes(boxes, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+    D = boxes.shape[2]
+
+    # Pre-allocate these and reuse them on each loop iteration
+    # to avoid heap allocations in the loop.
+    grid_span = np.zeros((2, D), dtype=np.uint64)
+    grid_span_shape = np.empty(D, dtype=np.uint64)
+    grid_index = np.empty(D, dtype=np.uint64)
+    curr_axis_pos = np.empty(D, dtype=np.uint64)
+
     rows = List()
     codes = List()
+
     for row, (box, level) in enumerate(zip(boxes, levels)):
-        grid_shape = grid_shapes[level]
         chunk_shape = chunk_shapes[level]
+        ab = axis_bits_per_level[level]
 
-        grid_span = np.zeros((2, D), np.uint64)
-        grid_span[0] = np.floor((box[0] - grid_origin) / chunk_shape).astype(np.uint64)
-        grid_span[1] = np.ceil((box[1] - grid_origin) / chunk_shape).astype(np.uint64)
-        grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
+        # We'd prefer the following, but we're worried about little allocations,
+        # so below we loop over the dimensions explicitly.
+        ## grid_span[0] = np.floor((box[0] - grid_origin) / chunk_shape)
+        ## grid_span[1] = np.ceil((box[1] - grid_origin) / chunk_shape)
+        ## grid_span_cell_count = np.prod(grid_span[1] - grid_span[0])
 
-        # Switch to C order before computing compressed morton code.
-        row_codes = compressed_morton_code_no_broadcast(grid_indices[:, ::-1], grid_shape[::-1])
-        rows.extend(np.uint64(row) * np.ones_like(row_codes))
-        codes.extend(row_codes)
+        # Compute per-axis grid-cell range.
+        grid_span_cell_count = np.uint64(1)
+        for d in range(D):
+            grid_span[0, d] = np.uint64(np.floor((box[0, d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span[1, d] = np.uint64(np.ceil((box[1, d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
+            grid_span_cell_count *= grid_span_shape[d]
+
+        # Scan across all cells in the span.
+        for flat_index in range(grid_span_cell_count):
+            _unravel_index(flat_index, grid_span_shape, grid_index)
+            grid_index[:] += grid_span[0]
+            code = _compressed_morton_code_no_alloc(grid_index[::-1], ab, curr_axis_pos)
+            rows.append(row)
+            codes.append(code)
 
     # Return as arrays rather than reflecting into Python lists.
     rows = np.asarray(rows, dtype=np.uint32)
@@ -296,30 +326,49 @@ def _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_
         radii,
         per_row_levels,
         bounds[0],
-        gridspec.grid_shapes,
         gridspec.chunk_shapes,
+        _axis_bits_c_order(gridspec.grid_shapes),
     )
 
 
 @njit
-def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, grid_shapes, chunk_shapes):
-    D = len(grid_shapes[0])
+def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+    n = len(centroids)
+    D = centroids.shape[1]
+
+    grid_span = np.zeros((2, D), dtype=np.uint64)
+    grid_span_shape = np.empty(D, dtype=np.uint64)
+    grid_index = np.empty(D, dtype=np.uint64)
+    curr_axis_pos = np.empty(D, dtype=np.uint64)
+
     rows = List()
     codes = List()
-    for row, (centroid, radius, level) in enumerate(zip(centroids, radii, levels)):
-        grid_shape = grid_shapes[level]
+    for row in range(n):
+        centroid = centroids[row]
+        radius = radii[row]
+        level = levels[row]
         chunk_shape = chunk_shapes[level]
+        ab = axis_bits_per_level[level]
 
-        grid_span = np.zeros((2, D), np.uint64)
-        grid_span[0] = np.floor((centroid - radius - grid_origin) / chunk_shape)
-        grid_span[1] = np.ceil((centroid + radius - grid_origin) / chunk_shape)
+        # We'd prefer the following, but we're worried about little allocations,
+        # so below we loop over the dimensions explicitly.
+        ## grid_span[0] = np.floor((centroid - radius - grid_origin) / chunk_shape)
+        ## grid_span[1] = np.ceil((centroid + radius - grid_origin) / chunk_shape)
+        ## grid_span_cell_count = np.prod(grid_span[1] - grid_span[0])
 
-        grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
+        grid_span_cell_count = np.uint64(1)
+        for d in range(D):
+            grid_span[0, d] = np.uint64(np.floor((centroid[d] - radius[d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span[1, d] = np.uint64(np.ceil((centroid[d] + radius[d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
+            grid_span_cell_count *= grid_span_shape[d]
 
-        for grid_index in grid_indices:
+        # Scan across all cells in the span.
+        for flat_index in range(grid_span_cell_count):
+            _unravel_index(flat_index, grid_span_shape, grid_index)
+            grid_index[:] += grid_span[0]
             if _ellipsoid_chunk_overlap(centroid, radius, grid_origin, chunk_shape, grid_index):
-                # Switch to C order before computing compressed morton code.
-                code = compressed_morton_code_no_broadcast(grid_index[::-1], grid_shape[::-1])
+                code = _compressed_morton_code_no_alloc(grid_index[::-1], ab, curr_axis_pos)
                 rows.append(row)
                 codes.append(code)
 
@@ -373,29 +422,49 @@ def _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_l
         endpoints,
         per_row_levels,
         bounds[0],
-        gridspec.grid_shapes,
         gridspec.chunk_shapes,
+        _axis_bits_c_order(gridspec.grid_shapes),
     )
 
 
 @njit
-def _line_grid_codes(endpoints, levels, grid_origin, grid_shapes, chunk_shapes):
-    D = len(grid_shapes[0])
+def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+    n = len(endpoints)
+    D = endpoints.shape[2]
+
+    grid_span = np.zeros((2, D), dtype=np.uint64)
+    grid_span_shape = np.empty(D, dtype=np.uint64)
+    grid_index = np.empty(D, dtype=np.uint64)
+    curr_axis_pos = np.empty(D, dtype=np.uint64)
+
     rows = List()
     codes = List()
-    for row, ((point_a, point_b), level) in enumerate(zip(endpoints, levels)):
-        grid_shape = grid_shapes[level]
+    for row in range(n):
+        point_a = endpoints[row, 0]
+        point_b = endpoints[row, 1]
+        level = levels[row]
         chunk_shape = chunk_shapes[level]
+        ab = axis_bits_per_level[level]
 
-        grid_span = np.zeros((2, D), np.uint64)
-        grid_span[0] = np.floor((point_a - grid_origin) / chunk_shape)
-        grid_span[1] = np.ceil((point_b - grid_origin) / chunk_shape)
+        # We'd prefer the following, but we're worried about little allocations,
+        # so below we loop over the dimensions explicitly.
+        ## grid_span[0] = np.floor((point_a - grid_origin) / chunk_shape)
+        ## grid_span[1] = np.ceil((point_b - grid_origin) / chunk_shape)
+        ## grid_span_cell_count = np.prod(grid_span[1] - grid_span[0])
 
-        grid_indices = grid_span[0] + _ndindex_array(grid_span[1] - grid_span[0])
-        for grid_index in grid_indices:
+        grid_span_cell_count = np.uint64(1)
+        for d in range(D):
+            grid_span[0, d] = np.uint64(np.floor((point_a[d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span[1, d] = np.uint64(np.ceil((point_b[d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
+            grid_span_cell_count *= grid_span_shape[d]
+
+        # Scan across all cells in the span.
+        for flat_index in range(grid_span_cell_count):
+            _unravel_index(flat_index, grid_span_shape, grid_index)
+            grid_index[:] += grid_span[0]
             if _line_chunk_overlap(point_a, point_b, grid_origin, chunk_shape, grid_index):
-                # Switch to C order before computing compressed morton code.
-                code = compressed_morton_code_no_broadcast(grid_index[::-1], grid_shape[::-1])
+                code = _compressed_morton_code_no_alloc(grid_index[::-1], ab, curr_axis_pos)
                 rows.append(row)
                 codes.append(code)
 

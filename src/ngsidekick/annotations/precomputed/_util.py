@@ -103,13 +103,35 @@ def ndindex_array(shape):
     """
     return _ndindex_array(np.asarray(shape))
 
+@njit(inline='always')
+def _unravel_index(flat_index, shape, out):
+    """
+    Allocation-free, single-index equivalent of ``numpy.unravel_index``.
+
+    Decodes ``flat_index`` into a multi-D coordinate within an array of
+    ``shape``, writing the result into the pre-allocated ``out`` buffer
+    (which must have length ``len(shape)``). Like ``numpy.unravel_index``
+    with its default ``order='C'``, the last axis varies fastest as
+    ``flat_index`` increments.
+
+    Equivalent to:
+
+        out[:] = numpy.unravel_index(flat_index, shape)
+
+    but without allocating a tuple of arrays for the result.
+    """
+    for d in range(len(shape) - 1, -1, -1):
+        out[d] = flat_index % shape[d]
+        flat_index = flat_index // shape[d]
+
+
 @njit
 def _ndindex_array(shape):
     total_indices = np.prod(shape)
     ndim = len(shape)
-    
+
     indices = np.zeros((total_indices, ndim), dtype=np.uint64)
-    
+
     for linear_idx in range(total_indices):
         temp_idx = linear_idx
 

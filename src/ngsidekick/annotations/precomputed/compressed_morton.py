@@ -66,19 +66,60 @@ def __compressed_morton_code(grid_coord, axis_bits, result):
     output_pos = np.uint64(0)
     output_code = np.uint64(0)
 
+    _1 = np.uint64(1)
     for _ in range(D * 64):
         curr_axis = (curr_axis - 1) % D
         if curr_axis_pos[curr_axis] >= axis_bits[curr_axis]:
             continue
 
         input_pos = curr_axis_pos[curr_axis]
-        output_code |= ((grid_coord[curr_axis] >> input_pos) & np.uint64(1)) << output_pos
-        output_pos += np.uint64(1)
-        curr_axis_pos[curr_axis] += 1
+        output_code |= ((grid_coord[curr_axis] >> input_pos) & _1) << output_pos
+        output_pos += _1
+        curr_axis_pos[curr_axis] += _1
 
     # With guvectorize, we treat a scalar output as if it had a single element.
     # https://numba.readthedocs.io/en/stable/user/vectorize.html#scalar-return-values
     result[0] = output_code
+
+
+@njit(inline='always')
+def _compressed_morton_code_no_alloc(grid_coord, axis_bits, curr_axis_pos):
+    """
+    Similar to __compressed_morton_code, but does not allocate any
+    arrays internally, making it suitable for use inside hot loops in @njit
+    kernels.  Avoids polluting the heap with lots of small allocations that
+    wouldn't be readily reclaimed by the libc allocator.
+
+    - Works only for a single grid coordinate (no broadcasting)
+    - Requires the caller to provide a pre-allocated scratch buffer (curr_axis_pos).
+
+    Args:
+        grid_coord:
+            Array of length D giving the grid coordinate to encode (C-order).
+        axis_bits:
+            Array of length D giving ``ceil(log2(grid_shape))`` per axis (C-order).
+        curr_axis_pos:
+            Writable uint64 buffer of length D. Overwritten on entry; its
+            contents at exit are unspecified.
+    """
+    D = len(axis_bits)
+    curr_axis_pos[:] = np.uint64(0)
+    curr_axis = 0
+    output_code = np.uint64(0)
+    output_pos = np.uint64(0)
+
+    _1 = np.uint64(1)
+    for _ in range(D * 64):
+        curr_axis = (curr_axis - 1) % D
+        if curr_axis_pos[curr_axis] >= axis_bits[curr_axis]:
+            continue
+
+        input_pos = curr_axis_pos[curr_axis]
+        output_code |= ((grid_coord[curr_axis] >> input_pos) & _1) << output_pos
+        output_pos += _1
+        curr_axis_pos[curr_axis] += _1
+
+    return output_code
 
 
 @njit
