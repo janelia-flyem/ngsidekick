@@ -308,12 +308,24 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle"><code class="docutils literal notranslate"><span class="pre">TableHandle</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle.df"><code class="docutils literal notranslate"><span class="pre">TableHandle.df</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geometry-columns">Geometry columns</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#point-annotations">Point annotations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#line-annotations">Line annotations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ellipsoid-annotations">Ellipsoid annotations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#polyline-annotations">Polyline annotations</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#precomputed-annotations">Precomputed Annotations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#properties-and-relationships">Properties and relationships</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#releasing-input-data-early">Releasing input data early</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-ngsidekick.annotations.precomputed">API reference</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle"><code class="docutils literal notranslate"><span class="pre">TableHandle</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle.df"><code class="docutils literal notranslate"><span class="pre">TableHandle.df</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
             </nav>
         </div>
@@ -325,11 +337,230 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="module-ngsidekick.annotations.precomputed">
-<span id="annotations-precomputed"></span><h1>annotations.precomputed<a class="headerlink" href="#module-ngsidekick.annotations.precomputed" title="Link to this heading">#</a></h1>
+  <section id="annotations-precomputed">
+<h1>annotations.precomputed<a class="headerlink" href="#annotations-precomputed" title="Link to this heading">#</a></h1>
+<p>Export annotations in neuroglancer’s <a class="reference external" href="https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md">precomputed annotations format</a>.
+The single entry point is
+<a class="reference internal" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations" title="ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="xref py py-func docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a>,
+which supports five annotation types: <code class="docutils literal notranslate"><span class="pre">'point'</span></code>, <code class="docutils literal notranslate"><span class="pre">'line'</span></code>,
+<code class="docutils literal notranslate"><span class="pre">'axis_aligned_bounding_box'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ellipsoid'</span></code>, and <code class="docutils literal notranslate"><span class="pre">'polyline'</span></code>.</p>
+<section id="geometry-columns">
+<h2>Geometry columns<a class="headerlink" href="#geometry-columns" title="Link to this heading">#</a></h2>
+<p>Annotations can live in a coordinate space of any dimensionality (not just 3D);
+the column names are derived from <code class="docutils literal notranslate"><span class="pre">coord_space.names</span></code>. For example, with
+<code class="docutils literal notranslate"><span class="pre">coord_space.names</span> <span class="pre">==</span> <span class="pre">['x',</span> <span class="pre">'y',</span> <span class="pre">'z']</span></code>, the main DataFrame must have the
+following geometry columns (plus any property / relationship columns):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'point'</span></code>: <code class="docutils literal notranslate"><span class="pre">x</span></code>, <code class="docutils literal notranslate"><span class="pre">y</span></code>, <code class="docutils literal notranslate"><span class="pre">z</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'line'</span></code> and <code class="docutils literal notranslate"><span class="pre">'axis_aligned_bounding_box'</span></code>: <code class="docutils literal notranslate"><span class="pre">xa</span></code>, <code class="docutils literal notranslate"><span class="pre">ya</span></code>, <code class="docutils literal notranslate"><span class="pre">za</span></code>, <code class="docutils literal notranslate"><span class="pre">xb</span></code>, <code class="docutils literal notranslate"><span class="pre">yb</span></code>, <code class="docutils literal notranslate"><span class="pre">zb</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'ellipsoid'</span></code>: <code class="docutils literal notranslate"><span class="pre">x</span></code>, <code class="docutils literal notranslate"><span class="pre">y</span></code>, <code class="docutils literal notranslate"><span class="pre">z</span></code>, <code class="docutils literal notranslate"><span class="pre">rx</span></code>, <code class="docutils literal notranslate"><span class="pre">ry</span></code>, <code class="docutils literal notranslate"><span class="pre">rz</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'polyline'</span></code>: no geometry columns; vertices are supplied separately via <code class="docutils literal notranslate"><span class="pre">polyline_points</span></code></p></li>
+</ul>
+<p>The DataFrame’s index is used as the annotation ID. In most use-cases the
+annotation ID is not user-visible, so the index need not be carefully chosen;
+any unique uint64-compatible values will do (e.g. <code class="docutils literal notranslate"><span class="pre">range(len(df))</span></code>).</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h2>
+<section id="point-annotations">
+<h3>Point annotations<a class="headerlink" href="#point-annotations" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ngsidekick.annotations.precomputed</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_precomputed_annotations</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">],</span>
+    <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">],</span>
+    <span class="s1">&#39;z&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">],</span>
+<span class="p">})</span>
+
+<span class="c1"># df:</span>
+<span class="c1">#       x     y     z</span>
+<span class="c1">#    0  10.0  10.0  10.0</span>
+<span class="c1">#    1  20.0  20.0  20.0</span>
+<span class="c1">#    2  30.0  30.0  30.0</span>
+
+<span class="n">write_precomputed_annotations</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;point&#39;</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">&#39;out/points&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="line-annotations">
+<h3>Line annotations<a class="headerlink" href="#line-annotations" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;xa&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">],</span> <span class="s1">&#39;ya&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="s1">&#39;za&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+    <span class="s1">&#39;xb&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">],</span> <span class="s1">&#39;yb&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">],</span> <span class="s1">&#39;zb&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+<span class="p">})</span>
+
+<span class="c1"># df:</span>
+<span class="c1">#         xa   ya   za    xb   yb   zb</span>
+<span class="c1">#    0   0.0  0.0  0.0   5.0  5.0  0.0</span>
+<span class="c1">#    1  10.0  0.0  0.0  15.0  5.0  0.0</span>
+
+<span class="n">write_precomputed_annotations</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">&#39;out/lines&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Bounding boxes use the same column convention as lines, with <code class="docutils literal notranslate"><span class="pre">annotation_type='axis_aligned_bounding_box'</span></code>.</p>
+</section>
+<section id="ellipsoid-annotations">
+<h3>Ellipsoid annotations<a class="headerlink" href="#ellipsoid-annotations" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;x&#39;</span><span class="p">:</span>  <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">],</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span>  <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">],</span> <span class="s1">&#39;z&#39;</span><span class="p">:</span>  <span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">],</span>
+    <span class="s1">&#39;rx&#39;</span><span class="p">:</span> <span class="p">[</span> <span class="mf">2.0</span><span class="p">,</span>  <span class="mf">3.0</span><span class="p">],</span> <span class="s1">&#39;ry&#39;</span><span class="p">:</span> <span class="p">[</span> <span class="mf">2.0</span><span class="p">,</span>  <span class="mf">3.0</span><span class="p">],</span> <span class="s1">&#39;rz&#39;</span><span class="p">:</span> <span class="p">[</span> <span class="mf">2.0</span><span class="p">,</span>  <span class="mf">3.0</span><span class="p">],</span>
+<span class="p">})</span>
+
+<span class="c1"># df:</span>
+<span class="c1">#          x     y     z   rx   ry   rz</span>
+<span class="c1">#    0  10.0  10.0  10.0  2.0  2.0  2.0</span>
+<span class="c1">#    1  20.0  20.0  20.0  3.0  3.0  3.0</span>
+
+<span class="n">write_precomputed_annotations</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;ellipsoid&#39;</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">&#39;out/ellipsoids&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="polyline-annotations">
+<h3>Polyline annotations<a class="headerlink" href="#polyline-annotations" title="Link to this heading">#</a></h3>
+<p>Polylines have a variable number of vertices, so vertex coordinates are passed
+in a separate auxiliary DataFrame supplied via the <code class="docutils literal notranslate"><span class="pre">polyline_points</span></code>
+argument: one row per vertex, with coordinate columns plus an
+<code class="docutils literal notranslate"><span class="pre">'annotation_id'</span></code> column linking each vertex back to its polyline. Vertex
+order within an annotation defines the polyline’s traversal order.</p>
+<p>The main DataFrame carries any per-annotation properties or relationships;
+its index supplies the annotation IDs referenced by <code class="docutils literal notranslate"><span class="pre">polyline_points['annotation_id']</span></code>.
+In the example below, two polylines each get a single <code class="docutils literal notranslate"><span class="pre">mycolor</span></code> rgb color
+property; the main DataFrame’s default <code class="docutils literal notranslate"><span class="pre">RangeIndex</span></code> <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code> matches the
+<code class="docutils literal notranslate"><span class="pre">annotation_id</span></code> values in the points table.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">main_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;mycolor_r&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">255</span><span class="p">,</span>   <span class="mi">0</span><span class="p">],</span>
+    <span class="s1">&#39;mycolor_g&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span>
+    <span class="s1">&#39;mycolor_b&#39;</span><span class="p">:</span> <span class="p">[</span>  <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">],</span>
+<span class="p">})</span>
+
+<span class="c1"># main_df:</span>
+<span class="c1">#       mycolor_r  mycolor_g  mycolor_b</span>
+<span class="c1">#    0        255        128          0</span>
+<span class="c1">#    1          0        200        255</span>
+
+<span class="n">polyline_points</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;x&#39;</span><span class="p">:</span>             <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span>    <span class="mf">5.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">],</span>
+    <span class="s1">&#39;y&#39;</span><span class="p">:</span>             <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span>    <span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">],</span>
+    <span class="s1">&#39;z&#39;</span><span class="p">:</span>             <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span>    <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+    <span class="s1">&#39;annotation_id&#39;</span><span class="p">:</span> <span class="p">[</span>   <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">,</span>   <span class="mi">0</span><span class="p">,</span>     <span class="mi">1</span><span class="p">,</span>   <span class="mi">1</span><span class="p">],</span>
+<span class="p">})</span>
+
+<span class="c1"># polyline_points:</span>
+<span class="c1">#         x    y    z  annotation_id</span>
+<span class="c1">#    0  0.0  0.0  0.0              0</span>
+<span class="c1">#    1  1.0  0.5  0.0              0</span>
+<span class="c1">#    2  2.0  1.0  0.0              0</span>
+<span class="c1">#    3  5.0  5.0  0.0              1</span>
+<span class="c1">#    4  5.0  6.0  0.0              1</span>
+
+<span class="n">write_precomputed_annotations</span><span class="p">(</span>
+    <span class="n">main_df</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;polyline&#39;</span><span class="p">,</span>
+    <span class="n">properties</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mycolor&#39;</span><span class="p">],</span>
+    <span class="n">polyline_points</span><span class="o">=</span><span class="n">polyline_points</span><span class="p">,</span>
+    <span class="n">output_dir</span><span class="o">=</span><span class="s1">&#39;out/polylines&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="#properties-and-relationships">Properties and relationships</a> below for the full set of supported
+property and relationship column conventions, which apply identically to
+polyline annotations.</p>
+<p>If your polylines have no properties or relationships, you can omit the main
+DataFrame entirely and pass the points table as the first positional argument:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">write_precomputed_annotations</span><span class="p">(</span><span class="n">polyline_points</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;polyline&#39;</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">&#39;out/polylines&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="properties-and-relationships">
+<h2>Properties and relationships<a class="headerlink" href="#properties-and-relationships" title="Link to this heading">#</a></h2>
+<p>In addition to geometry columns, the main DataFrame can carry annotation
+<strong>properties</strong> (per-annotation attributes like color or a confidence score)
+and <strong>relationships</strong> (per-annotation lists of related segment IDs that
+neuroglancer can use to filter annotations by segment).</p>
+<ul class="simple">
+<li><p><strong>Numeric properties</strong> are plain numeric columns. The column dtype determines
+the encoded type (<code class="docutils literal notranslate"><span class="pre">uint8</span></code>, <code class="docutils literal notranslate"><span class="pre">int8</span></code>, …, <code class="docutils literal notranslate"><span class="pre">float32</span></code>).</p></li>
+<li><p><strong>Enum properties</strong> are pandas categorical columns. Each category becomes a
+discrete enum value with the category label shown in the neuroglancer UI.</p></li>
+<li><p><strong>Color properties</strong> (<code class="docutils literal notranslate"><span class="pre">rgb</span></code> or <code class="docutils literal notranslate"><span class="pre">rgba</span></code>) are split across one column per
+channel: <code class="docutils literal notranslate"><span class="pre">&lt;name&gt;_r</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;name&gt;_g</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;name&gt;_b</span></code> (and optionally
+<code class="docutils literal notranslate"><span class="pre">&lt;name&gt;_a</span></code>). List the <em>base</em> name in <code class="docutils literal notranslate"><span class="pre">properties</span></code>; the suffixed columns
+are picked up automatically.</p></li>
+<li><p><strong>Relationships</strong> are columns whose values are lists of related segment IDs
+(<code class="docutils literal notranslate"><span class="pre">uint64</span></code>). As a shortcut, if every annotation has exactly one related
+segment, the column may have <code class="docutils literal notranslate"><span class="pre">dtype=np.uint64</span></code> (a scalar per row) instead
+of containing lists.</p></li>
+</ul>
+<p>The example below demonstrates all four on <code class="docutils literal notranslate"><span class="pre">'line'</span></code> annotations. The two
+single-segment relationships (<code class="docutils literal notranslate"><span class="pre">body_pre</span></code> / <code class="docutils literal notranslate"><span class="pre">body_post</span></code>) use scalar
+<code class="docutils literal notranslate"><span class="pre">uint64</span></code> columns; the multi-segment relationship (<code class="docutils literal notranslate"><span class="pre">nearby_mito</span></code>) uses lists.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ngsidekick.annotations.precomputed</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_precomputed_annotations</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="c1"># line geometry columns</span>
+    <span class="s1">&#39;xa&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">],</span> <span class="s1">&#39;ya&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="s1">&#39;za&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+    <span class="s1">&#39;xb&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">],</span> <span class="s1">&#39;yb&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">],</span> <span class="s1">&#39;zb&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+
+    <span class="c1"># numeric property</span>
+    <span class="s1">&#39;confidence&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.92</span><span class="p">,</span> <span class="mf">0.71</span><span class="p">],</span>
+
+    <span class="c1"># enum property (pandas categorical)</span>
+    <span class="s1">&#39;kind&#39;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Categorical</span><span class="p">([</span><span class="s1">&#39;excitatory&#39;</span><span class="p">,</span> <span class="s1">&#39;inhibitory&#39;</span><span class="p">]),</span>
+
+    <span class="c1"># color property: one column per channel, rgb(a)</span>
+    <span class="s1">&#39;mycolor_r&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">255</span><span class="p">,</span>   <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;mycolor_g&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span> <span class="s1">&#39;mycolor_b&#39;</span><span class="p">:</span> <span class="p">[</span>  <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">],</span>
+    <span class="s1">&#39;mycolor_a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">],</span>  <span class="c1"># (alpha is optional)</span>
+
+    <span class="c1"># single-segment relationships: scalar uint64 per row</span>
+    <span class="s1">&#39;body_pre&#39;</span><span class="p">:</span>  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">),</span>
+    <span class="s1">&#39;body_post&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">300</span><span class="p">,</span> <span class="mi">400</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">),</span>
+
+    <span class="c1"># multi-segment relationship: list of uint64 per row</span>
+    <span class="s1">&#39;nearby_mito&#39;</span><span class="p">:</span> <span class="p">[[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">],</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">21</span><span class="p">,</span> <span class="mi">22</span><span class="p">]],</span>
+<span class="p">})</span>
+
+<span class="c1"># df:</span>
+<span class="c1">#         xa   ya   za    xb   yb   zb  confidence        kind  mycolor_r  mycolor_g  mycolor_b  mycolor_a  body_pre  body_post   nearby_mito</span>
+<span class="c1">#    0   0.0  0.0  0.0   5.0  5.0  0.0        0.92  excitatory        255        128          0        255       100        300      [10, 11]</span>
+<span class="c1">#    1  10.0  0.0  0.0  15.0  5.0  0.0        0.71  inhibitory          0        200        255        255       200        400  [20, 21, 22]</span>
+
+<span class="n">write_precomputed_annotations</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;line&#39;</span><span class="p">,</span>
+    <span class="c1"># &#39;mycolor&#39; is the base name; the _r/_g/_b/_a columns are picked up automatically.</span>
+    <span class="n">properties</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;confidence&#39;</span><span class="p">,</span> <span class="s1">&#39;kind&#39;</span><span class="p">,</span> <span class="s1">&#39;mycolor&#39;</span><span class="p">],</span>
+    <span class="n">relationships</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;body_pre&#39;</span><span class="p">,</span> <span class="s1">&#39;body_post&#39;</span><span class="p">,</span> <span class="s1">&#39;nearby_mito&#39;</span><span class="p">],</span>
+    <span class="n">output_dir</span><span class="o">=</span><span class="s1">&#39;out/lines&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="releasing-input-data-early">
+<h2>Releasing input data early<a class="headerlink" href="#releasing-input-data-early" title="Link to this heading">#</a></h2>
+<p>For very large inputs (hundreds of millions of annotations and up), this
+function has high peak RAM requirements.
+You can partially mitigate the peak by transferring ownership of your input DataFrame
+to the function via a <a class="reference internal" href="#ngsidekick.annotations.precomputed.TableHandle" title="ngsidekick.annotations.precomputed.TableHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">TableHandle</span></code></a>:
+wrap your DataFrame, drop your own reference, and pass the handle.
+<a class="reference internal" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations" title="ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="xref py py-func docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a> will
+release the handle’s reference as soon as the data has been consumed, freeing
+the DataFrame before the writing phase begins:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ngsidekick.annotations.precomputed</span><span class="w"> </span><span class="kn">import</span> <span class="n">TableHandle</span>
+
+<span class="n">handle</span> <span class="o">=</span> <span class="n">TableHandle</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="k">del</span> <span class="n">df</span>  <span class="c1"># release your own reference</span>
+<span class="n">write_precomputed_annotations</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;point&#39;</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">&#39;out/points&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The same option applies to <code class="docutils literal notranslate"><span class="pre">polyline_points</span></code>.</p>
+</section>
+<section id="module-ngsidekick.annotations.precomputed">
+<span id="api-reference"></span><h2>API reference<a class="headerlink" href="#module-ngsidekick.annotations.precomputed" title="Link to this heading">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="ngsidekick.annotations.precomputed.write_precomputed_annotations">
-<span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.precomputed.</span></span><span class="sig-name descname"><span class="pre">write_precomputed_annotations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord_space</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annotation_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationships</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'annotations'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_sharded</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_relationship</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_spatial_chunk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_spatial_levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_chunk_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle_before_assigning_spatial_levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/annotations/precomputed/precomputed.py#L22-L279"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.precomputed.</span></span><span class="sig-name descname"><span class="pre">write_precomputed_annotations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord_space</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annotation_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationships</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'annotations'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_sharded</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">polyline_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_relationship</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_by_spatial_chunk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_spatial_levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_chunk_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle_before_assigning_spatial_levels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_shards_per_transaction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/annotations/precomputed/precomputed.py#L23-L372"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations" title="Link to this definition">#</a></dt>
 <dd><p>Export the data from a pandas DataFrame into neuroglancer’s precomputed annotations format
 as described in the <a class="reference external" href="https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md">neuroglancer spec</a>.</p>
 <p>A progress bar is shown when writing each portion of the export (annotation ID index, related ID indexes),
@@ -346,7 +577,7 @@ The TableHandle’s reference will be deleted internally as soon as possible
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a> | <a class="reference internal" href="#ngsidekick.annotations.precomputed.TableHandle" title="ngsidekick.annotations.precomputed._util.TableHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">TableHandle</span></code></a></span>) – <p>DataFrame or TableHandle.
+<li><p><strong>df</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> | <a class="reference internal" href="#ngsidekick.annotations.precomputed.TableHandle" title="ngsidekick.annotations.precomputed._util.TableHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">TableHandle</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – <p>DataFrame or TableHandle.
 The index of the DataFrame is used as the annotation ID, so it must be unique.
 The required columns depend on the annotation_type and the coordinate space.
 For example, assuming <code class="docutils literal notranslate"><span class="pre">coord_space.names</span> <span class="pre">==</span> <span class="pre">['x',</span> <span class="pre">'y',</span> <span class="pre">'z']</span></code>,
@@ -357,6 +588,10 @@ then provide the following columns:</p>
 provide [‘xa’, ‘ya’, ‘za’, ‘xb’, ‘yb’, ‘zb’]</p></li>
 <li><p>For ellipsoid annotations, provide [‘x’, ‘y’, ‘z’, ‘rx’, ‘ry’, ‘rz’]
 for the center point and radii.</p></li>
+<li><p>For polyline annotations, do not provide x/y/z columns here.
+Instead, provide them in the <code class="docutils literal notranslate"><span class="pre">polyline_points</span></code> argument.
+If your polyline annotations have no properties or relationships,
+you may set df to None and pass only polyline_points.</p></li>
 </ul>
 <p>You may also provide additional columns to use as annotation properties, in which
 case their column names should be listed in the ‘properties’ argument. (See below.)</p>
@@ -386,7 +621,7 @@ assuming a default scale of 1 nm if no scale/units are provided.</p>
 </pre></div>
 </div>
 </p></li>
-<li><p><strong>annotation_type</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<code class="docutils literal notranslate"><span class="pre">'point'</span></code>, <code class="docutils literal notranslate"><span class="pre">'line'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ellipsoid'</span></code>, <code class="docutils literal notranslate"><span class="pre">'axis_aligned_bounding_box'</span></code>]</span>) – Literal[‘point’, ‘line’, ‘ellipsoid’, ‘axis_aligned_bounding_box’]
+<li><p><strong>annotation_type</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<code class="docutils literal notranslate"><span class="pre">'point'</span></code>, <code class="docutils literal notranslate"><span class="pre">'line'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ellipsoid'</span></code>, <code class="docutils literal notranslate"><span class="pre">'axis_aligned_bounding_box'</span></code>, <code class="docutils literal notranslate"><span class="pre">'polyline'</span></code>]</span>) – Literal[‘point’, ‘line’, ‘ellipsoid’, ‘axis_aligned_bounding_box’, ‘polyline’]
 The type of annotation to export. Note that the columns you provide in
 the DataFrame depend on the annotation type.</p></li>
 <li><p><strong>properties</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>] | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">AnnotationPropertySpec</span></code>] | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">AnnotationPropertySpec</span></code>] | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>]</span>) – <p>If your dataframe contains columns for annotation properties,
@@ -416,6 +651,18 @@ Whether to write the output as sharded files.
 The sharded format is preferable for most use cases.
 Without sharding, every annotation results in a separate file in the annotation ID index.
 Similarly, every related ID results in a separate file in the related ID index.</p></li>
+<li><p><strong>polyline_points</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> | <a class="reference internal" href="#ngsidekick.annotations.precomputed.TableHandle" title="ngsidekick.annotations.precomputed._util.TableHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">TableHandle</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – <p>DataFrame or TableHandle. Required when <code class="docutils literal notranslate"><span class="pre">annotation_type='polyline'</span></code>;
+must be <code class="docutils literal notranslate"><span class="pre">None</span></code> otherwise.</p>
+<p>One row per polyline vertex, with one column per coordinate axis
+plus an <code class="docutils literal notranslate"><span class="pre">'annotation_id'</span></code> column indicating which polyline each
+vertex belongs to. For example, assuming <code class="docutils literal notranslate"><span class="pre">coord_space.names</span> <span class="pre">==</span> <span class="pre">['x',</span> <span class="pre">'y',</span> <span class="pre">'z']</span></code>,
+then provide the following columns: [‘annotation_id’, ‘x’, ‘y’, ‘z’].
+(For a polyline with N vertices, its annotation_id should appear N times.)</p>
+<p>For each polyline, the point order in the emitted annotation will match
+the order in which they appear in this dataframe.</p>
+<p>As with <code class="docutils literal notranslate"><span class="pre">df</span></code>, you may pass a <code class="docutils literal notranslate"><span class="pre">TableHandle</span></code> so the reference can
+be released as soon as the table has been consumed.</p>
+</p></li>
 <li><p><strong>write_by_id</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – bool
 Whether to write the annotations to the “Annotation ID Index”.
 If False, skip writing.</p></li>
@@ -450,6 +697,21 @@ preferring to show larger annotations when zoomed out).
 So if this is False, the annotations will be assigned to spatial levels in
 the order they appear in the input dataframe, with earlier annotations
 assigned to coarser spatial levels.</p></li>
+<li><p><strong>max_threads</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – int or None
+Caps tensorstore’s internal thread pool (data-copy and file-I/O
+concurrency) when writing. Defaults to <code class="docutils literal notranslate"><span class="pre">LSB_DJOB_NUMPROC</span></code> on
+LSF clusters, otherwise <code class="docutils literal notranslate"><span class="pre">multiprocessing.cpu_count()</span></code>.</p></li>
+<li><p><strong>max_shards_per_transaction</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – <p>int or None
+(Sharded mode only.) Caps the number of shards committed in a
+single tensorstore transaction. Tensorstore parallelizes the
+per-shard work (encode, compress, write) inside a transaction
+across its internal thread pool, so this knob trades RAM (more
+shards staged in memory at once) for throughput and effective
+CPU utilization (more parallel work available at commit).</p>
+<p>Defaults to <code class="docutils literal notranslate"><span class="pre">max_threads</span></code> so each transaction can saturate
+the available threads. Set higher for better throughput at
+extra RAM cost, or lower to reduce peak RAM.</p>
+</p></li>
 <li><p><strong>description</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – str
 A description of the annotation collection.</p></li>
 <li><p><strong>write_by_relationship</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
@@ -460,7 +722,7 @@ A description of the annotation collection.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="ngsidekick.annotations.precomputed.TableHandle">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.precomputed.</span></span><span class="sig-name descname"><span class="pre">TableHandle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/annotations/precomputed/_util.py#L8-L23"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.annotations.precomputed.TableHandle" title="Link to this definition">#</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ngsidekick.annotations.precomputed.</span></span><span class="sig-name descname"><span class="pre">TableHandle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/janelia-flyem/ngsidekick/blob/main/src/ngsidekick/annotations/precomputed/_util.py#L24-L39"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ngsidekick.annotations.precomputed.TableHandle" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>A wrapper for a pandas DataFrame that can be provided to transfer ownership
 of the DataFrame to <code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code>, which will delete
@@ -473,19 +735,16 @@ the handle’s reference to the DataFrame as soon as possible to save RAM.</p>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><em>DataFrame</em></a><em> | </em><em>None</em>)</p>
+<dd class="field-odd"><p><strong>df</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p>
 </dd>
 </dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="ngsidekick.annotations.precomputed.TableHandle.df">
-<span class="sig-name descname"><span class="pre">df</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a> <span class="pre">|</span> <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#ngsidekick.annotations.precomputed.TableHandle.df" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">df</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> <span class="pre">|</span> <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#ngsidekick.annotations.precomputed.TableHandle.df" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
-<section id="precomputed-annotations">
-<h2>Precomputed Annotations<a class="headerlink" href="#precomputed-annotations" title="Link to this heading">#</a></h2>
-<p>This module provides tools for working with precomputed annotation formats.</p>
 </section>
 </section>
 
@@ -534,12 +793,24 @@ the handle’s reference to the DataFrame as soon as possible to save RAM.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle"><code class="docutils literal notranslate"><span class="pre">TableHandle</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle.df"><code class="docutils literal notranslate"><span class="pre">TableHandle.df</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geometry-columns">Geometry columns</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#point-annotations">Point annotations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#line-annotations">Line annotations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ellipsoid-annotations">Ellipsoid annotations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#polyline-annotations">Polyline annotations</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#precomputed-annotations">Precomputed Annotations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#properties-and-relationships">Properties and relationships</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#releasing-input-data-early">Releasing input data early</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-ngsidekick.annotations.precomputed">API reference</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.write_precomputed_annotations"><code class="docutils literal notranslate"><span class="pre">write_precomputed_annotations()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle"><code class="docutils literal notranslate"><span class="pre">TableHandle</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#ngsidekick.annotations.precomputed.TableHandle.df"><code class="docutils literal notranslate"><span class="pre">TableHandle.df</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
   </nav></div>
 

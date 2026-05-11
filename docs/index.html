@@ -309,6 +309,7 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-highlights">Feature Highlights</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
 </ul>
             </nav>
@@ -323,7 +324,7 @@ document.write(`
                   
   <section id="ngsidekick">
 <h1>NGSidekick<a class="headerlink" href="#ngsidekick" title="Link to this heading">#</a></h1>
-<p>Tools for neuroglancer scenes.</p>
+<p>Tools for working with <a class="reference external" href="https://github.com/google/neuroglancer">neuroglancer</a>.</p>
 <div class="toctree-wrapper compound">
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
 <ul>
@@ -335,6 +336,44 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="ngvideo_helper.html">NGVideo Helper</a></li>
 </ul>
 </div>
+<section id="feature-highlights">
+<h2>Feature Highlights<a class="headerlink" href="#feature-highlights" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="segmentprops.html"><span class="doc">Segment properties</span></a>: read and write neuroglancer’s
+precomputed <a class="reference external" href="https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/segment_properties.md">segment properties</a>
+format from a pandas DataFrame.</p></li>
+<li><p><a class="reference internal" href="annotations.html"><span class="doc">Annotations</span></a>:</p>
+<ul>
+<li><p><a class="reference internal" href="local.html"><span class="doc">Local annotations</span></a>: construct local annotations directly
+in viewer state.  (API subject to change.)</p></li>
+<li><p><a class="reference internal" href="precomputed.html"><span class="doc">Precomputed annotations</span></a>: export annotations in
+neuroglancer’s <a class="reference external" href="https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md">precomputed annotations format</a>
+from a pandas DataFrame.</p>
+<ul>
+<li><dl class="simple">
+<dt>Supports all five annotation types:</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">point</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">line</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">axis_aligned_bounding_box</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ellipsoid</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">polyline</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Per-annotation <strong>properties</strong> (numeric, enum/categorical, and rgb/rgba color).</p></li>
+<li><p>Per-annotation <strong>relationships</strong> (lists of related segment IDs, used by
+neuroglancer to filter annotations by segment).</p></li>
+<li><p>Written to all “index” types (annotation id, related segment, and multi-level spatial grid)</p></li>
+<li><p>Sharded output, written in parallel via <a class="reference external" href="https://google.github.io/tensorstore/">tensorstore</a>.</p></li>
+<li><p><strong>Note:</strong> writing directly to cloud storage is not yet supported;
+outputs must be written to a local filesystem (you must upload to cloud storage afterwards).</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</section>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
 <p>Packages are available from both PyPI and conda-forge.</p>
@@ -390,6 +429,7 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#feature-highlights">Feature Highlights</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
 </ul>
   </nav></div>
