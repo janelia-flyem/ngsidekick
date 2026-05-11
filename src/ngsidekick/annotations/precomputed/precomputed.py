@@ -11,7 +11,7 @@ from neuroglancer.coordinate_space import CoordinateSpace
 from neuroglancer.viewer_state import AnnotationPropertySpec
 
 from ..util import annotation_property_specs
-from ._util import _encode_uint64_series, _geometry_cols, TableHandle
+from ._util import _encode_uint64_series, _geometry_cols, PolylineGeometry, TableHandle
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships, _encode_relationships
 from ._spatial import _compute_spatial_assignment, _write_annotations_by_spatial_chunk
@@ -21,14 +21,15 @@ logger = logging.getLogger(__name__)
 
 
 def write_precomputed_annotations(
-    df: pd.DataFrame | TableHandle,
+    df: pd.DataFrame | TableHandle | None,
     coord_space: CoordinateSpace | str | list[str] | dict[str, list],
-    annotation_type: Literal['point', 'line', 'ellipsoid', 'axis_aligned_bounding_box'],
+    annotation_type: Literal['point', 'line', 'ellipsoid', 'axis_aligned_bounding_box', 'polyline'],
     properties: list[str] | list[AnnotationPropertySpec] | dict[str, AnnotationPropertySpec] | list[dict] = (),
     relationships: list[str] = (),
     output_dir: str = 'annotations',
     write_sharded: bool = True,
     *,
+    polyline_points: pd.DataFrame | TableHandle | None = None,
     write_by_id: bool = True,
     write_by_relationship: bool = True,
     write_by_spatial_chunk: bool = True,
@@ -68,6 +69,10 @@ def write_precomputed_annotations(
               provide ['xa', 'ya', 'za', 'xb', 'yb', 'zb']
             - For ellipsoid annotations, provide ['x', 'y', 'z', 'rx', 'ry', 'rz']
               for the center point and radii.
+            - For polyline annotations, do not provide x/y/z columns here.
+              Instead, provide them in the ``polyline_points`` argument.
+              If your polyline annotations have no properties or relationships,
+              you may set df to None and pass only polyline_points.
 
             You may also provide additional columns to use as annotation properties, in which
             case their column names should be listed in the 'properties' argument. (See below.)
@@ -102,7 +107,7 @@ def write_precomputed_annotations(
                 ... )
 
         annotation_type:
-            Literal['point', 'line', 'ellipsoid', 'axis_aligned_bounding_box']
+            Literal['point', 'line', 'ellipsoid', 'axis_aligned_bounding_box', 'polyline']
             The type of annotation to export. Note that the columns you provide in
             the DataFrame depend on the annotation type.
 
@@ -143,6 +148,22 @@ def write_precomputed_annotations(
             The sharded format is preferable for most use cases.
             Without sharding, every annotation results in a separate file in the annotation ID index.
             Similarly, every related ID results in a separate file in the related ID index.
+
+        polyline_points:
+            DataFrame or TableHandle. Required when ``annotation_type='polyline'``;
+            must be ``None`` otherwise.
+
+            One row per polyline vertex, with one column per coordinate axis
+            plus an ``'annotation_id'`` column indicating which polyline each
+            vertex belongs to. For example, assuming ``coord_space.names == ['x', 'y', 'z']``,
+            then provide the following columns: ['annotation_id', 'x', 'y', 'z'].
+            (For a polyline with N vertices, its annotation_id should appear N times.)
+            
+            For each polyline, the point order in the emitted annotation will match
+            the order in which they appear in this dataframe.
+
+            As with ``df``, you may pass a ``TableHandle`` so the reference can
+            be released as soon as the table has been consumed.
 
         write_by_id:
             bool
@@ -229,15 +250,20 @@ def write_precomputed_annotations(
             f"shards per transaction with up to {max_threads} tensorstore threads."
         )
 
+    annotation_type = annotation_type.lower()
+    coord_space = _construct_coord_space(coord_space)
+
+    df, polyline_geom = _resolve_polyline_inputs(
+        df, annotation_type, polyline_points, coord_space, properties, relationships
+    )
+
     if isinstance(df, TableHandle):
         # Take ownership of the dataframe.
         handle, df = df, df.df
         handle.df = None
 
-    coord_space = _construct_coord_space(coord_space)
-    annotation_type = annotation_type.lower()
     property_specs = annotation_property_specs(df, properties)
-    bounds = _get_bounds(df, coord_space, annotation_type)
+    bounds = _get_bounds(df, coord_space, annotation_type, polyline_geom=polyline_geom)
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -250,7 +276,8 @@ def write_precomputed_annotations(
         coord_space,
         annotation_type,
         property_specs,
-        relationships
+        relationships,
+        polyline_geom=polyline_geom,
     )
 
     # The property columns have been folded into ``ann_buf`` and aren't
@@ -271,9 +298,13 @@ def write_precomputed_annotations(
             num_spatial_levels,
             target_chunk_limit,
             shuffle_before_assigning_spatial_levels,
+            polyline_geom=polyline_geom,
         )
         geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
         df = df.drop(columns=geom_cols)
+        # Polyline geometry was held in flat numpy arrays; release them
+        # now that spatial assignment is done.
+        polyline_geom = None
 
     by_id_metadata = {}
     if write_by_id:
@@ -422,13 +453,14 @@ def _construct_coord_space(coord_space):
     raise ValueError(f"Invalid coordinate space: {coord_space!r}.")
 
 
-def _get_bounds(df, coord_space, annotation_type):
+def _get_bounds(df, coord_space, annotation_type, *, polyline_geom=None):
     """
-    Inspect the geometry columns of the given dataframe to
-    determine the overall upper and lower bounds of the annotations.
+    Inspect the geometry columns of the given dataframe (or, for polylines,
+    the auxiliary points array) to determine the overall upper and lower
+    bounds of the annotations.
 
-    Also checks for the presence of NaN values in the geometry columns,
-    and raises a ValueError if any are found.
+    Also checks for the presence of NaN values in the geometry, and raises a
+    ValueError if any are found.
 
     Returns:
         lower_bound, upper_bound
@@ -441,6 +473,12 @@ def _get_bounds(df, coord_space, annotation_type):
         raise ValueError(
             "Dataframe does not have all required geometry columns for the given coordinate space.\n"
             f"Required columns: {required_cols}"
+        )
+
+    if annotation_type == 'polyline':
+        bounds = (
+            polyline_geom.points.min(axis=0),
+            polyline_geom.points.max(axis=0),
         )
 
     if annotation_type == 'point':
@@ -479,7 +517,7 @@ def _get_bounds(df, coord_space, annotation_type):
     return bounds
 
 
-def _encode_annotations(df, coord_space, annotation_type, property_specs, relationships):
+def _encode_annotations(df, coord_space, annotation_type, property_specs, relationships, *, polyline_geom=None):
     """
     Returns a (shallow) copy of the dataframe with additional columns containing
     buffers for each encoded annotation and its encoded id and encoded relationships.
@@ -491,7 +529,8 @@ def _encode_annotations(df, coord_space, annotation_type, property_specs, relati
 
     logger.info("Encoding annotation geometries and properties")
     df['ann_buf'] = _encode_geometries_and_properties(
-        df, coord_space, annotation_type, property_specs
+        df, coord_space, annotation_type, property_specs,
+        polyline_geom=polyline_geom,
     )
 
     logger.info("Encoding relationships")
@@ -502,7 +541,7 @@ def _encode_annotations(df, coord_space, annotation_type, property_specs, relati
     return df
 
 
-def _encode_geometries_and_properties(df, coord_space, annotation_type, property_specs):
+def _encode_geometries_and_properties(df, coord_space, annotation_type, property_specs, *, polyline_geom=None):
     """
     For each annotation in the given dataframe, encode its geometry columns (e.g. x,y,z)
     and property columns into a buffer, plus any padding that was necessary to align the
@@ -515,6 +554,9 @@ def _encode_geometries_and_properties(df, coord_space, annotation_type, property
     Returns:
         pd.Series of dtype=object, containing one buffer for each annotation.
     """
+    if annotation_type == 'polyline':
+        return _encode_polyline_geometries_and_properties(df, property_specs, polyline_geom)
+
     geometry_cols = _geometry_cols(coord_space.names, annotation_type)
     geometry_prop_df = _geometry_prop_df(df, geometry_cols, property_specs)
     buf, recsize = _encode_geometry_prop_df(geometry_prop_df, geometry_cols, property_specs)
@@ -524,6 +566,165 @@ def _encode_geometries_and_properties(df, coord_space, annotation_type, property
     encoded_annotations = [buf[i*recsize:(i+1)*recsize] for i in range(len(df))]
     ann_bufs = pd.Series(encoded_annotations, index=df.index)
     return ann_bufs
+
+
+def _resolve_polyline_inputs(df, annotation_type, polyline_points, coord_space, properties, relationships):
+    """
+    Pre-processing for the polyline argument-handling conveniences.
+
+    For ``annotation_type == 'polyline'``:
+        - If the user passed the aux table as the first positional and omitted
+          ``polyline_points``, swap them.
+        - Validate that ``polyline_points`` is supplied.
+        - Wrap the aux table in a :class:`TableHandle` so we can drop the
+          reference as soon as we're done with it.
+        - Synthesize a column-less main df from the aux table's unique
+          annotation IDs if ``df`` is None (the no-properties/no-relationships
+          convenience path).
+        - Take ownership of ``df`` if it arrived as a TableHandle (so we can
+          index into it below).
+        - Build the flat point arrays the encoder and spatial kernel need,
+          then release the aux table.
+        - Filter out main-df rows that have no vertices in the aux table.
+
+    For other annotation types, validates that ``polyline_points`` is ``None``
+    and returns ``(df, None)``.
+
+    Returns:
+        (df, polyline_geom) -- ``polyline_geom`` is a :class:`PolylineGeometry`
+        for polyline annotations, ``None`` otherwise.
+    """
+    if annotation_type == 'polyline' and df is not None and polyline_points is None:
+        polyline_points, df = df, None
+
+    if annotation_type == 'polyline':
+        if polyline_points is None:
+            raise ValueError("polyline_points must be provided for annotation_type='polyline'")
+    elif polyline_points is not None:
+        raise ValueError("polyline_points may only be provided for annotation_type='polyline'")
+    else:
+        return df, None
+
+    if isinstance(polyline_points, TableHandle):
+        aux_handle = polyline_points
+    elif isinstance(polyline_points, pd.DataFrame):
+        aux_handle = TableHandle(polyline_points)
+    else:
+        raise TypeError("polyline_points must be a pandas DataFrame or TableHandle")
+
+    if df is None:
+        if properties:
+            raise ValueError("Cannot pass properties=... when the main table is None.")
+        if relationships:
+            raise ValueError("Cannot pass relationships=... when the main table is None.")
+        unique_ids = pd.unique(aux_handle.df['annotation_id'])
+        df = pd.DataFrame(index=pd.Index(unique_ids))
+    elif isinstance(df, TableHandle):
+        # The general TableHandle unwrap in write_precomputed_annotations runs
+        # after this helper, but we need df.index here, so consume it now.
+        handle, df = df, df.df
+        handle.df = None
+
+    polyline_geom, valid_mask = _polyline_aux_to_arrays(
+        aux_handle.df, df.index, coord_space.names
+    )
+    aux_handle.df = None
+    if not valid_mask.all():
+        df = df.loc[valid_mask].copy()
+
+    return df, polyline_geom
+
+
+def _polyline_aux_to_arrays(aux_df, main_index, coord_names):
+    """
+    Convert the user-supplied auxiliary polyline-points table into the flat
+    numpy arrays the encoder and spatial kernel need.
+
+    The aux table has one row per vertex with columns ``[*coord_names, 'annotation_id']``.
+    Within each annotation, vertex order in the aux table defines polyline traversal order.
+
+    Returns:
+        polyline_geom:
+            :class:`PolylineGeometry` whose ``points`` array is in stable-sorted
+            annotation_id order (so each annotation's vertices are contiguous,
+            preserving their input order within the group). ``starts``/``ends``
+            are aligned with main-df row order, filtered to rows that have at
+            least one vertex.
+        valid_mask:
+            (N,) bool, True for main-df rows with at least one vertex. Callers
+            should ``df.loc[valid_mask]`` before downstream processing.
+    """
+    if 'annotation_id' not in aux_df.columns:
+        raise ValueError("polyline_points must have an 'annotation_id' column.")
+    missing = [c for c in coord_names if c not in aux_df.columns]
+    if missing:
+        raise ValueError(f"polyline_points is missing coordinate columns: {missing}")
+
+    aux_df = aux_df.sort_values('annotation_id', kind='stable')
+    aux_ids = aux_df['annotation_id'].to_numpy()
+
+    if len(aux_ids) == 0:
+        boundaries = np.array([0], dtype=np.int64)
+    else:
+        boundaries = np.concatenate((
+            [0],
+            np.flatnonzero(aux_ids[1:] != aux_ids[:-1]) + 1,
+            [len(aux_ids)],
+        )).astype(np.int64)
+
+    unique_aux_ids = aux_ids[boundaries[:-1]]
+    aux_slot_per_main = pd.Index(unique_aux_ids).get_indexer(main_index)
+    valid_mask = aux_slot_per_main >= 0
+
+    n_unused = int((~valid_mask).sum())
+    if n_unused:
+        logger.warning(
+            f"{n_unused} of {len(main_index)} main-table annotations have no "
+            f"vertices in polyline_points; those annotations will be dropped."
+        )
+
+    valid_slots = aux_slot_per_main[valid_mask]
+    starts = boundaries[:-1][valid_slots]
+    ends = boundaries[1:][valid_slots]
+
+    points = aux_df[list(coord_names)].to_numpy(np.float32, copy=False)
+    if np.isnan(points).any():
+        raise ValueError("polyline_points contains NaN coordinate values.")
+
+    return PolylineGeometry(points=points, starts=starts, ends=ends), valid_mask
+
+
+def _encode_polyline_geometries_and_properties(df, property_specs, polyline_geom):
+    """
+    Encode each polyline's variable-length geometry plus its (fixed-size)
+    property record. See the polyline branch of "Single annotation encoding"
+    in the neuroglancer precomputed annotations spec.
+    """
+    points = polyline_geom.points
+    starts = polyline_geom.starts
+    ends = polyline_geom.ends
+    D = points.shape[1]
+    point_byte_size = 4 * D  # float32 per axis
+
+    flat_bytes = points.astype(np.float32, copy=False).tobytes()
+    counts = (ends - starts).astype(np.uint32)
+    counts_buf = counts.tobytes()
+
+    if property_specs:
+        property_only_df = _geometry_prop_df(df, [], property_specs)
+        prop_buf, prop_recsize = _encode_geometry_prop_df(property_only_df, [], property_specs)
+        del property_only_df
+    else:
+        prop_buf = b''
+        prop_recsize = 0
+
+    encoded_annotations = [
+        counts_buf[i*4:(i+1)*4]
+        + flat_bytes[int(starts[i])*point_byte_size : int(ends[i])*point_byte_size]
+        + prop_buf[i*prop_recsize:(i+1)*prop_recsize]
+        for i in range(len(df))
+    ]
+    return pd.Series(encoded_annotations, index=df.index)
 
 
 def _geometry_prop_df(df, geometry_cols, property_specs):

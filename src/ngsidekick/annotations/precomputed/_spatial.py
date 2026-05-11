@@ -33,6 +33,8 @@ def _compute_spatial_assignment(
     num_levels,
     target_chunk_limit,
     shuffle_before_assigning_spatial_levels,
+    *,
+    polyline_geom=None,
 ):
     """
     Compute a :class:`SpatialAssignment` for ``df`` without modifying it
@@ -88,6 +90,10 @@ def _compute_spatial_assignment(
             rows, codes = _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_row_levels)
         case 'line':
             rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
+        case 'polyline':
+            rows, codes = _compute_grid_codes_for_polylines(
+                polyline_geom, bounds, gridspec, per_row_levels,
+            )
         case _:
             raise NotImplementedError(f"Spatial indexing for {annotation_type} annotations is not implemented")
     logger.info("Done assigning spatial grid chunks")
@@ -515,6 +521,91 @@ def _line_chunk_overlap(point_a, point_b, grid_origin, cell_shape, grid_index):
                 max_t = min(max_t, t)
     
     return max_t >= min_t
+
+
+def _compute_grid_codes_for_polylines(polyline_geom, bounds, gridspec, per_row_levels):
+    """
+    Wrapper around the @njit polyline-grid-codes kernel.
+
+    Args:
+        polyline_geom:
+            :class:`PolylineGeometry`. ``points[starts[i]:ends[i]]`` gives
+            the vertices of polyline ``i`` in traversal order.
+        bounds, gridspec, per_row_levels:
+            See callers in :func:`_compute_spatial_assignment`.
+    """
+    logger.info(f"Computing grid codes for {len(polyline_geom.starts)} polylines")
+    return _polyline_grid_codes(
+        polyline_geom.points,
+        polyline_geom.starts,
+        polyline_geom.ends,
+        per_row_levels,
+        bounds[0],
+        gridspec.chunk_shapes,
+        _axis_bits_c_order(gridspec.grid_shapes),
+    )
+
+
+@njit
+def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+    D = points.shape[1]
+
+    # Pre-allocate these and reuse them on each loop iteration
+    # to avoid heap allocations in the loop.
+    grid_span = np.zeros((2, D), dtype=np.uint64)
+    grid_span_shape = np.empty(D, dtype=np.uint64)
+    grid_index = np.empty(D, dtype=np.uint64)
+    curr_axis_pos = np.empty(D, dtype=np.uint64)
+    poly_bbox = np.empty((2, D), dtype=np.float32)
+
+    rows = List()
+    codes = List()
+    for row, (start, end, level) in enumerate(zip(starts_per_row, ends_per_row, levels)):
+        chunk_shape = chunk_shapes[level]
+        ab = axis_bits_per_level[level]
+
+        poly_points = points[start:end]
+
+        # Compute bounding box of the current polyline.
+        # Since min(axis=0) doesn't work in numba, we have to loop explicitly.
+        for d in range(D):
+            poly_bbox[0, d] = poly_points[:, d].min()
+            poly_bbox[1, d] = poly_points[:, d].max()
+
+        grid_span_cell_count = np.uint64(1)
+        for d in range(D):
+            grid_span[0, d] = np.uint64(np.floor((poly_bbox[0, d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span[1, d] = np.uint64(np.ceil((poly_bbox[1, d] - grid_origin[d]) / chunk_shape[d]))
+            grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
+            grid_span_cell_count *= grid_span_shape[d]
+
+        # Scan across all cells in the bounding-box span.
+        for flat_index in range(grid_span_cell_count):
+            _unravel_index(flat_index, grid_span_shape, grid_index)
+            grid_index[:] += grid_span[0]
+
+            if len(poly_points) <= 1:
+                # Single-vertex polylines have no segments;
+                # This must be the one grid cell that contains the vertex.
+                overlaps = True
+            else:
+                # Check all segments in the polyline for overlap.
+                overlaps = False
+                for i in range(len(poly_points) - 1):
+                    a = poly_points[i]
+                    b = poly_points[i+1]
+                    if _line_chunk_overlap(a, b, grid_origin, chunk_shape, grid_index):
+                        overlaps = True
+                        break
+
+            if overlaps:
+                code = _compressed_morton_code_no_alloc(grid_index[::-1], ab, curr_axis_pos)
+                rows.append(row)
+                codes.append(code)
+
+    rows = np.asarray(rows, dtype=np.uint32)
+    codes = np.asarray(codes, dtype=np.uint64)
+    return rows, codes
 
 
 def _write_annotations_by_spatial_chunk(df_handle, spatial_assignment, disable_subsampling, output_dir, write_sharded, max_shards_per_transaction, max_threads):

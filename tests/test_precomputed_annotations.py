@@ -138,6 +138,98 @@ def test_box_annotations(pointpair_testdata, test_output_dir):
     )
 
 
+@pytest.fixture
+def polyline_testdata(
+    num_clusters=20,
+    num_polylines_per_cluster=50,
+    cluster_spacing=[10, 100, 1000],
+    point_spacing=[1, 10, 100],
+    points_per_polyline_range=(3, 7),
+    step_sigma=[0.1, 1, 10],
+):
+    """
+    Returns ``(main_df, aux_df)``:
+
+    - ``main_df`` is indexed by annotation_id with property + relationship columns
+      (matching the conventions used by the other annotation types in this module).
+    - ``aux_df`` has one row per polyline vertex with columns ``['x','y','z','annotation_id']``.
+
+    Each polyline's vertex count is drawn uniformly from
+    ``[points_per_polyline_range[0], points_per_polyline_range[1]]`` (inclusive).
+    """
+    centers = np.random.normal(0, cluster_spacing, (num_clusters, 3))
+    n_polys = num_clusters * num_polylines_per_cluster
+
+    annotation_ids = np.arange(n_polys, dtype=np.uint64)
+    cluster_ids = np.repeat(np.arange(num_clusters), num_polylines_per_cluster).astype(np.uint32)
+
+    polyline_starts = np.empty((n_polys, 3), dtype=np.float64)
+    for i, center in enumerate(centers):
+        polyline_starts[i*num_polylines_per_cluster:(i+1)*num_polylines_per_cluster] = (
+            np.random.normal(center, point_spacing, (num_polylines_per_cluster, 3))
+        )
+
+    lo, hi = points_per_polyline_range
+    per_polyline_counts = np.random.randint(lo, hi + 1, size=n_polys)
+
+    aux_rows = []
+    for poly_i, start, n_points in zip(annotation_ids, polyline_starts, per_polyline_counts):
+        steps = np.cumsum(np.random.normal(0, step_sigma, (n_points, 3)), axis=0)
+        verts = start + steps
+        for v in verts:
+            aux_rows.append((v[0], v[1], v[2], int(poly_i)))
+    aux_df = pd.DataFrame(aux_rows, columns=['x', 'y', 'z', 'annotation_id'])
+
+    colormap = pd.Series(Category10[10])
+
+    def hex_to_rgb(h):
+        return [int(c, base=16) for c in (h[1:3], h[3:5], h[5:7])]
+
+    rgb = colormap.loc[cluster_ids % 10].map(hex_to_rgb).tolist()
+    main_df = pd.DataFrame(index=pd.Index(annotation_ids))
+    main_df[['cluster_color_r', 'cluster_color_g', 'cluster_color_b']] = rgb
+    main_df['cluster_color_a'] = 255
+    main_df['cluster_id'] = cluster_ids
+    return main_df, aux_df
+
+
+def test_polyline_annotations(polyline_testdata, test_output_dir):
+    main_df, aux_df = polyline_testdata
+    cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
+    write_precomputed_annotations(
+        main_df,
+        cs,
+        'polyline',
+        ['cluster_color'],
+        ['cluster_id'],
+        output_dir=test_output_dir / 'test-polyline-annotations',
+        polyline_points=aux_df,
+        write_by_spatial_chunk=True,
+        num_spatial_levels=4,
+        target_chunk_limit=10,
+    )
+
+
+def test_polyline_annotations_aux_only(test_output_dir):
+    """Convenience: pass aux table as the first arg and omit a main table."""
+    aux_df = pd.DataFrame({
+        'x': [0.1, 0.2, 0.3, 0.5, 0.9],
+        'y': [0.1, 0.2, 0.3, 0.5, 0.5],
+        'z': [0.1, 0.2, 0.3, 0.5, 0.5],
+        'annotation_id': [10, 10, 10, 20, 20],
+    })
+    cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
+    write_precomputed_annotations(
+        aux_df,
+        cs,
+        'polyline',
+        output_dir=test_output_dir / 'test-polyline-aux-only',
+        write_by_spatial_chunk=True,
+        num_spatial_levels=2,
+        target_chunk_limit=1,
+    )
+
+
 def test_ellipsoid_annotations(ellipsoid_testdata, test_output_dir):
     cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
     write_precomputed_annotations(
@@ -180,7 +272,13 @@ def test_early_data_deletion(point_testdata, test_output_dir):
 
 
 @pytest.mark.manual
-def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdata, ellipsoid_testdata):
+def test_inspect_test_results(
+    test_output_dir,
+    point_testdata,
+    pointpair_testdata,
+    ellipsoid_testdata,
+    polyline_testdata,
+):
     """
     Inspect the exported annotations from this test suite in neuroglancer.
     This test is marked as 'manual' and skipped by default since it requires manual inspection.
@@ -201,6 +299,7 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
     test_line_annotations(pointpair_testdata, test_output_dir)
     test_box_annotations(pointpair_testdata, test_output_dir)
     test_ellipsoid_annotations(ellipsoid_testdata, test_output_dir)
+    test_polyline_annotations(polyline_testdata, test_output_dir)
     
     # Start CORS webserver in background
     port = 9010
@@ -253,6 +352,13 @@ def test_inspect_test_results(test_output_dir, point_testdata, pointpair_testdat
                 "source": f"precomputed://{NGSK_SERVER_ADDRESS}/test-ellipsoid-annotations",
                 "shader": """\nvoid main() {\n  setColor(prop_cluster_color());\n}\n""",
                 "name": "ellipsoids",
+                "annotations": []
+            },
+            {
+                "type": "annotation",
+                "source": f"precomputed://{NGSK_SERVER_ADDRESS}/test-polyline-annotations",
+                "shader": """\nvoid main() {\n  setColor(prop_cluster_color());\n}\n""",
+                "name": "polylines",
                 "annotations": []
             }
         ],

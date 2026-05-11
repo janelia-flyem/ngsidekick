@@ -1,8 +1,24 @@
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from numba import njit
 import numpy as np
 import pandas as pd
+
+
+class PolylineGeometry(NamedTuple):
+    """
+    Bundle of arrays that describes a batch of polyline annotations after
+    they've been unpacked from the user-supplied auxiliary table.
+
+    - ``points``: (total_points, D) float32, all polyline vertices concatenated
+      in main-df-row order. ``points[starts[i]:ends[i]]`` are the vertices of
+      polyline ``i`` in traversal order.
+    - ``starts``, ``ends``: (N,) int64 offsets into ``points``.
+    """
+    points: np.ndarray
+    starts: np.ndarray
+    ends: np.ndarray
 
 
 @dataclass
@@ -77,6 +93,10 @@ def _geometry_cols(coord_names, annotation_type):
             [f'{c}a' for c in coord_names],
             [f'{c}b' for c in coord_names]
         ]
+
+    if annotation_type == 'polyline':
+        # Polyline geometry lives in an auxiliary table, not the main df.
+        return []
 
     raise ValueError(f"Annotation type {annotation_type} not supported")
 

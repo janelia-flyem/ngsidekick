@@ -13,8 +13,10 @@ from ngsidekick.annotations.precomputed._spatial import (
     _compute_grid_codes_for_ellipsoids,
     _compute_grid_codes_for_lines,
     _compute_grid_codes_for_points,
+    _compute_grid_codes_for_polylines,
     GridSpec,
 )
+from ngsidekick.annotations.precomputed._util import PolylineGeometry
 
 
 def _single_level_gridspec(grid_shape=(4, 4, 4), bounds_upper=1.0):
@@ -212,5 +214,82 @@ def test_short_annotation_inside_one_chunk_produces_single_entry():
     per_row_levels = np.zeros(len(df), dtype=np.uint64)
 
     rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
+    assert rows.tolist() == [0]
+    assert len(codes) == 1
+
+
+def test_polylines_spanning_multiple_chunks_are_duplicated():
+    """
+    A polyline that crosses chunk boundaries must produce one output entry
+    per chunk it overlaps. Mirrors the line analogue.
+    """
+    bounds = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]])
+    gridspec = _single_level_gridspec((4, 4, 4))
+
+    # Two polylines:
+    #  poly 0: stays in 1 chunk (3 close vertices in [0.1, 0.15])
+    #  poly 1: a 4-vertex zigzag along x covering ~4 cells
+    points = np.array([
+        # poly 0 -- 3 vertices in one chunk
+        [0.10, 0.10, 0.10],
+        [0.12, 0.12, 0.12],
+        [0.14, 0.14, 0.14],
+        # poly 1 -- 4 vertices spanning 4 chunks along x
+        [0.10, 0.10, 0.10],
+        [0.40, 0.10, 0.10],
+        [0.60, 0.10, 0.10],
+        [0.90, 0.10, 0.10],
+    ], dtype=np.float32)
+    starts = np.array([0, 3], dtype=np.int64)
+    ends = np.array([3, 7], dtype=np.int64)
+    per_row_levels = np.zeros(2, dtype=np.uint64)
+
+    rows, codes = _compute_grid_codes_for_polylines(
+        PolylineGeometry(points, starts, ends), bounds, gridspec, per_row_levels
+    )
+    counts = Counter(rows.tolist())
+    assert counts[0] == 1
+    assert counts[1] == 4, counts
+
+
+def test_2d_polylines_span_multiple_chunks():
+    """Polyline kernel must be agnostic to coordinate-space dimensionality."""
+    bounds = np.array([[0.0, 0.0], [1.0, 1.0]])
+    gridspec = _single_level_gridspec((4, 4))
+
+    points = np.array([
+        # poly 0: 1 chunk
+        [0.10, 0.10],
+        [0.15, 0.15],
+        # poly 1: zigzag across x covering chunks 0,1,2,3
+        [0.10, 0.10],
+        [0.40, 0.10],
+        [0.90, 0.10],
+    ], dtype=np.float32)
+    starts = np.array([0, 2], dtype=np.int64)
+    ends = np.array([2, 5], dtype=np.int64)
+    per_row_levels = np.zeros(2, dtype=np.uint64)
+
+    rows, codes = _compute_grid_codes_for_polylines(
+        PolylineGeometry(points, starts, ends), bounds, gridspec, per_row_levels
+    )
+    counts = Counter(rows.tolist())
+    assert counts[0] == 1
+    assert counts[1] == 4, counts
+
+
+def test_polyline_with_single_point_emits_one_chunk():
+    """A 1-vertex polyline is degenerate but spec-permitted; emit its containing chunk."""
+    bounds = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]])
+    gridspec = _single_level_gridspec((4, 4, 4))
+
+    points = np.array([[0.10, 0.10, 0.10]], dtype=np.float32)
+    starts = np.array([0], dtype=np.int64)
+    ends = np.array([1], dtype=np.int64)
+    per_row_levels = np.zeros(1, dtype=np.uint64)
+
+    rows, codes = _compute_grid_codes_for_polylines(
+        PolylineGeometry(points, starts, ends), bounds, gridspec, per_row_levels
+    )
     assert rows.tolist() == [0]
     assert len(codes) == 1
