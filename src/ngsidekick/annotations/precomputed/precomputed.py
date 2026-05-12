@@ -262,12 +262,17 @@ def write_precomputed_annotations(
         handle, df = df, df.df
         handle.df = None
 
+    # Compute property specs, drop unused columns up front, then derive
+    # bounds. Dropping unused columns first reduces RAM pressure during
+    # bounds/encoding when the input df carries extra columns we don't
+    # consume; and it makes ``df`` thereafter a shallow view that holds
+    # only the data the writers need.
     property_specs = annotation_property_specs(df, properties)
+    df = _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships)
     bounds = _get_bounds(df, coord_space, annotation_type, polyline_geom=polyline_geom)
+
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
-
-    df = _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships)
 
     # Each writer encodes its own bytes lazily from the native ``df`` (plus
     # polyline_geom for polyline). This trades the small cost of re-encoding
@@ -281,17 +286,28 @@ def write_precomputed_annotations(
             output_dir, write_sharded, max_shards_per_transaction, max_threads,
         )
 
+    # After by-id, split ``df`` between the by-rel and by-spatial writers via
+    # separate TableHandles. by-rel needs the relationship columns; by-spatial
+    # doesn't, so its handle drops them. Pandas shares blocks between the two
+    # handles for the kept columns; the rel-column block is owned only by the
+    # rel handle and gets freed once the rel writer nulls its handle.
+    if write_by_relationship:
+        rel_handle = TableHandle(df)
+    if write_by_spatial_chunk:
+        spatial_handle = TableHandle(df.drop(columns=list(relationships)))
+    del df
+
     by_rel_metadata = []
     if write_by_relationship:
         by_rel_metadata = _write_annotations_by_relationships(
-            df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+            rel_handle, coord_space, annotation_type, property_specs, relationships, polyline_geom,
             output_dir, write_sharded, max_shards_per_transaction, max_threads,
         )
 
     spatial_metadata = []
     if write_by_spatial_chunk:
         spatial_metadata = _write_annotations_by_spatial_chunk(
-            df, coord_space, annotation_type, property_specs, polyline_geom,
+            spatial_handle, coord_space, annotation_type, property_specs, polyline_geom,
             bounds, num_spatial_levels, target_chunk_limit,
             shuffle_before_assigning_spatial_levels,
             disable_subsampling=(target_chunk_limit == 0),
@@ -301,7 +317,7 @@ def write_precomputed_annotations(
             max_threads=max_threads,
         )
 
-    del df, polyline_geom
+    polyline_geom = None
 
 
     # Write the top-level 'info' file for the annotation output directory.

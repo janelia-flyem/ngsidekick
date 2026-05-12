@@ -16,8 +16,10 @@ class PartitionedBuffer:
     One "column" of a per-key write: a flat byte buffer plus a layout
     describing how to slice out each row's contribution.
 
-    - ``buf`` is a flat ``bytes`` (or bytes-like) object containing every
-      row's contribution concatenated.
+    - ``buf`` is a flat 1-D ``np.uint8`` ndarray containing every row's
+      contribution concatenated. For convenience, the constructor also
+      accepts a ``bytes`` or ``bytearray`` value and wraps it in a uint8
+      view without copying the underlying memory.
     - ``layout`` is either:
 
       - an ``int`` recsize: every row's contribution is exactly that many
@@ -28,9 +30,19 @@ class PartitionedBuffer:
     A ``_write_buffers`` call takes a list of ``PartitionedBuffer`` instances;
     the value written for key ``i`` is the concatenation of each buffer's
     :meth:`slice_for_partition` result.
+
+    Holding the data as a uint8 ndarray (rather than ``bytes``) lets the
+    encoders return ``records.view(np.uint8)`` directly without paying for
+    a separate full-size ``.tobytes()`` copy; the per-row ``.tobytes()`` in
+    :meth:`slice_for_partition` is small (recsize bytes) and freed
+    immediately after each tensorstore write.
     """
-    buf: bytes
+    buf: np.ndarray
     layout: object  # int | np.ndarray
+
+    def __post_init__(self):
+        if not isinstance(self.buf, np.ndarray):
+            object.__setattr__(self, 'buf', np.frombuffer(self.buf, dtype=np.uint8))
 
     def slice_for_partition(self, i):
         """
@@ -43,8 +55,8 @@ class PartitionedBuffer:
         """
         layout = self.layout
         if isinstance(layout, (int, np.integer)):
-            return self.buf[i*layout:(i+1)*layout]
-        return self.buf[int(layout[i]):int(layout[i+1])]
+            return self.buf[i*layout:(i+1)*layout].tobytes()
+        return self.buf[int(layout[i]):int(layout[i+1])].tobytes()
 
     def total_bytes(self, n_rows):
         """Total size in bytes covering ``n_rows`` rows."""
@@ -55,14 +67,44 @@ class PartitionedBuffer:
         return int(layout[n_rows])
 
 
+def _records_to_uint8(df, dtypes, batch_size=10_000_000):
+    """
+    Vectorized DataFrame serialization to a flat 1-D ``uint8`` ndarray,
+    suitable for use as a :class:`PartitionedBuffer`'s ``buf``.
+
+    Encodes ``batch_size`` rows at a time. The pre-allocated output is the
+    only large allocation that survives the call -- each batch's transient
+    structured records ndarray is freed before the next batch runs --
+    capping peak transient memory at roughly ``len(df) * recsize +
+    batch_size * recsize`` bytes (instead of the ``2 * len(df) * recsize``
+    we'd pay if we built one full-size records ndarray then called
+    ``.tobytes()`` on it).
+
+    Returns:
+        ``(out, recsize)`` where ``out`` is a 1-D ``np.uint8`` ndarray of
+        length ``len(df) * recsize``, and ``recsize`` is the per-record
+        size in bytes (derived from ``dtypes``).
+    """
+    # Determine recsize from an empty-rows sample, so we can pre-allocate.
+    sample = df.iloc[:0].to_records(index=False, column_dtypes=dtypes)
+    recsize = sample.dtype.itemsize
+    n = len(df)
+    out = np.empty(n * recsize, dtype=np.uint8)
+    for s in range(0, n, batch_size):
+        e = min(s + batch_size, n)
+        records = df.iloc[s:e].to_records(index=False, column_dtypes=dtypes)
+        out[s * recsize : e * recsize] = records.view(np.uint8).reshape(-1)
+    return out, recsize
+
+
 def _encode_id_bytes(annotation_ids):
     """
     Encode annotation IDs as ``<id:uint64le>`` records. Returns a
     :class:`PartitionedBuffer` whose layout is the fixed 8-byte recsize.
     Permute ``annotation_ids`` externally if a non-row-order encoding is required.
     """
-    encoded = np.asarray(annotation_ids).astype('<u8', copy=False).tobytes()
-    return PartitionedBuffer(encoded, 8)
+    ids = np.asarray(annotation_ids).astype('<u8', copy=False)
+    return PartitionedBuffer(ids.view(np.uint8).reshape(-1), 8)
 
 
 def _encode_annotation_records(df, coord_space, annotation_type, property_specs, polyline_geom=None):
@@ -102,28 +144,31 @@ def _encode_polyline_records(df, property_specs, polyline_geom):
     ends = polyline_geom.ends
     D = points.shape[1]
     point_byte_size = 4 * D
-    flat_points = points.astype(np.float32, copy=False).tobytes()
+    # Flatten then view: a 2-D ``(N, D)`` array can't be view'd directly to
+    # uint8 if its last axis isn't byte-contiguous; ravel-then-view avoids
+    # that constraint.
+    flat_points = points.astype(np.float32, copy=False).ravel().view(np.uint8)
 
     n = len(df)
     counts = (ends - starts).astype(np.uint32)
-    counts_buf = counts.tobytes()
+    counts_uint8 = counts.view(np.uint8).reshape(-1)  # 4 bytes per count
 
     if property_specs:
         property_only_df = _geometry_prop_df(df, [], property_specs)
         prop_buf, prop_recsize = _encode_geometry_prop_df(property_only_df, [], property_specs)
         del property_only_df
     else:
-        prop_buf = b''
+        prop_buf = np.empty(0, dtype=np.uint8)
         prop_recsize = 0
 
     # Per-record byte size = 4 (count) + n_points * D * 4 + prop_recsize.
     rec_sizes = 4 + counts.astype(np.int64) * point_byte_size + prop_recsize
     offsets = np.concatenate(([0], np.cumsum(rec_sizes))).astype(np.int64)
 
-    out = bytearray(int(offsets[-1]))
+    out = np.empty(int(offsets[-1]), dtype=np.uint8)
     for i in range(n):
         s = int(offsets[i])
-        out[s:s+4] = counts_buf[i*4:(i+1)*4]
+        out[s:s+4] = counts_uint8[i*4:(i+1)*4]
         pts_start = s + 4
         src_s = int(starts[i]) * point_byte_size
         src_e = int(ends[i]) * point_byte_size
@@ -132,7 +177,7 @@ def _encode_polyline_records(df, property_specs, polyline_geom):
             prop_off = pts_start + (src_e - src_s)
             out[prop_off:prop_off + prop_recsize] = prop_buf[i*prop_recsize:(i+1)*prop_recsize]
 
-    return PartitionedBuffer(bytes(out), offsets)
+    return PartitionedBuffer(out, offsets)
 
 
 def _geometry_prop_df(df, geometry_cols, property_specs):
@@ -206,11 +251,7 @@ def _encode_geometry_prop_df(geometry_prop_df, geometry_cols, property_specs):
             geometry_prop_df[p] = geometry_prop_df[p].cat.codes
             dtypes[p] = spec['type']
 
-    # Vectorized serialization
-    records = geometry_prop_df.to_records(index=False, column_dtypes=dtypes)
-    recsize = records.dtype.itemsize
-    buf = records.tobytes()
-    return buf, recsize
+    return _records_to_uint8(geometry_prop_df, dtypes)
 
 
 def _encode_relationship_records(df, relationships):
@@ -238,9 +279,9 @@ def _encode_relationship_records(df, relationships):
         offset = 0
         for pb in per_rel:
             recsize = int(pb.layout)
-            combined[:, offset:offset+recsize] = np.frombuffer(pb.buf, dtype=np.uint8).reshape(n, recsize)
+            combined[:, offset:offset+recsize] = pb.buf.reshape(n, recsize)
             offset += recsize
-        return PartitionedBuffer(combined.tobytes(), total_recsize)
+        return PartitionedBuffer(combined.reshape(-1), total_recsize)
 
     # Variable-width: at least one relationship is a list column.
     n = len(df)
@@ -252,7 +293,7 @@ def _encode_relationship_records(df, relationships):
             per_row_sizes += (pb.layout[1:] - pb.layout[:-1])
     offsets = np.concatenate(([0], np.cumsum(per_row_sizes))).astype(np.int64)
 
-    out = bytearray(int(offsets[-1]))
+    out = np.empty(int(offsets[-1]), dtype=np.uint8)
     for i in range(n):
         cursor = int(offsets[i])
         for pb in per_rel:
@@ -266,7 +307,7 @@ def _encode_relationship_records(df, relationships):
                 w = src_e - src_s
                 out[cursor:cursor + w] = pb.buf[src_s:src_e]
                 cursor += w
-    return PartitionedBuffer(bytes(out), offsets)
+    return PartitionedBuffer(out, offsets)
 
 
 def _encode_one_relationship(s):
@@ -279,27 +320,27 @@ def _encode_one_relationship(s):
     For an object column of lists, the per-row record is variable-width.
     """
     if pd.api.types.is_integer_dtype(s):
-        records = (
+        df_count_id = (
             pd.DataFrame({'count': np.uint32(1), 'id': s.to_numpy()})
             .astype({'count': np.uint32, 'id': np.uint64}, copy=False)
-            .to_records(index=False)
         )
-        return PartitionedBuffer(records.tobytes(), 12)
+        buf, recsize = _records_to_uint8(df_count_id, {'count': np.uint32, 'id': np.uint64})
+        return PartitionedBuffer(buf, recsize)
 
     assert s.dtype == object
     counts = s.map(len).to_numpy(np.uint32)
-    counts_buf = counts.tobytes()
-    ids_buf = np.concatenate(s.to_list(), dtype=np.uint64).tobytes()
+    counts_uint8 = counts.view(np.uint8).reshape(-1)  # 4 bytes per count
+    ids_uint8 = np.concatenate(s.to_list(), dtype=np.uint64).view(np.uint8).reshape(-1)
 
     per_row_sizes = 4 + counts.astype(np.int64) * 8
     offsets = np.concatenate(([0], np.cumsum(per_row_sizes))).astype(np.int64)
 
-    out = bytearray(int(offsets[-1]))
+    out = np.empty(int(offsets[-1]), dtype=np.uint8)
     id_cursor = 0
     for i in range(len(counts)):
         s_off = int(offsets[i])
-        out[s_off:s_off+4] = counts_buf[i*4:(i+1)*4]
+        out[s_off:s_off+4] = counts_uint8[i*4:(i+1)*4]
         ids_bytes = int(counts[i]) * 8
-        out[s_off+4:s_off+4+ids_bytes] = ids_buf[id_cursor:id_cursor+ids_bytes]
+        out[s_off+4:s_off+4+ids_bytes] = ids_uint8[id_cursor:id_cursor+ids_bytes]
         id_cursor += ids_bytes
-    return PartitionedBuffer(bytes(out), offsets)
+    return PartitionedBuffer(out, offsets)

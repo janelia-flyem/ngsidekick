@@ -9,15 +9,19 @@ from ._write_buffers import _write_buffers
 logger = logging.getLogger(__name__)
 
 
-def _write_annotations_by_relationships(df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+def _write_annotations_by_relationships(df_handle, coord_space, annotation_type, property_specs, relationships, polyline_geom,
                                         output_dir, write_sharded, max_shards_per_transaction, max_threads):
     """
     Write the annotations to a "Related Object ID Index" for each relationship.
 
     Args:
-        df:
-            DataFrame holding the native geometry / property / relationship
-            columns for every annotation. Not mutated.
+        df_handle:
+            TableHandle holding the DataFrame of geometry + property +
+            relationship columns. The handle's reference will be unset
+            before this function returns, so that any other handle the
+            caller built from the same source data (e.g. for the
+            by-spatial writer) can free its share of the rel-column
+            block as soon as we're done.
         coord_space, annotation_type, property_specs, relationships, polyline_geom:
             See :func:`write_precomputed_annotations`.
 
@@ -28,6 +32,9 @@ def _write_annotations_by_relationships(df, coord_space, annotation_type, proper
         List of JSON metadata dicts (one per relationship) for the
         'relationships' key in the top-level 'info' file.
     """
+    df = df_handle.df
+    df_handle.df = None
+
     by_rel_metadata = []
     for relationship in relationships:
         metadata = _write_annotations_by_relationship(

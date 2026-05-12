@@ -16,15 +16,6 @@ logger = logging.getLogger(__name__)
 
 GridSpec = NamedTuple("GridSpec", [('chunk_shapes', np.ndarray), ('grid_shapes', np.ndarray)])
 
-SpatialAssignment = NamedTuple("SpatialAssignment", [
-    # Each entry of (rows, codes, levels) is a single (annotation, chunk)
-    # pairing. ``rows`` may contain duplicates (multi-chunk annotations).
-    ('rows', np.ndarray),       # uint32; positional index into the input df
-    ('codes', np.ndarray),      # uint64; chunk_code at the assigned level
-    ('levels', np.ndarray),     # uint64; level at which this entry lives
-    ('gridspec', GridSpec),
-])
-
 
 def _compute_spatial_assignment(
     df,
@@ -38,13 +29,14 @@ def _compute_spatial_assignment(
     polyline_geom=None,
 ):
     """
-    Compute a :class:`SpatialAssignment` for ``df`` without modifying it
-    or building a duplicated dataframe.
+    Compute the spatial assignment for ``df``: for each (annotation,
+    chunk) pair, a triple ``(row, chunk_code, level)``.
 
-    Splitting this step out from the actual writing lets the caller
-    drop the geometry columns from ``df`` as soon as this returns,
-    holding only the much smaller ``(rows, codes, levels)`` arrays
-    until the spatial index is finally written.
+    The returned DataFrame is sorted by ``(level, chunk_code)`` so each
+    chunk's contributions are contiguous; within a chunk the original
+    df row order is preserved (a stable sort), which matters because
+    neuroglancer subsamples a spatial chunk by taking a prefix of its
+    annotation list.
 
     Args:
         df:
@@ -62,7 +54,10 @@ def _compute_spatial_assignment(
             modified.
 
     Returns:
-        SpatialAssignment.
+        ``(assignment_df, gridspec)`` -- ``assignment_df`` is a pandas
+        DataFrame with columns ``('level', 'chunk_code', 'row_pos')``
+        sorted by ``(level, chunk_code)``; ``gridspec`` is the
+        :class:`GridSpec` used to assign chunks.
     """
     geometry_cols = _geometry_cols(coord_space.names, annotation_type)
     gridspec = _define_spatial_grids(bounds, coord_space, num_levels)
@@ -99,12 +94,23 @@ def _compute_spatial_assignment(
             raise NotImplementedError(f"Spatial indexing for {annotation_type} annotations is not implemented")
     logger.info("Done assigning spatial grid chunks")
 
-    return SpatialAssignment(
-        rows=rows,
-        codes=codes,
-        levels=per_row_levels[rows],
-        gridspec=gridspec,
-    )
+    # Stable-sort by (level, chunk_code) using ``np.lexsort`` and then
+    # reorder ``rows``, ``codes``, and ``levels`` one at a time. This
+    # avoids constructing an unsorted 3-column DataFrame just to sort it
+    # (which transiently doubles memory during ``pd.sort_values``).
+    levels = per_row_levels[rows]
+    order = np.lexsort((codes, levels))
+    rows = rows[order]
+    codes = codes[order]
+    levels = levels[order]
+    del order
+
+    assignment_df = pd.DataFrame({
+        'level': levels,
+        'chunk_code': codes,
+        'row_pos': rows,
+    })
+    return assignment_df, gridspec
 
 
 def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
@@ -609,7 +615,7 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
     return rows, codes
 
 
-def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, property_specs, polyline_geom,
+def _write_annotations_by_spatial_chunk(df_handle, coord_space, annotation_type, property_specs, polyline_geom,
                                         bounds, num_spatial_levels, target_chunk_limit,
                                         shuffle_before_assigning_spatial_levels,
                                         disable_subsampling, output_dir, write_sharded,
@@ -617,14 +623,18 @@ def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, proper
     """
     Write the spatial index.
 
-    Computes the (level, chunk_code, row) spatial assignment up front, then
-    for each level encodes that level's annotations once in
-    (level, chunk_code)-sorted order and expresses each chunk's output as
-    contiguous byte ranges into that single buffer.
+    Computes the (level, chunk_code, row) spatial assignment up front
+    (already sorted by ``(level, chunk_code)``), then for each level
+    encodes that level's annotations once in sorted order and expresses
+    each chunk's output as contiguous byte ranges into that single buffer.
 
     Args:
-        df:
-            DataFrame holding geometry + property + relationship columns.
+        df_handle:
+            TableHandle holding the DataFrame of geometry + property
+            columns. The handle's reference will be unset before this
+            function returns, allowing the caller's full-size DataFrame
+            to be released as soon as we've materialized the permuted
+            work df.
         coord_space, annotation_type, property_specs, polyline_geom:
             See :func:`write_precomputed_annotations`.
 
@@ -643,7 +653,10 @@ def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, proper
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
     """
-    spatial_assignment = _compute_spatial_assignment(
+    df = df_handle.df
+    df_handle.df = None
+
+    assignment_df, gridspec = _compute_spatial_assignment(
         df,
         coord_space,
         annotation_type,
@@ -653,20 +666,12 @@ def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, proper
         shuffle_before_assigning_spatial_levels,
         polyline_geom=polyline_geom,
     )
-    gridspec = spatial_assignment.gridspec
+    sorted_rows = assignment_df['row_pos'].to_numpy()
 
-    # Stable-sort the (level, chunk_code, row) triples by (level, chunk_code)
-    # so each chunk's contributions are contiguous, and within a chunk the
-    # original row order is preserved (which is meaningful: spatial subsampling
-    # in neuroglancer takes a prefix of each chunk's annotation list).
-    spatial_assignment_df = pd.DataFrame({
-        'level': spatial_assignment.levels,
-        'chunk_code': spatial_assignment.codes,
-        'row_pos': spatial_assignment.rows,
-    }).sort_values(['level', 'chunk_code'], kind='stable')
-    sorted_rows = spatial_assignment_df['row_pos'].to_numpy()
-
-    # Permute the source data to match the sorted order and drop columns we don't want.
+    # Permute the source data to match the sorted order and drop columns we
+    # don't want. After this rebind ``df`` is the small permuted work df;
+    # the original (potentially large) source df has no remaining references
+    # and gets freed.
     cols = _ann_required_cols(coord_space, annotation_type, property_specs)
     df = df[cols].iloc[sorted_rows]
     if polyline_geom is not None:
@@ -687,10 +692,10 @@ def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, proper
     # Count the annotations in each chunk and assemble a per-chunk metadata
     # DataFrame indexed by (level, chunk_code). The columns hold the chunk's
     # byte ranges in each of the two flat encoded buffers we just produced.
-    # ``spatial_assignment_df`` is already sorted by (level, chunk_code), so
+    # ``assignment_df`` is already sorted by (level, chunk_code), so
     # ``sort=False`` here just walks the contiguous runs.
-    counts_per_chunk = spatial_assignment_df.groupby(['level', 'chunk_code'], sort=False).size()
-    del spatial_assignment_df
+    counts_per_chunk = assignment_df.groupby(['level', 'chunk_code'], sort=False).size()
+    del assignment_df
 
     row_boundaries = np.concatenate(([0], np.cumsum(counts_per_chunk.to_numpy()))).astype(np.int64)
     if isinstance(ann_pb.layout, (int, np.integer)):
