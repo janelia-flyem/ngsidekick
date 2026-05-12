@@ -269,19 +269,6 @@ def write_precomputed_annotations(
 
     df = _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships)
 
-    # Spatial assignment uses the geometry columns directly; no encoding yet.
-    if write_by_spatial_chunk:
-        spatial_assignment = _compute_spatial_assignment(
-            df,
-            coord_space,
-            annotation_type,
-            bounds,
-            num_spatial_levels,
-            target_chunk_limit,
-            shuffle_before_assigning_spatial_levels,
-            polyline_geom=polyline_geom,
-        )
-
     # Each writer encodes its own bytes lazily from the native ``df`` (plus
     # polyline_geom for polyline). This trades the small cost of re-encoding
     # in each writer for a large RAM saving: nothing persists between
@@ -304,8 +291,9 @@ def write_precomputed_annotations(
     spatial_metadata = []
     if write_by_spatial_chunk:
         spatial_metadata = _write_annotations_by_spatial_chunk(
-            df, spatial_assignment,
-            coord_space, annotation_type, property_specs, polyline_geom,
+            df, coord_space, annotation_type, property_specs, polyline_geom,
+            bounds, num_spatial_levels, target_chunk_limit,
+            shuffle_before_assigning_spatial_levels,
             disable_subsampling=(target_chunk_limit == 0),
             output_dir=output_dir,
             write_sharded=write_sharded,

@@ -609,29 +609,29 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
     return rows, codes
 
 
-def _write_annotations_by_spatial_chunk(df, spatial_assignment,
-                                        coord_space, annotation_type, property_specs, polyline_geom,
+def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, property_specs, polyline_geom,
+                                        bounds, num_spatial_levels, target_chunk_limit,
+                                        shuffle_before_assigning_spatial_levels,
                                         disable_subsampling, output_dir, write_sharded,
                                         max_shards_per_transaction, max_threads):
     """
-    Write the spatial index, given a precomputed :class:`SpatialAssignment`
-    and the native-dtype DataFrame of annotation columns.
+    Write the spatial index.
 
-    Encoding happens here, not upstream. For each level, we encode the
-    relevant annotations once in (level, chunk_code)-sorted order, then
-    express each chunk's output as contiguous byte ranges into that
-    single buffer.
+    Computes the (level, chunk_code, row) spatial assignment up front, then
+    for each level encodes that level's annotations once in
+    (level, chunk_code)-sorted order and expresses each chunk's output as
+    contiguous byte ranges into that single buffer.
 
     Args:
         df:
             DataFrame holding geometry + property + relationship columns.
-            ``spatial_assignment.rows`` indexes positionally into ``df``;
-            the same row may appear multiple times (a multi-chunk
-            annotation lands in several chunks).
-        spatial_assignment:
-            Output of :func:`_compute_spatial_assignment`.
         coord_space, annotation_type, property_specs, polyline_geom:
             See :func:`write_precomputed_annotations`.
+
+        bounds, num_spatial_levels, target_chunk_limit,
+        shuffle_before_assigning_spatial_levels:
+            See :func:`_compute_spatial_assignment` /
+            :func:`write_precomputed_annotations`.
 
         disable_subsampling:
             Whether to disable subsampling by setting "limit" to 1 in
@@ -643,6 +643,16 @@ def _write_annotations_by_spatial_chunk(df, spatial_assignment,
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
     """
+    spatial_assignment = _compute_spatial_assignment(
+        df,
+        coord_space,
+        annotation_type,
+        bounds,
+        num_spatial_levels,
+        target_chunk_limit,
+        shuffle_before_assigning_spatial_levels,
+        polyline_geom=polyline_geom,
+    )
     gridspec = spatial_assignment.gridspec
 
     # Stable-sort the (level, chunk_code, row) triples by (level, chunk_code)
