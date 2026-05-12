@@ -244,6 +244,61 @@ the DataFrame before the writing phase begins:
 The same option applies to ``polyline_points``.
 
 
+Tuning tensorstore writes
+-------------------------
+
+The sharded write path uses `tensorstore
+<https://google.github.io/tensorstore/>`_, which can be tuned via three
+related arguments. The defaults are tuned for high-throughput multi-core
+machines and should be fine for most cases.
+
+``max_threads`` (default: ``LSB_DJOB_NUMPROC`` on LSF, otherwise the local
+CPU count) sets the limit on tensorstore's ``data_copy_concurrency`` and
+``file_io_concurrency`` pools — i.e. how many threads tensorstore is
+allowed to use for shard encoding/compression and file I/O.
+
+``max_shards_per_transaction`` (default: equal to ``max_threads``) controls
+how many shards are committed in a single tensorstore transaction. A
+transaction holds all of its shards' staged data in memory until commit,
+so this is the main knob for trading **RAM for throughput** during writes:
+more shards per transaction → more parallelism at commit time but a higher
+peak RAM during sharded writes; fewer shards per transaction → less RAM,
+slower commits.
+
+.. code-block:: python
+
+    # Lower memory pressure at the cost of less commit parallelism.
+    write_precomputed_annotations(
+        df, 'xyz', 'line', output_dir='out/lines',
+        max_threads=64,
+        max_shards_per_transaction=16,
+    )
+
+``tensorstore_context`` accepts a JSON-shaped ``dict`` matching
+tensorstore's
+`Context spec <https://google.github.io/tensorstore/context.html>`_,
+which is useful when you want finer control over tensorstore's resource
+pools than ``max_threads`` alone provides. The most useful key in
+practice is ``cache_pool.total_bytes_limit``, which caps the
+in-memory shard staging that tensorstore retains across transactions
+(and tends to dominate sustained RAM use on very large runs):
+
+.. code-block:: python
+
+    write_precomputed_annotations(
+        df, 'xyz', 'line', output_dir='out/lines',
+        tensorstore_context={
+            # Cap tensorstore's internal cache + write-staging pool at 4 GB.
+            'cache_pool': {'total_bytes_limit': 4_000_000_000},
+        },
+    )
+
+Any keys you provide are passed through verbatim; the
+``data_copy_concurrency`` and ``file_io_concurrency`` keys are filled
+in from ``max_threads`` only when your dict doesn't already specify
+them, so you can override one without touching the other.
+
+
 API reference
 -------------
 
