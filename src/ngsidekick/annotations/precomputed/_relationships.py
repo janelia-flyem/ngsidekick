@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def _write_annotations_by_relationships(df_handle, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-                                        output_dir, write_sharded, max_shards_per_transaction, max_threads):
+                                        output_dir, write_sharded, max_shards_per_transaction, ts_context):
     """
     Write the annotations to a "Related Object ID Index" for each relationship.
 
@@ -25,7 +25,7 @@ def _write_annotations_by_relationships(df_handle, coord_space, annotation_type,
         coord_space, annotation_type, property_specs, relationships, polyline_geom:
             See :func:`write_precomputed_annotations`.
 
-        output_dir, write_sharded, max_shards_per_transaction, max_threads:
+        output_dir, write_sharded, max_shards_per_transaction, ts_context:
             See :func:`._write_buffers._write_buffers`.
 
     Returns:
@@ -39,14 +39,14 @@ def _write_annotations_by_relationships(df_handle, coord_space, annotation_type,
     for relationship in relationships:
         metadata = _write_annotations_by_relationship(
             df, coord_space, annotation_type, property_specs, polyline_geom, relationship,
-            output_dir, write_sharded, max_shards_per_transaction, max_threads,
+            output_dir, write_sharded, max_shards_per_transaction, ts_context,
         )
         by_rel_metadata.append(metadata)
     return by_rel_metadata
 
 
 def _write_annotations_by_relationship(df, coord_space, annotation_type, property_specs, polyline_geom, relationship,
-                                       output_dir, write_sharded, max_shards_per_transaction, max_threads):
+                                       output_dir, write_sharded, max_shards_per_transaction, ts_context):
     """
     Write the annotations to a "Related Object ID Index" for a single relationship.
 
@@ -128,7 +128,7 @@ def _write_annotations_by_relationship(df, coord_space, annotation_type, propert
     metadata = _write_buffers(
         unique_rels, buffers,
         output_dir, f"by_rel_{relationship}",
-        write_sharded, max_shards_per_transaction, max_threads,
+        write_sharded, max_shards_per_transaction, ts_context,
     )
     metadata['id'] = relationship
     return metadata

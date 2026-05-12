@@ -30,7 +30,23 @@ def _default_max_threads():
     return multiprocessing.cpu_count()
 
 
-def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, write_sharded, max_shards_per_transaction, max_threads):
+def _build_ts_context(user_spec, max_threads):
+    """
+    Build the :class:`tensorstore.Context` used by every write in this run.
+
+    ``user_spec`` is the optional JSON spec dict the caller passed to
+    :func:`write_precomputed_annotations`. We copy it and fill in
+    ``data_copy_concurrency`` / ``file_io_concurrency`` with limits of
+    ``max_threads`` only if those keys are missing; any setting the
+    caller did include is preserved verbatim.
+    """
+    spec = dict(user_spec or {})
+    spec.setdefault("data_copy_concurrency", {"limit": max_threads})
+    spec.setdefault("file_io_concurrency", {"limit": max_threads})
+    return ts.Context(spec)
+
+
+def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, write_sharded, max_shards_per_transaction, ts_context):
     """
     Write per-key byte values to a tensorstore kvstore.
 
@@ -58,8 +74,10 @@ def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, w
         max_shards_per_transaction:
             int. Caps shards committed per transaction (sharded mode only).
 
-        max_threads:
-            int. Caps tensorstore's data-copy + file-io thread pool.
+        ts_context:
+            :class:`tensorstore.Context` to use for opening the kvstore.
+            Pre-built once at the top of
+            :func:`write_precomputed_annotations` and threaded through.
 
     Returns:
         JSON metadata dict for the written subdir.
@@ -76,11 +94,11 @@ def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, w
                 f"offset-layout buffer has length {len(pb.layout)}, expected {n_rows+1}"
 
     if write_sharded:
-        return _write_buffers_sharded(keys, buffers, output_dir, subdir, max_shards_per_transaction, max_threads)
-    return _write_buffers_unsharded(keys, buffers, output_dir, subdir, max_threads)
+        return _write_buffers_sharded(keys, buffers, output_dir, subdir, max_shards_per_transaction, ts_context)
+    return _write_buffers_unsharded(keys, buffers, output_dir, subdir, ts_context)
 
 
-def _write_buffers_unsharded(keys, buffers: list[PartitionedBuffer], output_dir, subdir, max_threads):
+def _write_buffers_unsharded(keys, buffers: list[PartitionedBuffer], output_dir, subdir, ts_context):
     """
     Write the buffers to the appropriate subdirectory of output_dir,
     in unsharded format, i.e. one file per item.
@@ -95,11 +113,7 @@ def _write_buffers_unsharded(keys, buffers: list[PartitionedBuffer], output_dir,
 
     # Using tensorstore here is mostly a matter of taste, but it makes it
     # straightforward to add alternative storage backends later.
-    context = ts.Context({
-        "data_copy_concurrency": {"limit": max_threads},
-        "file_io_concurrency": {"limit": max_threads},
-    })
-    kvstore = ts.KvStore.open(f"file://{output_dir}/{subdir}/", context=context).result()
+    kvstore = ts.KvStore.open(f"file://{output_dir}/{subdir}/", context=ts_context).result()
 
     with ts.Transaction() as txn:
         txn_kv = kvstore.with_transaction(txn)
@@ -114,7 +128,7 @@ def _write_buffers_unsharded(keys, buffers: list[PartitionedBuffer], output_dir,
     return {"key": subdir}
 
 
-def _write_buffers_sharded(keys, buffers: list[PartitionedBuffer], output_dir, subdir, max_shards_per_transaction, max_threads):
+def _write_buffers_sharded(keys, buffers: list[PartitionedBuffer], output_dir, subdir, max_shards_per_transaction, ts_context):
     """
     Write the buffers using the neuroglancer_uint64_sharded driver. ``keys``
     is converted to a numpy uint64 array; each key is encoded big-endian
@@ -140,11 +154,7 @@ def _write_buffers_sharded(keys, buffers: list[PartitionedBuffer], output_dir, s
         "metadata": shard_spec.to_json(),
         "base": f"file://{output_dir}/{subdir}",
     }
-    context = ts.Context({
-        "data_copy_concurrency": {"limit": max_threads},
-        "file_io_concurrency": {"limit": max_threads},
-    })
-    kvstore = ts.KvStore.open(spec, context=context).result()
+    kvstore = ts.KvStore.open(spec, context=ts_context).result()
 
     # Pre-compute which shard each key will land in (replicating tensorstore's
     # hash) so we can group writes into shard-aligned batches and commit each

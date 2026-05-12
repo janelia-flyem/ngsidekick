@@ -15,7 +15,7 @@ from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry, Table
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships
 from ._spatial import _compute_spatial_assignment, _write_annotations_by_spatial_chunk
-from ._write_buffers import _default_max_threads
+from ._write_buffers import _build_ts_context, _default_max_threads
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ def write_precomputed_annotations(
     shuffle_before_assigning_spatial_levels: bool = True,
     max_threads: int | None = None,
     max_shards_per_transaction: int | None = None,
+    tensorstore_context: dict | None = None,
     description: str = "",
 ):
     """
@@ -211,9 +212,12 @@ def write_precomputed_annotations(
 
         max_threads:
             int or None
-            Caps tensorstore's internal thread pool (data-copy and file-I/O
-            concurrency) when writing. Defaults to ``LSB_DJOB_NUMPROC`` on
-            LSF clusters, otherwise ``multiprocessing.cpu_count()``.
+            Default cap on tensorstore's data-copy and file-I/O thread
+            pools. Used to populate the ``data_copy_concurrency`` and
+            ``file_io_concurrency`` keys of the tensorstore Context when
+            ``tensorstore_context`` doesn't already specify them.
+            Defaults to ``LSB_DJOB_NUMPROC`` on LSF clusters, otherwise
+            ``multiprocessing.cpu_count()``.
 
         max_shards_per_transaction:
             int or None
@@ -227,6 +231,19 @@ def write_precomputed_annotations(
             Defaults to ``max_threads`` so each transaction can saturate
             the available threads. Set higher for better throughput at
             extra RAM cost, or lower to reduce peak RAM.
+
+        tensorstore_context:
+            dict or None
+            Optional JSON spec for the tensorstore
+            `Context <https://google.github.io/tensorstore/context.html>`_
+            used to open every kvstore in this run. Useful for tuning
+            resource pool sizes (e.g. ``cache_pool.total_bytes_limit``)
+            to cap peak RAM during sharded writes.
+
+            Any key you supply is passed through verbatim;
+            ``data_copy_concurrency`` and ``file_io_concurrency`` are
+            filled in from ``max_threads`` only when you haven't
+            already specified them.
 
         description:
             str
@@ -244,6 +261,9 @@ def write_precomputed_annotations(
         max_threads = _default_max_threads()
     if max_shards_per_transaction is None:
         max_shards_per_transaction = max_threads
+
+    ts_context = _build_ts_context(tensorstore_context, max_threads)
+
     if write_sharded:
         logger.info(
             f"Sharded writes will use up to {max_shards_per_transaction} "
@@ -283,7 +303,7 @@ def write_precomputed_annotations(
     if write_by_id:
         by_id_metadata = _write_annotations_by_id(
             df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-            output_dir, write_sharded, max_shards_per_transaction, max_threads,
+            output_dir, write_sharded, max_shards_per_transaction, ts_context,
         )
 
     # After by-id, split ``df`` between the by-rel and by-spatial writers via
@@ -301,7 +321,7 @@ def write_precomputed_annotations(
     if write_by_relationship:
         by_rel_metadata = _write_annotations_by_relationships(
             rel_handle, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-            output_dir, write_sharded, max_shards_per_transaction, max_threads,
+            output_dir, write_sharded, max_shards_per_transaction, ts_context,
         )
 
     spatial_metadata = []
@@ -314,7 +334,7 @@ def write_precomputed_annotations(
             output_dir=output_dir,
             write_sharded=write_sharded,
             max_shards_per_transaction=max_shards_per_transaction,
-            max_threads=max_threads,
+            ts_context=ts_context,
         )
 
     polyline_geom = None

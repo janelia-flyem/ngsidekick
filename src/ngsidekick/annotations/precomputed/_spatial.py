@@ -619,7 +619,7 @@ def _write_annotations_by_spatial_chunk(df_handle, coord_space, annotation_type,
                                         bounds, num_spatial_levels, target_chunk_limit,
                                         shuffle_before_assigning_spatial_levels,
                                         disable_subsampling, output_dir, write_sharded,
-                                        max_shards_per_transaction, max_threads):
+                                        max_shards_per_transaction, ts_context):
     """
     Write the spatial index.
 
@@ -647,7 +647,7 @@ def _write_annotations_by_spatial_chunk(df_handle, coord_space, annotation_type,
             Whether to disable subsampling by setting "limit" to 1 in
             the info file. (See inline comments.)
 
-        output_dir, write_sharded, max_shards_per_transaction, max_threads:
+        output_dir, write_sharded, max_shards_per_transaction, ts_context:
             See :func:`._write_buffers._write_buffers`.
 
     Returns:
@@ -754,7 +754,7 @@ def _write_annotations_by_spatial_chunk(df_handle, coord_space, annotation_type,
             f"by_spatial_level_{level}",
             write_sharded,
             max_shards_per_transaction,
-            max_threads,
+            ts_context,
         )
         level_metadata['chunk_size'] = gridspec.chunk_shapes[level].tolist()
         level_metadata['grid_shape'] = gridspec.grid_shapes[level].tolist()

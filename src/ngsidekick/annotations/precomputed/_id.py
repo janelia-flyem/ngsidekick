@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def _write_annotations_by_id(df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-                              output_dir, write_sharded, max_shards_per_transaction, max_threads):
+                              output_dir, write_sharded, max_shards_per_transaction, ts_context):
     """
     Write the annotations to the "Annotation ID Index".
 
@@ -24,7 +24,7 @@ def _write_annotations_by_id(df, coord_space, annotation_type, property_specs, r
         coord_space, annotation_type, property_specs, relationships, polyline_geom:
             See :func:`write_precomputed_annotations`.
 
-        output_dir, write_sharded, max_shards_per_transaction, max_threads:
+        output_dir, write_sharded, max_shards_per_transaction, ts_context:
             See :func:`._write_buffers._write_buffers`.
 
     Returns:
@@ -48,5 +48,5 @@ def _write_annotations_by_id(df, coord_space, annotation_type, property_specs, r
         "by_id",
         write_sharded,
         max_shards_per_transaction,
-        max_threads,
+        ts_context,
     )

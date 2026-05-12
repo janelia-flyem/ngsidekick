@@ -196,7 +196,7 @@ def test_dense_small_keyspace_actually_multishards(tmp_path):
     Also verifies the shard files line up with what shards_for_keys
     predicts for the new spec.
     """
-    from ngsidekick.annotations.precomputed._write_buffers import PartitionedBuffer, _write_buffers_sharded
+    from ngsidekick.annotations.precomputed._write_buffers import PartitionedBuffer, _build_ts_context, _write_buffers_sharded
 
     n = 192
     ids = np.arange(n, dtype=np.uint64)
@@ -210,7 +210,7 @@ def test_dense_small_keyspace_actually_multishards(tmp_path):
         ids, [PartitionedBuffer(buf, recsize)],
         str(tmp_path), "sub",
         max_shards_per_transaction=8,
-        max_threads=2,
+        ts_context=_build_ts_context(None, max_threads=2),
     )
     sharding = metadata['sharding']
     assert sharding['shard_bits'] >= 1, "test premise: spec must request multiple shards"
@@ -246,7 +246,7 @@ def test_max_shards_per_transaction_roundtrip(tmp_path, max_shards_per_transacti
     the predicted set. Covers both the per-shard end of the spectrum
     (max=1) and the single-transaction end (max>=num_shards).
     """
-    from ngsidekick.annotations.precomputed._write_buffers import PartitionedBuffer, _write_buffers_sharded
+    from ngsidekick.annotations.precomputed._write_buffers import PartitionedBuffer, _build_ts_context, _write_buffers_sharded
 
     rng = np.random.default_rng(11)
     n = 5_000
@@ -274,7 +274,7 @@ def test_max_shards_per_transaction_roundtrip(tmp_path, max_shards_per_transacti
             ids, [PartitionedBuffer(flat_buf, offsets)],
             str(tmp_path), "sub",
             max_shards_per_transaction,
-            max_threads=2,
+            ts_context=_build_ts_context(None, max_threads=2),
         )
     finally:
         wb._choose_output_spec = orig_choose
