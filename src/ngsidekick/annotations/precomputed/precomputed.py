@@ -11,9 +11,9 @@ from neuroglancer.coordinate_space import CoordinateSpace
 from neuroglancer.viewer_state import AnnotationPropertySpec
 
 from ..util import annotation_property_specs
-from ._util import _encode_uint64_series, _geometry_cols, PolylineGeometry, TableHandle
+from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry, TableHandle
 from ._id import _write_annotations_by_id
-from ._relationships import _write_annotations_by_relationships, _encode_relationships
+from ._relationships import _write_annotations_by_relationships
 from ._spatial import _compute_spatial_assignment, _write_annotations_by_spatial_chunk
 from ._write_buffers import _default_max_threads
 
@@ -269,26 +269,7 @@ def write_precomputed_annotations(
 
     df = _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships)
 
-    # Construct a buffer for each annotation and additional buffers
-    # for each annotation's relationships, stored in new columns of df.
-    df = _encode_annotations(
-        df,
-        coord_space,
-        annotation_type,
-        property_specs,
-        relationships,
-        polyline_geom=polyline_geom,
-    )
-
-    # The property columns have been folded into ``ann_buf`` and aren't
-    # needed by any downstream writer. Drop them now to release potentially
-    # tens of GB of property-column arrays before by_id/by_rel/by_spatial.
-    df = df.drop(columns=_property_column_names(property_specs))
-
-    # Compute the spatial assignment up-front (while geometry is still
-    # available), then drop the geometry columns. The much smaller
-    # (rows, codes, levels) arrays carry through the by_id and by_rel
-    # phases instead of the full geometry, releasing further GB of RAM.
+    # Spatial assignment uses the geometry columns directly; no encoding yet.
     if write_by_spatial_chunk:
         spatial_assignment = _compute_spatial_assignment(
             df,
@@ -300,58 +281,41 @@ def write_precomputed_annotations(
             shuffle_before_assigning_spatial_levels,
             polyline_geom=polyline_geom,
         )
-        geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
-        df = df.drop(columns=geom_cols)
-        # Polyline geometry was held in flat numpy arrays; release them
-        # now that spatial assignment is done.
-        polyline_geom = None
 
+    # Each writer encodes its own bytes lazily from the native ``df`` (plus
+    # polyline_geom for polyline). This trades the small cost of re-encoding
+    # in each writer for a large RAM saving: nothing persists between
+    # writers except the native-dtype DataFrame, whose per-row Python-object
+    # overhead is zero.
     by_id_metadata = {}
     if write_by_id:
         by_id_metadata = _write_annotations_by_id(
-            df,
-            output_dir,
-            write_sharded,
-            max_shards_per_transaction,
-            max_threads,
+            df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+            output_dir, write_sharded, max_shards_per_transaction, max_threads,
         )
-
-    # Done with rel_buf (only needed when writing by_id).
-    df = df.drop(columns=['rel_buf'], errors='ignore')
-
-    if write_by_relationship:
-        df_handle_for_rel = TableHandle(df)
-
-    if write_by_spatial_chunk:
-        df_handle_for_spatial = TableHandle(df.drop(columns=list(relationships)))
-
-    # Delete our reference to df.
-    # The TableHandles own the data now.
-    del df
 
     by_rel_metadata = []
     if write_by_relationship:
         by_rel_metadata = _write_annotations_by_relationships(
-            df_handle_for_rel,
-            relationships,
-            output_dir,
-            write_sharded,
-            max_shards_per_transaction,
-            max_threads,
+            df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+            output_dir, write_sharded, max_shards_per_transaction, max_threads,
         )
 
     spatial_metadata = []
     if write_by_spatial_chunk:
         spatial_metadata = _write_annotations_by_spatial_chunk(
-            df_handle_for_spatial,
-            spatial_assignment,
+            df, spatial_assignment,
+            coord_space, annotation_type, property_specs, polyline_geom,
             disable_subsampling=(target_chunk_limit == 0),
             output_dir=output_dir,
             write_sharded=write_sharded,
             max_shards_per_transaction=max_shards_per_transaction,
             max_threads=max_threads,
         )
-    
+
+    del df, polyline_geom
+
+
     # Write the top-level 'info' file for the annotation output directory.
     info = {
         "@type": "neuroglancer_annotations_v1",
@@ -370,41 +334,6 @@ def write_precomputed_annotations(
 
     with open(f"{output_dir}/info", 'w') as f:
         json.dump(info, f)
-
-
-def _property_column_names(property_specs):
-    """
-    Return the dataframe column names that back the given property specs.
-    For numeric/categorical/string properties this is the property id itself;
-    for rgb/rgba properties the value comes from ``{p}_r``, ``{p}_g``, etc.
-    """
-    cols = []
-    for spec in property_specs:
-        p = spec['id']
-        if spec['type'] == 'rgb':
-            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b'])
-        elif spec['type'] == 'rgba':
-            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b', f'{p}_a'])
-        else:
-            cols.append(p)
-    return cols
-
-
-def _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships):
-    """
-    Return a view of ``df`` containing only the columns this exporter
-    actually consumes (geometry, properties, relationships). Logs a notice
-    listing any dropped columns.
-    """
-    geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
-    prop_cols = _property_column_names(property_specs)
-
-    used = {*geom_cols, *prop_cols, *relationships}
-    keep = [c for c in df.columns if c in used]
-    drop = [c for c in df.columns if c not in used]
-    if drop:
-        logger.info(f"Ignoring {len(drop)} unused input column(s): {drop}")
-    return df[keep]
 
 
 def _construct_coord_space(coord_space):
@@ -515,57 +444,6 @@ def _get_bounds(df, coord_space, annotation_type, *, polyline_geom=None):
         )
 
     return bounds
-
-
-def _encode_annotations(df, coord_space, annotation_type, property_specs, relationships, *, polyline_geom=None):
-    """
-    Returns a (shallow) copy of the dataframe with additional columns containing
-    buffers for each encoded annotation and its encoded id and encoded relationships.
-    """
-    df = df.copy(deep=False)
-
-    logger.info("Encoding annotation IDs")
-    df['id_buf'] = _encode_uint64_series(df.index)
-
-    logger.info("Encoding annotation geometries and properties")
-    df['ann_buf'] = _encode_geometries_and_properties(
-        df, coord_space, annotation_type, property_specs,
-        polyline_geom=polyline_geom,
-    )
-
-    logger.info("Encoding relationships")
-    rel_bufs = _encode_relationships(df, relationships)
-    if rel_bufs is not None:
-        df['rel_buf'] = rel_bufs
-
-    return df
-
-
-def _encode_geometries_and_properties(df, coord_space, annotation_type, property_specs, *, polyline_geom=None):
-    """
-    For each annotation in the given dataframe, encode its geometry columns (e.g. x,y,z)
-    and property columns into a buffer, plus any padding that was necessary to align the
-    buffer to a 4-byte boundary, per the neuroglancer spec.
-
-    (In the precomputed format, geometry and properties always appear together,
-    regardless of whether they're being written to the "Annotation ID Index",
-    the "Related Object ID Index" or the "Spatial Index".)
-
-    Returns:
-        pd.Series of dtype=object, containing one buffer for each annotation.
-    """
-    if annotation_type == 'polyline':
-        return _encode_polyline_geometries_and_properties(df, property_specs, polyline_geom)
-
-    geometry_cols = _geometry_cols(coord_space.names, annotation_type)
-    geometry_prop_df = _geometry_prop_df(df, geometry_cols, property_specs)
-    buf, recsize = _encode_geometry_prop_df(geometry_prop_df, geometry_cols, property_specs)
-    del geometry_prop_df
-
-    # extract bytes from the appropriate slice for each record
-    encoded_annotations = [buf[i*recsize:(i+1)*recsize] for i in range(len(df))]
-    ann_bufs = pd.Series(encoded_annotations, index=df.index)
-    return ann_bufs
 
 
 def _resolve_polyline_inputs(df, annotation_type, polyline_points, coord_space, properties, relationships):
@@ -692,114 +570,3 @@ def _polyline_aux_to_arrays(aux_df, main_index, coord_names):
         raise ValueError("polyline_points contains NaN coordinate values.")
 
     return PolylineGeometry(points=points, starts=starts, ends=ends), valid_mask
-
-
-def _encode_polyline_geometries_and_properties(df, property_specs, polyline_geom):
-    """
-    Encode each polyline's variable-length geometry plus its (fixed-size)
-    property record. See the polyline branch of "Single annotation encoding"
-    in the neuroglancer precomputed annotations spec.
-    """
-    points = polyline_geom.points
-    starts = polyline_geom.starts
-    ends = polyline_geom.ends
-    D = points.shape[1]
-    point_byte_size = 4 * D  # float32 per axis
-
-    flat_bytes = points.astype(np.float32, copy=False).tobytes()
-    counts = (ends - starts).astype(np.uint32)
-    counts_buf = counts.tobytes()
-
-    if property_specs:
-        property_only_df = _geometry_prop_df(df, [], property_specs)
-        prop_buf, prop_recsize = _encode_geometry_prop_df(property_only_df, [], property_specs)
-        del property_only_df
-    else:
-        prop_buf = b''
-        prop_recsize = 0
-
-    encoded_annotations = [
-        counts_buf[i*4:(i+1)*4]
-        + flat_bytes[int(starts[i])*point_byte_size : int(ends[i])*point_byte_size]
-        + prop_buf[i*prop_recsize:(i+1)*prop_recsize]
-        for i in range(len(df))
-    ]
-    return pd.Series(encoded_annotations, index=df.index)
-
-
-def _geometry_prop_df(df, geometry_cols, property_specs):
-    """
-    Select the subset of columns that specify the geometry and properties
-    of the annotations, and append columns for padding that will ensure
-    our encoded records have a width that is a multiple of 4 bytes.
-    """
-    # Note that the property specs are already sorted by
-    # dtype in the order neuroglancer requires.
-    # Order our columns accordingly before we encode them as records below.
-    prop_cols = []
-    for spec in property_specs:
-        p = spec['id']
-        if spec['type'] == 'rgb':
-            prop_cols.extend([f'{p}_r', f'{p}_g', f'{p}_b'])
-        elif spec['type'] == 'rgba':
-            prop_cols.extend([f'{p}_r', f'{p}_g', f'{p}_b', f'{p}_a'])
-        else:
-            prop_cols.append(p)
-
-    geometry_prop_df = df[[*chain(*geometry_cols), *prop_cols]].copy(deep=False)
-
-    # Calculate padding as required by neuroglancer.
-    property_widths = {}
-    for spec in property_specs:
-        if spec['type'] == 'rgb':
-            property_widths[spec['id']] = 3
-        elif spec['type'] == 'rgba':
-            property_widths[spec['id']] = 4
-        else:
-            property_widths[spec['id']] = np.dtype(spec['type']).itemsize
-
-    property_padding = (4 - (sum(property_widths.values()) % 4)) % 4
-    for i in range(property_padding):
-        geometry_prop_df[f'__padding_{i}__'] = np.uint8(0)
-
-    return geometry_prop_df
-
-
-def _encode_geometry_prop_df(geometry_prop_df, geometry_cols, property_specs):
-    """
-    Encode the geometry and properties of the annotations into a single buffer.
-
-    Note: Replaces category columns of geometry_prop_df with their integer equivalents.
-    """
-    # Convert our column dtypes to match property specs.
-    dtypes = {c: np.float32 for c in chain(*geometry_cols)}
-    for spec in property_specs:
-        p = spec['id']
-        if spec['type'] in ('rgb', 'rgba'):
-            dtypes.update({
-                f'{p}_{channel}': np.uint8
-                for channel in spec['type']
-            })
-        else:
-            dtypes[p] = spec['type']
-
-    if any(dt == np.int8 for dt in dtypes.values()):
-        logger.warning(
-            "Old versions of neuroglancer don't support int8 properties, "
-            "so consider casting to uint8 or int16 if your annotations don't load."
-        )
-
-    # Convert category columns to their integer equivalents
-    for spec in property_specs:
-        p = spec['id']
-        if spec['type'] in ('rgb', 'rgba'):
-            continue
-        if geometry_prop_df[p].dtype == 'category':
-            geometry_prop_df[p] = geometry_prop_df[p].cat.codes
-            dtypes[p] = spec['type']
-
-    # Vectorized serialization
-    records = geometry_prop_df.to_records(index=False, column_dtypes=dtypes)
-    recsize = records.dtype.itemsize
-    buf = records.tobytes()
-    return buf, recsize

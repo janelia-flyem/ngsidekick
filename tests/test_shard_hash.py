@@ -196,18 +196,19 @@ def test_dense_small_keyspace_actually_multishards(tmp_path):
     Also verifies the shard files line up with what shards_for_keys
     predicts for the new spec.
     """
-    from ngsidekick.annotations.precomputed._write_buffers import _write_buffers_sharded
+    from ngsidekick.annotations.precomputed._write_buffers import PartitionedBuffer, _write_buffers_sharded
 
     n = 192
     ids = np.arange(n, dtype=np.uint64)
     rng = np.random.default_rng(0)
     # Each value is large enough that the 50 MB/shard target picks
     # shard_bits > 0. A 1 MB buffer per item gives ~192 MB total.
-    bufs = [bytes(rng.integers(0, 256, size=1_000_000, dtype=np.uint8)) for _ in range(n)]
-    buf_series = pd.Series(bufs, index=pd.Index(ids, name='chunk_code'))
+    recsize = 1_000_000
+    buf = bytes(rng.integers(0, 256, size=n * recsize, dtype=np.uint8))
 
     metadata = _write_buffers_sharded(
-        buf_series, str(tmp_path), "sub",
+        ids, [PartitionedBuffer(buf, recsize)],
+        str(tmp_path), "sub",
         max_shards_per_transaction=8,
         max_threads=2,
     )
@@ -245,14 +246,19 @@ def test_max_shards_per_transaction_roundtrip(tmp_path, max_shards_per_transacti
     the predicted set. Covers both the per-shard end of the spectrum
     (max=1) and the single-transaction end (max>=num_shards).
     """
-    from ngsidekick.annotations.precomputed._write_buffers import _write_buffers_sharded
+    from ngsidekick.annotations.precomputed._write_buffers import PartitionedBuffer, _write_buffers_sharded
 
     rng = np.random.default_rng(11)
     n = 5_000
     ids = rng.choice(np.arange(1, 10_000_000), size=n, replace=False).astype(np.uint64)
     bufs = [bytes(rng.integers(0, 256, size=rng.integers(20, 100), dtype=np.uint8)) for _ in range(n)]
     truth = dict(zip(ids.tolist(), bufs))
-    buf_series = pd.Series(bufs, index=pd.Index(ids, name='id'))
+
+    # Pack the variable-length bufs into a flat buffer + offsets so we can
+    # use the new PartitionedBuffer-based ``_write_buffers_sharded`` signature.
+    sizes = np.array([len(b) for b in bufs], dtype=np.int64)
+    offsets = np.concatenate(([0], np.cumsum(sizes))).astype(np.int64)
+    flat_buf = b''.join(bufs)
 
     # Force a non-trivial multi-shard layout so the batching parameter is
     # actually exercised at all values of max_shards_per_transaction.
@@ -265,7 +271,8 @@ def test_max_shards_per_transaction_roundtrip(tmp_path, max_shards_per_transacti
     wb._choose_output_spec = force_multi_shard
     try:
         metadata = _write_buffers_sharded(
-            buf_series, str(tmp_path), "sub",
+            ids, [PartitionedBuffer(flat_buf, offsets)],
+            str(tmp_path), "sub",
             max_shards_per_transaction,
             max_threads=2,
         )

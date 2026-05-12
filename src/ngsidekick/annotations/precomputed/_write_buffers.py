@@ -10,6 +10,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 import tensorstore as ts
 
+from ._encode import PartitionedBuffer
 from ._shard_hash import shards_for_keys
 
 logger = logging.getLogger(__name__)
@@ -29,187 +30,110 @@ def _default_max_threads():
     return multiprocessing.cpu_count()
 
 
-_TOTAL_BYTES_SAMPLE_SIZE = 10_000
-
-
-def _estimate_total_bytes(bufs):
+def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, write_sharded, max_shards_per_transaction, max_threads):
     """
-    Estimate the total byte size of every value in ``bufs`` (a Series or
-    DataFrame of bytes-like objects).
-
-    Used by :func:`_write_buffers_sharded` only as input to the shard-spec
-    heuristic, which is itself logarithmic in ``total_bytes`` -- a few
-    percent of estimation error is harmless. The exact computation
-    (``bufs.map(len).sum()``) is a Python-level loop over every cell, so
-    on a 300M-row export it costs minutes; sampling cuts it to
-    milliseconds. The sample is drawn with a fixed seed so the chosen
-    sharding spec is deterministic across runs of the same input.
-    """
-    n = len(bufs)
-    if n == 0:
-        return 0
-    if n <= _TOTAL_BYTES_SAMPLE_SIZE:
-        # Cheap enough to measure exactly; also guarantees correctness
-        # for small inputs where sampling bias would dominate.
-        exact = bufs.map(len).sum()
-        # Series.sum() returns a scalar; DataFrame.sum() returns a Series.
-        return int(exact.sum() if isinstance(exact, pd.Series) else exact)
-    sample = bufs.sample(n=_TOTAL_BYTES_SAMPLE_SIZE, random_state=0)
-    sample_total = sample.map(len).sum()
-    sample_total = sample_total.sum() if isinstance(sample_total, pd.Series) else sample_total
-    return int(round(sample_total * n / _TOTAL_BYTES_SAMPLE_SIZE))
-
-
-def _write_buffers(bufs, output_dir, subdir, write_sharded, max_shards_per_transaction, max_threads):
-    """
-    Write the buffers to the appropriate subdirectory of output_dir,
-    in sharded or unsharded format.
+    Write per-key byte values to a tensorstore kvstore.
 
     Args:
-        bufs:
-            pd.Series or pd.DataFrame, with the index supplying the keys.
+        keys:
+            pd.Index or numpy array of length N, will be cast to uint64.
+            For sharded writes, each key is encoded big-endian as the kvstore key;
+            for unsharded writes, each key is converted to its decimal string
+            representation and used as a filename.
 
-            - If a Series of dtype=object, each value is a bytes-like
-              buffer written under the corresponding index key.
-            - If a DataFrame whose columns are object dtype Series of
-              bytes-like buffers, each row's column values are
-              concatenated in column order and written under the row's
-              index key. Passing a DataFrame here lets callers avoid
-              materializing an explicit Series of N concatenated bytes
-              objects (each carrying ~50 B of Python overhead) just to
-              pass it to this function.
+        buffers:
+            list of :class:`PartitionedBuffer`. The value written for key ``keys[i]`` is
+            the concatenation of each part's slice for row ``i``.
 
         output_dir:
-            str
-            The directory into which the exported annotations will be written.
+            str. The directory into which the data will be written.
 
         subdir:
-            str
-            The subdirectory into which the buffers will be written.
-            If it already exists, it will be deleted before we (re)create it.
+            str. Subdirectory of ``output_dir`` to (re-)create and populate.
 
         write_sharded:
-            bool
-            If True, write the buffers in sharded format.
-            If False, write one file per item.
+            bool. If True, use the neuroglancer_uint64_sharded driver;
+            otherwise, write one file per key.
 
         max_shards_per_transaction:
-            int
-            (Sharded mode only.) Caps the number of shards committed in a
-            single tensorstore transaction, controlling the RAM/throughput
-            tradeoff.
+            int. Caps shards committed per transaction (sharded mode only).
 
         max_threads:
-            int
-            Caps tensorstore's internal data-copy and file-I/O thread pool
-            via the ``ts.Context`` constructed when opening the kvstore.
+            int. Caps tensorstore's data-copy + file-io thread pool.
 
     Returns:
-        JSON metadata for the written data, including the key (subdir)
-        and sharding spec if applicable.
+        JSON metadata dict for the written subdir.
     """
     if os.path.exists(f"{output_dir}/{subdir}"):
         shutil.rmtree(f"{output_dir}/{subdir}")
 
+    keys = keys.astype(np.uint64, copy=False)
+
+    n_rows = len(keys)
+    for pb in buffers:
+        if not isinstance(pb.layout, (int, np.integer)):
+            assert len(pb.layout) == n_rows + 1, \
+                f"offset-layout buffer has length {len(pb.layout)}, expected {n_rows+1}"
+
     if write_sharded:
-        return _write_buffers_sharded(bufs, output_dir, subdir, max_shards_per_transaction, max_threads)
-    else:
-        return _write_buffers_unsharded(bufs, output_dir, subdir, max_threads)
+        return _write_buffers_sharded(keys, buffers, output_dir, subdir, max_shards_per_transaction, max_threads)
+    return _write_buffers_unsharded(keys, buffers, output_dir, subdir, max_threads)
 
 
-def _write_buffers_unsharded(bufs, output_dir, subdir, max_threads):
+def _write_buffers_unsharded(keys, buffers: list[PartitionedBuffer], output_dir, subdir, max_threads):
     """
     Write the buffers to the appropriate subdirectory of output_dir,
     in unsharded format, i.e. one file per item.
 
-    The index of bufs is used as the key for each item, after being
-    converted to a string (as decimal values in the case of integer keys).
-
-    Returns:
-        JSON metadata, always {"key": subdir}
+    The keys are converted to strings (after going through ``np.asarray``)
+    for use as filenames within ``subdir``.
     """
     output_dir = os.path.abspath(output_dir)
 
-    # Normalize Series → 1-column DataFrame so the multi-column-concat
-    # path below is uniform.
-    if isinstance(bufs, pd.Series):
-        bufs = bufs.to_frame()
+    n_rows = len(keys)
+    string_keys = [str(k) for k in np.asarray(keys)]
 
-    # In the unsharded format, the keys are just strings (e.g. decimal IDs).
-    string_keys = bufs.index.astype(str)
-
-    # Since we're writing unsharded files, we could have just used
-    # standard Python open() and write() here for each key.
-    # Using tensorstore here is mostly just a matter of taste, but it will
-    # become useful if we ever support alternative storage backends such as gcs.
+    # Using tensorstore here is mostly a matter of taste, but it makes it
+    # straightforward to add alternative storage backends later.
     context = ts.Context({
         "data_copy_concurrency": {"limit": max_threads},
         "file_io_concurrency": {"limit": max_threads},
     })
     kvstore = ts.KvStore.open(f"file://{output_dir}/{subdir}/", context=context).result()
 
-    # Using a transaction here is not necessary, at least for plain files.
-    # I'm not sure if it helps or hurts, but it probably doesn't matter much
-    # for small datasets, which is presumably what we're dealing with if the
-    # user has chosen the unsharded format.
     with ts.Transaction() as txn:
         txn_kv = kvstore.with_transaction(txn)
-        if len(bufs.columns) == 1:
-            for segment_key, buf in tqdm(zip(string_keys, bufs.iloc[:, 0]), total=len(bufs)):
-                txn_kv[segment_key] = buf
+        if len(buffers) == 1:
+            pb = buffers[0]
+            for i, segment_key in tqdm(enumerate(string_keys), total=n_rows):
+                txn_kv[segment_key] = pb.slice_for_partition(i)
         else:
-            buf_arrays = [bufs[c].values for c in bufs.columns]
-            for i, segment_key in tqdm(enumerate(string_keys), total=len(bufs)):
-                txn_kv[segment_key] = b''.join(c[i] for c in buf_arrays)
+            for i, segment_key in tqdm(enumerate(string_keys), total=n_rows):
+                txn_kv[segment_key] = b''.join(pb.slice_for_partition(i) for pb in buffers)
 
-    metadata = {"key": subdir}
-    return metadata
+    return {"key": subdir}
 
 
-def _write_buffers_sharded(bufs, output_dir, subdir, max_shards_per_transaction, max_threads):
+def _write_buffers_sharded(keys, buffers: list[PartitionedBuffer], output_dir, subdir, max_shards_per_transaction, max_threads):
     """
-    Write the buffers to the appropriate subdirectory of output_dir,
-    in sharded format.
-
-    The index of bufs is used as the key for each item,
-    after being encoded as a bigendian uint64.
-
-    Args:
-        bufs, output_dir, subdir:
-            See :func:`_write_buffers`.
-
-        max_shards_per_transaction:
-            int
-            Caps how many shards' worth of data may be staged in a single
-            tensorstore transaction. Within a single transaction tensorstore
-            parallelizes encoding, compression, and writing across its
-            internal thread pool — so a transaction containing many shards
-            saturates the available cores at commit, while a transaction
-            containing one shard leaves them idle. The tradeoff is RAM:
-            tensorstore holds every staged shard's data in memory until
-            commit.
-
-        max_threads:
-            int
-            Caps tensorstore's internal data-copy and file-I/O thread pool
-            via the ``ts.Context`` constructed when opening the kvstore.
-
-    Returns:
-        JSON metadata, including the output "key" (subdir) and sharding spec.
+    Write the buffers using the neuroglancer_uint64_sharded driver. ``keys``
+    is converted to a numpy uint64 array; each key is encoded big-endian
+    inline at write time.
     """
     output_dir = os.path.abspath(output_dir)
+    n_rows = len(keys)
+    keys_arr = np.asarray(keys) if n_rows else np.zeros(0, dtype=np.uint64)
+    assert keys_arr.dtype == np.uint64, \
+        f"keys must be uint64, got {keys_arr.dtype}"
 
-    # Normalize Series → 1-column DataFrame so the multi-column-concat
-    # path below is uniform.
-    if isinstance(bufs, pd.Series):
-        bufs = bufs.to_frame()
+    total_bytes = sum(pb.total_bytes(n_rows) for pb in buffers)
 
     shard_spec = _choose_output_spec(
-        total_count=len(bufs),
-        total_bytes=_estimate_total_bytes(bufs),
-        max_key=int(bufs.index.max()),
+        total_count=n_rows,
+        total_bytes=total_bytes,
+        max_key=int(keys_arr.max()) if n_rows else (2**64 - 1),
         hashtype='murmurhash3_x86_128',
-        gzip_compress=True
+        gzip_compress=True,
     )
     spec = {
         "driver": "neuroglancer_uint64_sharded",
@@ -226,16 +150,25 @@ def _write_buffers_sharded(bufs, output_dir, subdir, max_shards_per_transaction,
     # hash) so we can group writes into shard-aligned batches and commit each
     # batch as its own transaction. This caps peak RAM (tensorstore buffers
     # every staged shard until commit) while still letting tensorstore
-    # parallelize the per-shard commit work across its thread pool: each
-    # transaction owns up to ``max_shards_per_transaction`` distinct shards.
-    shard_assignments = shards_for_keys(bufs.index, shard_spec)
-
-    # Bucket adjacent shard numbers into batches. Shard numbers occupy
-    # [0, 2**shard_bits), so integer-dividing by max_shards_per_transaction
-    # yields up to ``max_shards_per_transaction`` distinct shards per batch.
-    # When ``max_shards_per_transaction`` >= 2**shard_bits all data lands in
-    # one batch (matching the prior single-transaction behavior).
+    # parallelize the per-shard commit work across its thread pool.
+    shard_assignments = shards_for_keys(pd.Index(keys_arr), shard_spec)
     batches = shard_assignments // np.uint64(max_shards_per_transaction)
+
+    # Sort rows by batch and find run-boundaries. We index into ``keys`` and
+    # ``buffers`` via ``sort_order`` rather than physically permuting the part
+    # buffers, which avoids materializing potentially-huge sorted copies.
+    sort_order = np.argsort(batches, kind='stable')
+    if n_rows == 0:
+        boundaries = np.array([0], dtype=np.int64)
+    else:
+        sorted_batches = batches[sort_order]
+        boundaries = np.concatenate((
+            [0],
+            np.flatnonzero(sorted_batches[1:] != sorted_batches[:-1]) + 1,
+            [n_rows],
+        ))
+        del sorted_batches
+    del shard_assignments, batches
 
     # Tensorstore's neuroglancer_uint64_sharded driver requires keys to be
     # the bigendian-uint64 encoding of the chunk ID
@@ -245,28 +178,24 @@ def _write_buffers_sharded(bufs, output_dir, subdir, max_shards_per_transaction,
     # ~50 B of Python-object overhead per item (~15 GB at 300M items),
     # whereas the inline encoding allocates one transient 8-byte bytes object
     # per write that tensorstore copies and immediately frees.
-    #
-    # When ``bufs`` has multiple columns we concatenate them inline so the
-    # caller can pass df[['a', 'b', ...]] without first materializing a
-    # separate Series of concatenated bytes objects.
-    with tqdm(total=len(bufs)) as pbar:
-        for _batch, group in bufs.groupby(batches, sort=False):
+    with tqdm(total=n_rows) as pbar:
+        for s, e in zip(boundaries[:-1], boundaries[1:]):
             with ts.Transaction() as txn:
                 txn_kv = kvstore.with_transaction(txn)
-                if len(bufs.columns) == 1:
-                    for key, buf in group.iloc[:, 0].items():
-                        txn_kv[int(key).to_bytes(8, 'big')] = buf
+                if len(buffers) == 1:
+                    pb = buffers[0]
+                    for i in range(s, e):
+                        orig = int(sort_order[i])
+                        txn_kv[int(keys_arr[orig]).to_bytes(8, 'big')] = pb.slice_for_partition(orig)
                 else:
-                    group_arrays = [group[c].values for c in group.columns]
-                    for i, key in enumerate(group.index):
-                        txn_kv[int(key).to_bytes(8, 'big')] = b''.join(c[i] for c in group_arrays)
-            pbar.update(len(group))
+                    for i in range(s, e):
+                        orig = int(sort_order[i])
+                        txn_kv[int(keys_arr[orig]).to_bytes(8, 'big')] = b''.join(
+                            pb.slice_for_partition(orig) for pb in buffers
+                        )
+            pbar.update(e - s)
 
-    metadata = {
-        "key": subdir,
-        "sharding": shard_spec.to_json()
-    }
-    return metadata
+    return {"key": subdir, "sharding": shard_spec.to_json()}
 
 
 @dataclass
@@ -314,16 +243,9 @@ def _choose_output_spec(
           shifted away and every key would hash to the same shard, defeating
           the chosen ``shard_bits``.
     """
-    import tensorstore as ts
     MINISHARD_TARGET_COUNT = 1000
     SHARD_TARGET_SIZE = 50000000
 
-    # if total_count == 1:
-    #     return None
-    # if ts is None:
-    #     return None
-
-    # test if hashtype is valid
     if hashtype not in ["murmurhash3_x86_128", "identity_hash"]:
         raise ValueError(
             f"Invalid hashtype {hashtype}."

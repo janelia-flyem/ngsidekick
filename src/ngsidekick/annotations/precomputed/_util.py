@@ -1,10 +1,13 @@
+import logging
 from dataclasses import dataclass
+from itertools import chain
 from typing import NamedTuple
 
 from numba import njit
 import numpy as np
 import pandas as pd
 
+logger = logging.getLogger(__name__)
 
 class PolylineGeometry(NamedTuple):
     """
@@ -37,25 +40,6 @@ class TableHandle:
         >>> write_precomputed_annotations(handle, 'xyz', 'point')
     """
     df: pd.DataFrame | None = None
-
-
-def _encode_uint64_series(s, dtype='<u8'):
-    """
-    Encode a pandas Series (or Index) of N values
-    into a numpy array of N buffers (bytes objects).
-
-    ``dtype`` must be a uint64 dtype (i.e. itemsize 8); the slicing step
-    below assumes 8-byte stride.
-    """
-    assert np.dtype(dtype).itemsize == 8, \
-        f"_encode_uint64_series requires an 8-byte dtype, got {dtype!r} (itemsize={np.dtype(dtype).itemsize})"
-
-    id_buf = s.to_numpy(dtype).tobytes()
-    id_bufs = [
-        id_buf[offset:(offset+8)]
-        for offset in range(0, len(id_buf), 8)
-    ]
-    return np.array(id_bufs, dtype=object)
 
 
 def _geometry_cols(coord_names, annotation_type):
@@ -101,27 +85,50 @@ def _geometry_cols(coord_names, annotation_type):
     raise ValueError(f"Annotation type {annotation_type} not supported")
 
 
-def ndindex_array(shape):
+def _property_column_names(property_specs):
     """
-    Like np.ndindex, but returns an array.
-    
-    Example:
-    
-        >>>  _ndindex_array([3,4])
-        array([[0, 0],
-               [0, 1],
-               [0, 2],
-               [0, 3],
-               [1, 0],
-               [1, 1],
-               [1, 2],
-               [1, 3],
-               [2, 0],
-               [2, 1],
-               [2, 2],
-               [2, 3]])
+    Return the dataframe column names that back the given property specs.
+    For numeric/categorical/string properties this is the property id itself;
+    for rgb/rgba properties the value comes from ``{p}_r``, ``{p}_g``, etc.
     """
-    return _ndindex_array(np.asarray(shape))
+    cols = []
+    for spec in property_specs:
+        p = spec['id']
+        if spec['type'] == 'rgb':
+            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b'])
+        elif spec['type'] == 'rgba':
+            cols.extend([f'{p}_r', f'{p}_g', f'{p}_b', f'{p}_a'])
+        else:
+            cols.append(p)
+    return cols
+
+
+def _ann_required_cols(coord_space, annotation_type, property_specs):
+    """
+    Names of the columns in the main DataFrame that the geometry+property
+    encoder will consume for the given annotation type. Used by writers
+    that subset before exploding / iloc-ing.
+    """
+    geom = list(chain(*_geometry_cols(coord_space.names, annotation_type)))
+    return geom + _property_column_names(property_specs)
+
+
+def _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships):
+    """
+    Return a view of ``df`` containing only the columns this exporter
+    actually consumes (geometry, properties, relationships). Logs a notice
+    listing any dropped columns.
+    """
+    geom_cols = [*chain(*_geometry_cols(coord_space.names, annotation_type))]
+    prop_cols = _property_column_names(property_specs)
+
+    used = {*geom_cols, *prop_cols, *relationships}
+    keep = [c for c in df.columns if c in used]
+    drop = [c for c in df.columns if c not in used]
+    if drop:
+        logger.info(f"Ignoring {len(drop)} unused input column(s): {drop}")
+    return df[keep]
+
 
 @njit(inline='always')
 def _unravel_index(flat_index, shape, out):
@@ -143,21 +150,3 @@ def _unravel_index(flat_index, shape, out):
     for d in range(len(shape) - 1, -1, -1):
         out[d] = flat_index % shape[d]
         flat_index = flat_index // shape[d]
-
-
-@njit
-def _ndindex_array(shape):
-    total_indices = np.prod(shape)
-    ndim = len(shape)
-
-    indices = np.zeros((total_indices, ndim), dtype=np.uint64)
-
-    for linear_idx in range(total_indices):
-        temp_idx = linear_idx
-
-        # Work backwards through dimensions
-        for dim in range(ndim - 1, -1, -1):
-            indices[linear_idx, dim] = temp_idx % shape[dim]
-            temp_idx = temp_idx // shape[dim]
-    
-    return indices

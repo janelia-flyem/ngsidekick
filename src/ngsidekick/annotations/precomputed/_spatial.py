@@ -8,8 +8,9 @@ from numba import njit
 from numba.typed import List
 
 from .compressed_morton import compressed_morton_code, compressed_morton_decode, _compressed_morton_code_no_alloc
+from ._encode import PartitionedBuffer, _encode_annotation_records, _encode_id_bytes
 from ._write_buffers import _write_buffers
-from ._util import _encode_uint64_series, _geometry_cols, _unravel_index, TableHandle
+from ._util import _ann_required_cols, _geometry_cols, _unravel_index, PolylineGeometry, TableHandle
 
 logger = logging.getLogger(__name__)
 
@@ -608,92 +609,132 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
     return rows, codes
 
 
-def _write_annotations_by_spatial_chunk(df_handle, spatial_assignment, disable_subsampling, output_dir, write_sharded, max_shards_per_transaction, max_threads):
+def _write_annotations_by_spatial_chunk(df, spatial_assignment,
+                                        coord_space, annotation_type, property_specs, polyline_geom,
+                                        disable_subsampling, output_dir, write_sharded,
+                                        max_shards_per_transaction, max_threads):
     """
     Write the spatial index, given a precomputed :class:`SpatialAssignment`
-    and a dataframe holding the encoded annotations.
+    and the native-dtype DataFrame of annotation columns.
+
+    Encoding happens here, not upstream. For each level, we encode the
+    relevant annotations once in (level, chunk_code)-sorted order, then
+    express each chunk's output as contiguous byte ranges into that
+    single buffer.
 
     Args:
-        df_handle:
-            TableHandle wrapping a DataFrame with ``id_buf`` and
-            ``ann_buf`` columns. The handle's reference will be unset
-            before this function returns. The dataframe is indexed
-            positionally by ``spatial_assignment.rows``.
-
+        df:
+            DataFrame holding geometry + property + relationship columns.
+            ``spatial_assignment.rows`` indexes positionally into ``df``;
+            the same row may appear multiple times (a multi-chunk
+            annotation lands in several chunks).
         spatial_assignment:
-            Output of :func:`_compute_spatial_assignment`. Holds the
-            (row, chunk_code, level) tuples that determine which
-            annotations land in which spatial cells; supplied here in
-            preference to recomputing it because the caller can drop the
-            input geometry columns once the assignment is known.
+            Output of :func:`_compute_spatial_assignment`.
+        coord_space, annotation_type, property_specs, polyline_geom:
+            See :func:`write_precomputed_annotations`.
 
         disable_subsampling:
             Whether to disable subsampling by setting "limit" to 1 in
             the info file. (See inline comments.)
 
-        output_dir:
-            Directory to write the annotations to.
-            Subdirectories for each level of the spatial index will be
-            created in output_dir, named ``by_spatial_level_<level>``.
-
-        write_sharded:
-            Whether to write the annotations in sharded format.
-
-        max_shards_per_transaction, max_threads:
+        output_dir, write_sharded, max_shards_per_transaction, max_threads:
             See :func:`._write_buffers._write_buffers`.
 
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
     """
-    rows = spatial_assignment.rows
-    codes = spatial_assignment.codes
-    levels = spatial_assignment.levels
     gridspec = spatial_assignment.gridspec
 
-    # Build the per-(level, chunk_code, annotation) frame by gathering
-    # id_buf and ann_buf at the assignment's row positions. Numpy fancy
-    # indexing on the underlying object arrays just produces parallel
-    # arrays of pointers to the same bytes objects — no buffer data is
-    # copied — so the cost is one pointer per (annotation, chunk) pair.
-    logger.info(f"Concatenating annotations by spatial chunk")
-    df = pd.DataFrame({
-        'level': levels,
-        'chunk_code': codes,
-        'id_buf': df_handle.df['id_buf'].values[rows],
-        'ann_buf': df_handle.df['ann_buf'].values[rows],
-    })
-    df_handle.df = None
-    bufs_by_grid = (
-        df
-        .groupby(['level', 'chunk_code'], sort=False)
-        .agg({'id_buf': ['count', b''.join], 'ann_buf': b''.join})
+    # Stable-sort the (level, chunk_code, row) triples by (level, chunk_code)
+    # so each chunk's contributions are contiguous, and within a chunk the
+    # original row order is preserved (which is meaningful: spatial subsampling
+    # in neuroglancer takes a prefix of each chunk's annotation list).
+    spatial_assignment_df = pd.DataFrame({
+        'level': spatial_assignment.levels,
+        'chunk_code': spatial_assignment.codes,
+        'row_pos': spatial_assignment.rows,
+    }).sort_values(['level', 'chunk_code'], kind='stable')
+    sorted_rows = spatial_assignment_df['row_pos'].to_numpy()
+
+    # Permute the source data to match the sorted order and drop columns we don't want.
+    cols = _ann_required_cols(coord_space, annotation_type, property_specs)
+    df = df[cols].iloc[sorted_rows]
+    if polyline_geom is not None:
+        polyline_geom = PolylineGeometry(
+            points=polyline_geom.points,
+            starts=polyline_geom.starts[sorted_rows],
+            ends=polyline_geom.ends[sorted_rows],
+        )
+    del sorted_rows
+
+    logger.info("Encoding annotations sorted by (level, chunk_code)")
+    ann_pb = _encode_annotation_records(
+        df, coord_space, annotation_type, property_specs, polyline_geom,
     )
+    id_pb = _encode_id_bytes(df.index)
     del df
 
-    bufs_by_grid.columns = ['count', 'id_buf', 'ann_buf']
-    bufs_by_grid['count_buf'] = _encode_uint64_series(bufs_by_grid['count'])
+    # Count the annotations in each chunk and assemble a per-chunk metadata
+    # DataFrame indexed by (level, chunk_code). The columns hold the chunk's
+    # byte ranges in each of the two flat encoded buffers we just produced.
+    # ``spatial_assignment_df`` is already sorted by (level, chunk_code), so
+    # ``sort=False`` here just walks the contiguous runs.
+    counts_per_chunk = spatial_assignment_df.groupby(['level', 'chunk_code'], sort=False).size()
+    del spatial_assignment_df
 
-    bufs_by_grid = bufs_by_grid.reset_index()
+    row_boundaries = np.concatenate(([0], np.cumsum(counts_per_chunk.to_numpy()))).astype(np.int64)
+    if isinstance(ann_pb.layout, (int, np.integer)):
+        ann_offsets = row_boundaries * int(ann_pb.layout)
+    else:
+        ann_offsets = ann_pb.layout[row_boundaries].astype(np.int64, copy=False)
+    id_offsets = row_boundaries * int(id_pb.layout)
 
+    chunk_offsets_df = counts_per_chunk.to_frame('count')
+    chunk_offsets_df['ann_start'] = ann_offsets[:-1]
+    chunk_offsets_df['ann_end']   = ann_offsets[1:]
+    chunk_offsets_df['id_start']  = id_offsets[:-1]
+    chunk_offsets_df['id_end']    = id_offsets[1:]
+    del row_boundaries, ann_offsets, id_offsets, counts_per_chunk
+
+    # Walk one level at a time, slicing the global buffers for that level's
+    # chunks and writing them out.
     metadata = []
-    for level, level_bufs in bufs_by_grid.groupby('level'):
-        logger.info(f"Writing annotations to 'by_spatial_level_{level}' index")
+    for level, level_info in chunk_offsets_df.groupby(level='level', sort=False):
+        level = int(level)
 
+        level_codes = level_info.index.get_level_values('chunk_code').to_numpy(np.uint64)
         if write_sharded:
-            # Sharded key is the compressed morton code of the grid coordinate.
-            level_bufs.index = level_bufs['chunk_code']
+            keys = level_codes
         else:
-            # Unsharded key is string of the grid coordinate, e.g. '0_0_0'
-            grid_coords = compressed_morton_decode(
-                level_bufs['chunk_code'].to_numpy(),
-                gridspec.grid_shapes[level]
-            )
-            level_bufs.index = list(map('_'.join, grid_coords.astype(str)))
+            grid_coords = compressed_morton_decode(level_codes, gridspec.grid_shapes[level])
+            keys = np.array(list(map('_'.join, grid_coords.astype(str))))
 
+        level_count_buf = PartitionedBuffer(level_info['count'].to_numpy(np.uint64).tobytes(), 8)
+
+        ann_absolute_start = level_info['ann_start'].iloc[0]
+        ann_absolute_end = level_info['ann_end'].iloc[-1]
+        ann_relative_starts = level_info['ann_start'] - ann_absolute_start
+        ann_relative_last_end = ann_absolute_end - ann_absolute_start
+        level_ann_layout = np.concatenate((ann_relative_starts.to_numpy(), [ann_relative_last_end])).astype(np.int64)
+        level_ann_buf = PartitionedBuffer(
+            buf=ann_pb.buf[ann_absolute_start:ann_absolute_end],
+            layout=level_ann_layout,
+        )
+
+        id_absolute_start = level_info['id_start'].iloc[0]
+        id_absolute_end = level_info['id_end'].iloc[-1]
+        id_relative_starts = level_info['id_start'] - id_absolute_start
+        id_relative_last_end = id_absolute_end - id_absolute_start
+        level_id_layout = np.concatenate((id_relative_starts.to_numpy(), [id_relative_last_end])).astype(np.int64)
+        level_id_buf = PartitionedBuffer(
+            buf=id_pb.buf[id_absolute_start:id_absolute_end],
+            layout=level_id_layout,
+        )
+
+        logger.info(f"Writing annotations to 'by_spatial_level_{level}' index")
         level_metadata = _write_buffers(
-            # _write_buffers concatenates these columns row-wise inline; no
-            # need to materialize a precomputed combined-buffer column.
-            level_bufs[['count_buf', 'ann_buf', 'id_buf']],
+            keys,
+            [level_count_buf, level_ann_buf, level_id_buf],
             output_dir,
             f"by_spatial_level_{level}",
             write_sharded,
@@ -714,7 +755,7 @@ def _write_annotations_by_spatial_chunk(df_handle, spatial_assignment, disable_s
             # [1]: https://github.com/google/neuroglancer/issues/227#issuecomment-651944575
             level_metadata['limit'] = 1
         else:
-            level_metadata['limit'] = int(level_bufs['count'].max())
+            level_metadata['limit'] = int(level_info['count'].max())
         metadata.append(level_metadata)
 
     return metadata
