@@ -196,12 +196,15 @@ def _write_buffers_sharded(keys, buffers: list[PartitionedBuffer], output_dir, s
                     pb = buffers[0]
                     for i in range(s, e):
                         orig = int(sort_order[i])
-                        txn_kv[int(keys_arr[orig]).to_bytes(8, 'big')] = pb.slice_for_partition(orig)
+                        key = int(keys_arr[orig]).to_bytes(8, 'big')
+                        txn_kv[key] = pb.slice_for_partition(orig)
                 else:
                     for i in range(s, e):
                         orig = int(sort_order[i])
-                        txn_kv[int(keys_arr[orig]).to_bytes(8, 'big')] = b''.join(
-                            pb.slice_for_partition(orig) for pb in buffers
+                        key = int(keys_arr[orig]).to_bytes(8, 'big')
+                        txn_kv[key] = b''.join(
+                            pb.slice_for_partition(orig)
+                            for pb in buffers
                         )
             pbar.update(e - s)
 
