@@ -221,29 +221,6 @@ single-segment relationships (``body_pre`` / ``body_post``) use scalar
     )
 
 
-Releasing input data early
---------------------------
-
-For very large inputs (hundreds of millions of annotations and up), this
-function has high peak RAM requirements.
-You can partially mitigate the peak by transferring ownership of your input DataFrame
-to the function via a :class:`~ngsidekick.annotations.precomputed.TableHandle`:
-wrap your DataFrame, drop your own reference, and pass the handle.
-:func:`~ngsidekick.annotations.precomputed.write_precomputed_annotations` will
-release the handle's reference as soon as the data has been consumed, freeing
-the DataFrame before the writing phase begins:
-
-.. code-block:: python
-
-    from ngsidekick.annotations.precomputed import TableHandle
-
-    handle = TableHandle(df)
-    del df  # release your own reference
-    write_precomputed_annotations(handle, 'xyz', 'point', output_dir='out/points')
-
-The same option applies to ``polyline_points``.
-
-
 Tuning tensorstore writes
 -------------------------
 

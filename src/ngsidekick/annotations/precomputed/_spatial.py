@@ -10,7 +10,7 @@ from numba.typed import List
 from .compressed_morton import compressed_morton_code, compressed_morton_decode, _compressed_morton_code_no_alloc
 from ._encode import PartitionedBuffer, _encode_annotation_records, _encode_id_bytes
 from ._write_buffers import _write_buffers
-from ._util import _ann_required_cols, _geometry_cols, _unravel_index, PolylineGeometry, TableHandle
+from ._util import _ann_required_cols, _geometry_cols, _unravel_index, PolylineGeometry
 
 logger = logging.getLogger(__name__)
 
@@ -615,7 +615,7 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
     return rows, codes
 
 
-def _write_annotations_by_spatial_chunk(df_handle, coord_space, annotation_type, property_specs, polyline_geom,
+def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, property_specs, polyline_geom,
                                         bounds, num_spatial_levels, target_chunk_limit,
                                         shuffle_before_assigning_spatial_levels,
                                         disable_subsampling, output_dir, write_sharded,
@@ -629,12 +629,9 @@ def _write_annotations_by_spatial_chunk(df_handle, coord_space, annotation_type,
     each chunk's output as contiguous byte ranges into that single buffer.
 
     Args:
-        df_handle:
-            TableHandle holding the DataFrame of geometry + property
-            columns. The handle's reference will be unset before this
-            function returns, allowing the caller's full-size DataFrame
-            to be released as soon as we've materialized the permuted
-            work df.
+        df:
+            DataFrame of geometry + property columns (relationships dropped
+            by the caller). Not mutated.
         coord_space, annotation_type, property_specs, polyline_geom:
             See :func:`write_precomputed_annotations`.
 
@@ -653,9 +650,6 @@ def _write_annotations_by_spatial_chunk(df_handle, coord_space, annotation_type,
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
     """
-    df = df_handle.df
-    df_handle.df = None
-
     assignment_df, gridspec = _compute_spatial_assignment(
         df,
         coord_space,

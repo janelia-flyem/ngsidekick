@@ -1,11 +1,10 @@
 import pytest
-import weakref
 import numpy as np
 import pandas as pd
 from bokeh.palettes import Category10
 
 from neuroglancer.coordinate_space import CoordinateSpace
-from ngsidekick.annotations.precomputed import write_precomputed_annotations, TableHandle
+from ngsidekick.annotations.precomputed import write_precomputed_annotations
 
 
 @pytest.fixture(scope='session')
@@ -243,33 +242,6 @@ def test_ellipsoid_annotations(ellipsoid_testdata, test_output_dir):
         num_spatial_levels=6,
         target_chunk_limit=10
     )
-
-def test_early_data_deletion(point_testdata, test_output_dir):
-    """
-    If we wrap the data in a TableHandle and delete our own reference to the data,
-    then the original reference should be invalid by the time the annotations are written.
-    We can verify this with a weakref.
-    """
-    point_testdata = point_testdata.sample(100).copy()
-
-    ref = weakref.ref(point_testdata)
-    lines_handle = TableHandle(point_testdata)
-    del point_testdata
-
-    cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
-    write_precomputed_annotations(
-        lines_handle,
-        cs,
-        'point',
-        output_dir=test_output_dir / 'test-tablehandle-deletion',
-        write_by_spatial_chunk=True,
-        num_spatial_levels=6,
-        target_chunk_limit=10_000
-    )
-    
-    assert lines_handle.df is None
-    assert ref() is None
-
 
 @pytest.mark.manual
 def test_inspect_test_results(

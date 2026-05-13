@@ -11,7 +11,7 @@ from neuroglancer.coordinate_space import CoordinateSpace
 from neuroglancer.viewer_state import AnnotationPropertySpec
 
 from ..util import annotation_property_specs
-from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry, TableHandle
+from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships
 from ._spatial import _compute_spatial_assignment, _write_annotations_by_spatial_chunk
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def write_precomputed_annotations(
-    df: pd.DataFrame | TableHandle | None,
+    df: pd.DataFrame | None,
     coord_space: CoordinateSpace | str | list[str] | dict[str, list],
     annotation_type: Literal['point', 'line', 'ellipsoid', 'axis_aligned_bounding_box', 'polyline'],
     properties: list[str] | list[AnnotationPropertySpec] | dict[str, AnnotationPropertySpec] | list[dict] = (),
@@ -29,7 +29,7 @@ def write_precomputed_annotations(
     output_dir: str = 'annotations',
     write_sharded: bool = True,
     *,
-    polyline_points: pd.DataFrame | TableHandle | None = None,
+    polyline_points: pd.DataFrame | None = None,
     write_by_id: bool = True,
     write_by_relationship: bool = True,
     write_by_spatial_chunk: bool = True,
@@ -50,16 +50,12 @@ def write_precomputed_annotations(
 
     Note:
 
-        Internally, the data will be copied during processing and again 
+        Internally, the data will be copied during processing and again
         during writing, incurring significant RAM usage for large datasets.
-        To save at least some RAM, you can wrap your dataframe in a TableHandle
-        and then delete your own reference to the dataframe before calling this function.
-        The TableHandle's reference will be deleted internally as soon as possible
-        (after the data is transformed for writing, before this function returns).
 
     Args:
         df:
-            DataFrame or TableHandle.
+            pandas DataFrame.
             The index of the DataFrame is used as the annotation ID, so it must be unique.
             The required columns depend on the annotation_type and the coordinate space.
             For example, assuming ``coord_space.names == ['x', 'y', 'z']``,
@@ -77,10 +73,6 @@ def write_precomputed_annotations(
 
             You may also provide additional columns to use as annotation properties, in which
             case their column names should be listed in the 'properties' argument. (See below.)
-
-            If you provide a TableHandle, the handle's reference will be unset before this
-            function returns, deleting your data if you didn't retain a reference to it yourself.
-            (If you do retain a reference, it defeats the point of using a TableHandle in the first place.)
 
         coord_space:
             ``neuroglancer.coordinate_space.CoordinateSpace`` or equivalent.
@@ -151,7 +143,7 @@ def write_precomputed_annotations(
             Similarly, every related ID results in a separate file in the related ID index.
 
         polyline_points:
-            DataFrame or TableHandle. Required when ``annotation_type='polyline'``;
+            pandas DataFrame. Required when ``annotation_type='polyline'``;
             must be ``None`` otherwise.
 
             One row per polyline vertex, with one column per coordinate axis
@@ -159,12 +151,9 @@ def write_precomputed_annotations(
             vertex belongs to. For example, assuming ``coord_space.names == ['x', 'y', 'z']``,
             then provide the following columns: ['annotation_id', 'x', 'y', 'z'].
             (For a polyline with N vertices, its annotation_id should appear N times.)
-            
+
             For each polyline, the point order in the emitted annotation will match
             the order in which they appear in this dataframe.
-
-            As with ``df``, you may pass a ``TableHandle`` so the reference can
-            be released as soon as the table has been consumed.
 
         write_by_id:
             bool
@@ -277,11 +266,6 @@ def write_precomputed_annotations(
         df, annotation_type, polyline_points, coord_space, properties, relationships
     )
 
-    if isinstance(df, TableHandle):
-        # Take ownership of the dataframe.
-        handle, df = df, df.df
-        handle.df = None
-
     # Compute property specs, drop unused columns up front, then derive
     # bounds. Dropping unused columns first reduces RAM pressure during
     # bounds/encoding when the input df carries extra columns we don't
@@ -306,28 +290,18 @@ def write_precomputed_annotations(
             output_dir, write_sharded, max_shards_per_transaction, ts_context,
         )
 
-    # After by-id, split ``df`` between the by-rel and by-spatial writers via
-    # separate TableHandles. by-rel needs the relationship columns; by-spatial
-    # doesn't, so its handle drops them. Pandas shares blocks between the two
-    # handles for the kept columns; the rel-column block is owned only by the
-    # rel handle and gets freed once the rel writer nulls its handle.
-    if write_by_relationship:
-        rel_handle = TableHandle(df)
-    if write_by_spatial_chunk:
-        spatial_handle = TableHandle(df.drop(columns=list(relationships)))
-    del df
-
     by_rel_metadata = []
     if write_by_relationship:
         by_rel_metadata = _write_annotations_by_relationships(
-            rel_handle, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+            df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
             output_dir, write_sharded, max_shards_per_transaction, ts_context,
         )
 
     spatial_metadata = []
     if write_by_spatial_chunk:
         spatial_metadata = _write_annotations_by_spatial_chunk(
-            spatial_handle, coord_space, annotation_type, property_specs, polyline_geom,
+            df.drop(columns=list(relationships)),
+            coord_space, annotation_type, property_specs, polyline_geom,
             bounds, num_spatial_levels, target_chunk_limit,
             shuffle_before_assigning_spatial_levels,
             disable_subsampling=(target_chunk_limit == 0),
@@ -478,15 +452,10 @@ def _resolve_polyline_inputs(df, annotation_type, polyline_points, coord_space, 
         - If the user passed the aux table as the first positional and omitted
           ``polyline_points``, swap them.
         - Validate that ``polyline_points`` is supplied.
-        - Wrap the aux table in a :class:`TableHandle` so we can drop the
-          reference as soon as we're done with it.
         - Synthesize a column-less main df from the aux table's unique
           annotation IDs if ``df`` is None (the no-properties/no-relationships
           convenience path).
-        - Take ownership of ``df`` if it arrived as a TableHandle (so we can
-          index into it below).
-        - Build the flat point arrays the encoder and spatial kernel need,
-          then release the aux table.
+        - Build the flat point arrays the encoder and spatial kernel need.
         - Filter out main-df rows that have no vertices in the aux table.
 
     For other annotation types, validates that ``polyline_points`` is ``None``
@@ -507,30 +476,20 @@ def _resolve_polyline_inputs(df, annotation_type, polyline_points, coord_space, 
     else:
         return df, None
 
-    if isinstance(polyline_points, TableHandle):
-        aux_handle = polyline_points
-    elif isinstance(polyline_points, pd.DataFrame):
-        aux_handle = TableHandle(polyline_points)
-    else:
-        raise TypeError("polyline_points must be a pandas DataFrame or TableHandle")
+    if not isinstance(polyline_points, pd.DataFrame):
+        raise TypeError("polyline_points must be a pandas DataFrame")
 
     if df is None:
         if properties:
             raise ValueError("Cannot pass properties=... when the main table is None.")
         if relationships:
             raise ValueError("Cannot pass relationships=... when the main table is None.")
-        unique_ids = pd.unique(aux_handle.df['annotation_id'])
+        unique_ids = pd.unique(polyline_points['annotation_id'])
         df = pd.DataFrame(index=pd.Index(unique_ids))
-    elif isinstance(df, TableHandle):
-        # The general TableHandle unwrap in write_precomputed_annotations runs
-        # after this helper, but we need df.index here, so consume it now.
-        handle, df = df, df.df
-        handle.df = None
 
     polyline_geom, valid_mask = _polyline_aux_to_arrays(
-        aux_handle.df, df.index, coord_space.names
+        polyline_points, df.index, coord_space.names
     )
-    aux_handle.df = None
     if not valid_mask.all():
         df = df.loc[valid_mask].copy()
 
