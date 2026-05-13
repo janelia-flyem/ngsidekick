@@ -90,6 +90,8 @@ def _write_annotations_by_relationship(df, coord_space, annotation_type, propert
             ends=polyline_geom.ends[pos],
         )
 
+    df = df.drop(columns=relationship)
+
     # Group boundaries: each unique relationship value becomes one output.
     if len(rel_values) == 0:
         boundaries = np.array([0], dtype=np.int64)
