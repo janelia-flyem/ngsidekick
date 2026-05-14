@@ -359,6 +359,19 @@ trading some I/O for a tighter resident-RAM ceiling. Leaving the
 argument as ``None`` (the default) lets DuckDB choose -- typically
 ~80% of system RAM, which is fine for most jobs.
 
+DuckDB's spill directory defaults to ``.tmp/`` under the process's
+**current working directory**. On a cluster node whose CWD lives on a
+slow shared filesystem (GPFS, NFS, etc.), it's worth pointing
+DuckDB at fast local scratch instead via ``duckdb_temp_directory``:
+
+.. code-block:: python
+
+    write_precomputed_annotations(
+        'annotations.feather', 'xyz', 'line', output_dir='out/lines',
+        duckdb_memory_limit='40GB',
+        duckdb_temp_directory='/scratch/myuser/duckdb-spill',
+    )
+
 
 API reference
 -------------

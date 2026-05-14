@@ -45,7 +45,8 @@ _INPUT_VIEW_RAW = '_annotations_input_raw'
 _FILTER_ANN_IDS = '_annotations_input_filter_ids'
 
 
-def open_connection(memory_limit: str | None = None, threads: int | None = None) -> duckdb.DuckDBPyConnection:
+def open_connection(memory_limit: str | None = None, threads: int | None = None,
+                    temp_directory: str | None = None) -> duckdb.DuckDBPyConnection:
     """
     Open an in-memory DuckDB connection with optional resource limits.
 
@@ -53,12 +54,22 @@ def open_connection(memory_limit: str | None = None, threads: int | None = None)
     (e.g. ``'16GB'``). When None, DuckDB defaults to ~80% of physical
     RAM. ``threads`` caps the number of worker threads DuckDB uses for
     query execution; defaults to CPU count.
+
+    ``temp_directory`` is forwarded to DuckDB's ``temp_directory``
+    setting (the location for spill files when the working set exceeds
+    ``memory_limit``). When None, DuckDB defaults to ``.tmp/`` in the
+    process's current working directory.
     """
     con = duckdb.connect()  # in-memory database
     if memory_limit is not None:
         con.execute(f"SET memory_limit = '{memory_limit}'")
     if threads is not None:
         con.execute(f"SET threads = {threads}")
+    if temp_directory is not None:
+        # SET temp_directory accepts a quoted path; quote it ourselves
+        # to avoid issues with single-quote characters in the value.
+        escaped = temp_directory.replace("'", "''")
+        con.execute(f"SET temp_directory = '{escaped}'")
     return con
 
 

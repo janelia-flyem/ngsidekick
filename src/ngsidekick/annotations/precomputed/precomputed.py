@@ -41,6 +41,7 @@ def write_precomputed_annotations(
     max_threads: int | None = None,
     max_shards_per_transaction: int | None = None,
     duckdb_memory_limit: str | None = None,
+    duckdb_temp_directory: str | None = None,
     tensorstore_context: dict | None = None,
     description: str = "",
 ):
@@ -255,6 +256,17 @@ def write_precomputed_annotations(
             extra I/O. Defaults to ``None``, which lets DuckDB pick its
             own limit (~80% of system RAM).
 
+        duckdb_temp_directory:
+            str or None
+            Forwarded to DuckDB's ``temp_directory`` setting -- the
+            location used for spill files when DuckDB's working set
+            exceeds ``duckdb_memory_limit``. Defaults to ``None``,
+            which leaves DuckDB on its own default of ``.tmp/`` under
+            the process's current working directory. Set this to a
+            fast local-scratch path (e.g. ``/scratch/...``) when
+            running on a cluster node whose CWD is on a slow shared
+            filesystem.
+
         tensorstore_context:
             dict or None
             Optional JSON spec for the tensorstore
@@ -340,7 +352,11 @@ def write_precomputed_annotations(
     by_id_metadata = {}
     by_rel_metadata = []
     spatial_metadata = []
-    con = open_connection(memory_limit=duckdb_memory_limit, threads=max_threads)
+    con = open_connection(
+        memory_limit=duckdb_memory_limit,
+        threads=max_threads,
+        temp_directory=duckdb_temp_directory,
+    )
     try:
         if input_df is not None:
             register_input(con, input_df)
