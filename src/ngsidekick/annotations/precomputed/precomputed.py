@@ -557,9 +557,14 @@ def _polyline_aux_to_arrays(aux_df, main_index, coord_names):
     valid_slots = aux_slot_per_main[valid_mask]
     starts = boundaries[:-1][valid_slots]
     ends = boundaries[1:][valid_slots]
+    valid_annotation_ids = np.asarray(main_index[valid_mask], dtype=np.uint64)
 
     points = aux_df[list(coord_names)].to_numpy(np.float32, copy=False)
     if np.isnan(points).any():
         raise ValueError("polyline_points contains NaN coordinate values.")
 
-    return PolylineGeometry(points=points, starts=starts, ends=ends), valid_mask
+    geom = PolylineGeometry(
+        points=points, starts=starts, ends=ends,
+        annotation_ids=valid_annotation_ids,
+    )
+    return geom, valid_mask

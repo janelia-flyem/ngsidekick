@@ -2,6 +2,7 @@ import logging
 import os
 
 import numpy as np
+import pandas as pd
 import tensorstore as ts
 from tqdm.auto import tqdm
 
@@ -9,6 +10,7 @@ from . import _write_buffers
 from ._db import INPUT_VIEW
 from ._encode import _encode_annotation_records, _encode_relationship_records
 from ._shard_hash import compute_shard_assignments_in_db
+from ._util import _property_recsize, _slice_polyline_geom
 from ._write_buffers import (
     _open_sharded_kvstore,
     _prepare_output_subdir,
@@ -51,16 +53,18 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
     Returns:
         JSON metadata for the 'by_id' key in the top-level 'info' file.
     """
-    if annotation_type == 'polyline':
-        raise NotImplementedError(
-            "by-id streaming writer does not yet support polyline annotations"
-        )
-
     if not write_sharded:
         return _write_annotations_by_id_unsharded(
             con, coord_space, annotation_type, property_specs, relationships,
-            output_dir, ts_context,
+            polyline_geom, output_dir, ts_context,
         )
+
+    # For polylines we need to look up each batch's rows in the
+    # in-memory polyline_geom (whose starts/ends are indexed by row
+    # position, not annotation_id). Build the lookup once.
+    polyline_id_lookup = (
+        pd.Index(polyline_geom.annotation_ids) if polyline_geom is not None else None
+    )
 
     logger.info("Preparing 'by_id' index")
 
@@ -77,6 +81,7 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
     # _choose_output_spec uses these inputs only via log2-shaped thresholds).
     total_bytes = _estimate_total_bytes_for_by_id(
         con, n, coord_space, annotation_type, property_specs, relationships,
+        polyline_geom,
     )
     shard_spec = _write_buffers._choose_output_spec(
         total_count=int(n),
@@ -120,8 +125,14 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
             chunk_shards = occupied_shards[chunk_start:chunk_start + batch_size]
             df_batch = _query_rows_for_shards(con, chunk_shards)
 
+            batch_polyline_geom = None
+            if polyline_geom is not None:
+                rows = polyline_id_lookup.get_indexer(df_batch.index.to_numpy())
+                batch_polyline_geom = _slice_polyline_geom(polyline_geom, rows)
+
             ann_pb = _encode_annotation_records(
-                df_batch, coord_space, annotation_type, property_specs, polyline_geom=None,
+                df_batch, coord_space, annotation_type, property_specs,
+                polyline_geom=batch_polyline_geom,
             )
             rel_pb = _encode_relationship_records(df_batch, relationships)
             buffers = [ann_pb] + ([rel_pb] if rel_pb is not None else [])
@@ -131,7 +142,7 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
             pbar.update(len(df_batch))
 
             # Release this batch before the next one runs.
-            del df_batch, ann_pb, rel_pb, buffers, batch_keys
+            del df_batch, ann_pb, rel_pb, buffers, batch_keys, batch_polyline_geom
 
     # Drop the temporary assignments table now that we're done with it.
     con.execute(f"DROP TABLE {SHARD_ASSIGNMENTS_TABLE}")
@@ -165,14 +176,17 @@ def _query_rows_for_shards(con, shard_ids):
     return result_df.set_index('annotation_id')
 
 
-def _estimate_total_bytes_for_by_id(con, n, coord_space, annotation_type, property_specs, relationships):
+def _estimate_total_bytes_for_by_id(con, n, coord_space, annotation_type, property_specs, relationships,
+                                    polyline_geom):
     """
     Rough upper-bound estimate of the by-id payload size, used only by
     :func:`_choose_output_spec`'s log2-shaped heuristic.
 
     Encodes an empty zero-row probe through the existing encoder helpers
     to discover the per-record byte sizes for geometry+properties and
-    relationships, then multiplies by ``n``.
+    relationships, then multiplies by ``n``. For polylines, where the
+    geometry record is variable-width, the vertex payload total is
+    derived directly from ``polyline_geom.points.nbytes``.
     """
     if n == 0:
         return 0
@@ -182,20 +196,38 @@ def _estimate_total_bytes_for_by_id(con, n, coord_space, annotation_type, proper
         .df()
         .set_index('annotation_id')
     )
-    ann_pb = _encode_annotation_records(
-        probe_df, coord_space, annotation_type, property_specs, polyline_geom=None,
-    )
     rel_pb = _encode_relationship_records(probe_df, relationships)
-
-    ann_recsize = int(ann_pb.layout) if isinstance(ann_pb.layout, (int, np.integer)) else 0
     rel_recsize = 0
     if rel_pb is not None and isinstance(rel_pb.layout, (int, np.integer)):
         rel_recsize = int(rel_pb.layout)
+
+    if annotation_type == 'polyline':
+        ann_total = _polyline_total_bytes(property_specs, polyline_geom)
+        return ann_total + n * rel_recsize
+
+    ann_pb = _encode_annotation_records(
+        probe_df, coord_space, annotation_type, property_specs, polyline_geom=None,
+    )
+    ann_recsize = int(ann_pb.layout) if isinstance(ann_pb.layout, (int, np.integer)) else 0
     return n * (ann_recsize + rel_recsize)
 
 
+def _polyline_total_bytes(property_specs, polyline_geom):
+    """
+    Total annotation-record bytes for a by-id polyline write: 4 bytes
+    per annotation for the vertex count, plus all vertex bytes (each
+    vertex is stored exactly once at by-id), plus the per-record
+    property payload (padded to a 4-byte boundary as the encoder does).
+    """
+    if polyline_geom is None:
+        return 0
+    n = len(polyline_geom.starts)
+    prop_recsize = _property_recsize(property_specs)
+    return 4 * n + int(polyline_geom.points.nbytes) + prop_recsize * n
+
+
 def _write_annotations_by_id_unsharded(con, coord_space, annotation_type, property_specs, relationships,
-                                       output_dir, ts_context):
+                                       polyline_geom, output_dir, ts_context):
     """
     Unsharded variant of :func:`_write_annotations_by_id`: one file per
     annotation, with the decimal annotation_id as the filename.
@@ -215,6 +247,10 @@ def _write_annotations_by_id_unsharded(con, coord_space, annotation_type, proper
     if n == 0:
         return {"key": "by_id"}
 
+    polyline_id_lookup = (
+        pd.Index(polyline_geom.annotation_ids) if polyline_geom is not None else None
+    )
+
     logger.info(f"Writing annotations to 'by_id' index ({n} rows, unsharded)")
     with tqdm(total=int(n)) as pbar, ts.Transaction() as txn:
         txn_kv = kvstore.with_transaction(txn)
@@ -224,8 +260,14 @@ def _write_annotations_by_id_unsharded(con, coord_space, annotation_type, proper
                 LIMIT {_UNSHARDED_BATCH_SIZE} OFFSET {offset}
             """).df().set_index('annotation_id')
 
+            batch_polyline_geom = None
+            if polyline_geom is not None:
+                rows = polyline_id_lookup.get_indexer(df_chunk.index.to_numpy())
+                batch_polyline_geom = _slice_polyline_geom(polyline_geom, rows)
+
             ann_pb = _encode_annotation_records(
-                df_chunk, coord_space, annotation_type, property_specs, polyline_geom=None,
+                df_chunk, coord_space, annotation_type, property_specs,
+                polyline_geom=batch_polyline_geom,
             )
             rel_pb = _encode_relationship_records(df_chunk, relationships)
             buffers = [ann_pb] + ([rel_pb] if rel_pb is not None else [])
@@ -235,6 +277,6 @@ def _write_annotations_by_id_unsharded(con, coord_space, annotation_type, proper
                 txn_kv[str(int(key))] = b''.join(pb.slice_for_partition(i) for pb in buffers)
 
             pbar.update(len(df_chunk))
-            del df_chunk, ann_pb, rel_pb, buffers, chunk_keys
+            del df_chunk, ann_pb, rel_pb, buffers, chunk_keys, batch_polyline_geom
 
     return {"key": "by_id"}

@@ -25,7 +25,14 @@ from ._write_buffers import (
     _sharded_metadata,
     _write_one_transaction,
 )
-from ._util import _ann_required_cols, _geometry_cols, _unravel_index, PolylineGeometry
+from ._util import (
+    _ann_required_cols,
+    _geometry_cols,
+    _property_recsize,
+    _slice_polyline_geom,
+    _unravel_index,
+    PolylineGeometry,
+)
 
 from tqdm.auto import tqdm
 
@@ -673,11 +680,6 @@ def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, p
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
     """
-    if annotation_type == 'polyline':
-        raise NotImplementedError(
-            "by-spatial streaming writer does not yet support polyline annotations"
-        )
-
     # 1. Run the numba kernels and stable-sort to produce the assignment.
     assignment_df, gridspec = _compute_spatial_assignment(
         df, coord_space, annotation_type, bounds, num_spatial_levels,
@@ -724,7 +726,7 @@ def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, p
 
             level_metadata = _write_one_spatial_level(
                 con, level_idx, gridspec,
-                coord_space, annotation_type, property_specs,
+                coord_space, annotation_type, property_specs, polyline_geom,
                 output_dir, write_sharded, max_shards_per_transaction, ts_context,
                 disable_subsampling,
             )
@@ -736,7 +738,7 @@ def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, p
 
 
 def _write_one_spatial_level(con, level, gridspec,
-                              coord_space, annotation_type, property_specs,
+                              coord_space, annotation_type, property_specs, polyline_geom,
                               output_dir, write_sharded, max_shards_per_transaction, ts_context,
                               disable_subsampling):
     """
@@ -748,9 +750,13 @@ def _write_one_spatial_level(con, level, gridspec,
     if not write_sharded:
         return _write_one_spatial_level_unsharded(
             con, level, gridspec,
-            coord_space, annotation_type, property_specs,
+            coord_space, annotation_type, property_specs, polyline_geom,
             output_dir, subdir, ts_context, disable_subsampling,
         )
+
+    polyline_id_lookup = (
+        pd.Index(polyline_geom.annotation_ids) if polyline_geom is not None else None
+    )
 
     # 1. Distinct chunk codes for this level (= the output keys).
     distinct_chunks = con.execute(f"""
@@ -762,7 +768,7 @@ def _write_one_spatial_level(con, level, gridspec,
 
     # 2. Choose shard spec from a payload-size estimate.
     total_bytes = _estimate_total_bytes_for_spatial_level(
-        con, level, n_chunks, coord_space, annotation_type, property_specs,
+        con, level, n_chunks, coord_space, annotation_type, property_specs, polyline_geom,
     )
     shard_spec = _write_buffers._choose_output_spec(
         total_count=int(n_chunks),
@@ -854,12 +860,18 @@ def _write_one_spatial_level(con, level, gridspec,
                 if len(df_batch) == 0:
                     continue
 
+                batch_polyline_geom = None
+                if polyline_geom is not None:
+                    rows = polyline_id_lookup.get_indexer(df_batch['annotation_id'].to_numpy())
+                    batch_polyline_geom = _slice_polyline_geom(polyline_geom, rows)
+
                 buffers, batch_chunks = _build_grouped_record_buffers(
                     df_batch, '_chunk_code', coord_space, annotation_type, property_specs,
+                    polyline_geom=batch_polyline_geom,
                 )
                 _write_one_transaction(kvstore, batch_chunks, buffers)
                 pbar.update(len(df_batch))
-                del df_batch, buffers, batch_chunks
+                del df_batch, buffers, batch_chunks, batch_polyline_geom
 
         # 5. Build level metadata.
         level_metadata = _sharded_metadata(subdir, shard_spec)
@@ -872,7 +884,7 @@ def _write_one_spatial_level(con, level, gridspec,
 
 
 def _write_one_spatial_level_unsharded(con, level, gridspec,
-                                       coord_space, annotation_type, property_specs,
+                                       coord_space, annotation_type, property_specs, polyline_geom,
                                        output_dir, subdir, ts_context, disable_subsampling):
     """
     Unsharded variant: one file per chunk, named by underscore-joined grid
@@ -904,8 +916,15 @@ def _write_one_spatial_level_unsharded(con, level, gridspec,
     if len(df_full) == 0:
         return level_metadata
 
+    sliced_polyline_geom = None
+    if polyline_geom is not None:
+        polyline_id_lookup = pd.Index(polyline_geom.annotation_ids)
+        rows = polyline_id_lookup.get_indexer(df_full['annotation_id'].to_numpy())
+        sliced_polyline_geom = _slice_polyline_geom(polyline_geom, rows)
+
     buffers, unique_chunks = _build_grouped_record_buffers(
         df_full, '_chunk_code', coord_space, annotation_type, property_specs,
+        polyline_geom=sliced_polyline_geom,
     )
 
     # For unsharded the key is the chunk's grid coordinate joined with '_'.
@@ -962,14 +981,32 @@ def _compute_subsampling_limit(con, level, disable_subsampling):
     return int(max_count or 1)
 
 
-def _estimate_total_bytes_for_spatial_level(con, level, n_chunks, coord_space, annotation_type, property_specs):
+def _estimate_total_bytes_for_spatial_level(con, level, n_chunks, coord_space, annotation_type, property_specs,
+                                            polyline_geom):
     """
     Rough estimate of one spatial level's payload bytes: 8 bytes per
     chunk for the count header plus ``(ann_recsize + 8) * total_rows``
     for the encoded records and annotation-id buffers.
+
+    For polylines the per-record size varies; we use the average
+    per-polyline record size as the stand-in.
     """
     if n_chunks == 0:
         return 0
+
+    n_total_rows = con.execute(
+        f"SELECT COUNT(*) FROM {SPATIAL_ASSIGNMENTS_TABLE} WHERE level = ?",
+        [level],
+    ).fetchone()[0]
+
+    if annotation_type == 'polyline':
+        if polyline_geom is None or len(polyline_geom.starts) == 0:
+            ann_recsize = 0
+        else:
+            n_polylines = len(polyline_geom.starts)
+            avg_vertex_bytes = int(polyline_geom.points.nbytes) // n_polylines
+            ann_recsize = 4 + avg_vertex_bytes + _property_recsize(property_specs)
+        return 8 * n_chunks + (ann_recsize + 8) * int(n_total_rows)
 
     probe_df = (
         con.execute(f"SELECT * FROM {INPUT_VIEW} LIMIT 0")
@@ -980,9 +1017,4 @@ def _estimate_total_bytes_for_spatial_level(con, level, n_chunks, coord_space, a
         probe_df, coord_space, annotation_type, property_specs, polyline_geom=None,
     )
     ann_recsize = int(ann_pb.layout) if isinstance(ann_pb.layout, (int, np.integer)) else 0
-
-    n_total_rows = con.execute(
-        f"SELECT COUNT(*) FROM {SPATIAL_ASSIGNMENTS_TABLE} WHERE level = ?",
-        [level],
-    ).fetchone()[0]
     return 8 * n_chunks + (ann_recsize + 8) * int(n_total_rows)

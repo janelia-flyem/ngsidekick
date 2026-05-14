@@ -244,10 +244,6 @@ def polyline_testdata(
     return main_df, aux_df
 
 
-@pytest.mark.xfail(
-    raises=NotImplementedError,
-    reason="DuckDB-streaming by-id writer doesn't yet support polyline annotations",
-)
 def test_polyline_annotations(polyline_testdata, test_output_dir):
     main_df, aux_df = polyline_testdata
     cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
@@ -265,10 +261,6 @@ def test_polyline_annotations(polyline_testdata, test_output_dir):
     )
 
 
-@pytest.mark.xfail(
-    raises=NotImplementedError,
-    reason="DuckDB-streaming by-id writer doesn't yet support polyline annotations",
-)
 def test_polyline_annotations_aux_only(test_output_dir):
     """Convenience: pass aux table as the first arg and omit a main table."""
     aux_df = pd.DataFrame({

@@ -242,10 +242,12 @@ def test_polylines_spanning_multiple_chunks_are_duplicated():
     ], dtype=np.float32)
     starts = np.array([0, 3], dtype=np.int64)
     ends = np.array([3, 7], dtype=np.int64)
+    annotation_ids = np.array([0, 1], dtype=np.uint64)
     per_row_levels = np.zeros(2, dtype=np.uint64)
 
     rows, codes = _compute_grid_codes_for_polylines(
-        PolylineGeometry(points, starts, ends), bounds, gridspec, per_row_levels
+        PolylineGeometry(points, starts, ends, annotation_ids),
+        bounds, gridspec, per_row_levels,
     )
     counts = Counter(rows.tolist())
     assert counts[0] == 1
@@ -268,10 +270,12 @@ def test_2d_polylines_span_multiple_chunks():
     ], dtype=np.float32)
     starts = np.array([0, 2], dtype=np.int64)
     ends = np.array([2, 5], dtype=np.int64)
+    annotation_ids = np.array([0, 1], dtype=np.uint64)
     per_row_levels = np.zeros(2, dtype=np.uint64)
 
     rows, codes = _compute_grid_codes_for_polylines(
-        PolylineGeometry(points, starts, ends), bounds, gridspec, per_row_levels
+        PolylineGeometry(points, starts, ends, annotation_ids),
+        bounds, gridspec, per_row_levels,
     )
     counts = Counter(rows.tolist())
     assert counts[0] == 1
@@ -286,10 +290,12 @@ def test_polyline_with_single_point_emits_one_chunk():
     points = np.array([[0.10, 0.10, 0.10]], dtype=np.float32)
     starts = np.array([0], dtype=np.int64)
     ends = np.array([1], dtype=np.int64)
+    annotation_ids = np.array([0], dtype=np.uint64)
     per_row_levels = np.zeros(1, dtype=np.uint64)
 
     rows, codes = _compute_grid_codes_for_polylines(
-        PolylineGeometry(points, starts, ends), bounds, gridspec, per_row_levels
+        PolylineGeometry(points, starts, ends, annotation_ids),
+        bounds, gridspec, per_row_levels,
     )
     assert rows.tolist() == [0]
     assert len(codes) == 1

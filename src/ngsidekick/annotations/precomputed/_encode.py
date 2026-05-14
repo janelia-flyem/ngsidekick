@@ -346,7 +346,8 @@ def _encode_one_relationship(s):
     return PartitionedBuffer(out, offsets)
 
 
-def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_type, property_specs):
+def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_type, property_specs,
+                                  polyline_geom=None):
     """
     Given a batch DataFrame containing the rows for one tensorstore
     transaction (already sorted by ``group_col``, then by annotation_id
@@ -367,6 +368,11 @@ def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_t
             Name of the column that identifies the output group
             (e.g. ``'_segment_id'`` for by-rel, ``'_chunk_code'`` for
             by-spatial).
+        polyline_geom:
+            For polyline annotations, the per-batch
+            :class:`PolylineGeometry` whose ``starts``/``ends`` are
+            aligned with ``df_batch`` row order. Pass ``None`` for
+            other annotation types.
 
     Returns:
         ``(buffers, unique_groups)``: a list of three
@@ -391,7 +397,7 @@ def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_t
 
     # Encode ann and id buffers, in group (then annotation_id) order.
     ann_pb = _encode_annotation_records(
-        df_batch, coord_space, annotation_type, property_specs, polyline_geom=None,
+        df_batch, coord_space, annotation_type, property_specs, polyline_geom=polyline_geom,
     )
     id_pb = _encode_id_bytes(df_batch.index)
 

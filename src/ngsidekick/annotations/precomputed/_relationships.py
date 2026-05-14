@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 from tqdm.auto import tqdm
 
@@ -13,7 +14,7 @@ from ._encode import (
     _encode_id_bytes,
 )
 from ._shard_hash import shards_for_keys
-from ._util import _ann_required_cols
+from ._util import _ann_required_cols, _property_recsize, _slice_polyline_geom
 from ._write_buffers import (
     _open_sharded_kvstore,
     _prepare_output_subdir,
@@ -46,15 +47,10 @@ def _write_annotations_by_relationships(con, coord_space, annotation_type, prope
         List of JSON metadata dicts (one per relationship) for the
         'relationships' key in the top-level 'info' file.
     """
-    if polyline_geom is not None:
-        raise NotImplementedError(
-            "by-rel streaming writer does not yet support polyline annotations"
-        )
-
     by_rel_metadata = []
     for relationship in relationships:
         metadata = _write_annotations_by_relationship(
-            con, coord_space, annotation_type, property_specs, relationship,
+            con, coord_space, annotation_type, property_specs, relationship, polyline_geom,
             output_dir, write_sharded, max_shards_per_transaction, ts_context,
         )
         by_rel_metadata.append(metadata)
@@ -62,6 +58,7 @@ def _write_annotations_by_relationships(con, coord_space, annotation_type, prope
 
 
 def _write_annotations_by_relationship(con, coord_space, annotation_type, property_specs, relationship,
+                                       polyline_geom,
                                        output_dir, write_sharded, max_shards_per_transaction, ts_context):
     """
     Write the annotations to a "Related Object ID Index" for a single
@@ -95,7 +92,7 @@ def _write_annotations_by_relationship(con, coord_space, annotation_type, proper
     """
     if not write_sharded:
         return _write_annotations_by_relationship_unsharded(
-            con, coord_space, annotation_type, property_specs, relationship,
+            con, coord_space, annotation_type, property_specs, relationship, polyline_geom,
             output_dir, ts_context,
         )
 
@@ -114,7 +111,7 @@ def _write_annotations_by_relationship(con, coord_space, annotation_type, proper
 
     try:
         return _write_annotations_by_relationship_sharded(
-            con, coord_space, annotation_type, property_specs, relationship,
+            con, coord_space, annotation_type, property_specs, relationship, polyline_geom,
             pairs_view, shard_assignments_table, chunk_segments_view,
             output_dir, max_shards_per_transaction, ts_context,
         )
@@ -123,9 +120,13 @@ def _write_annotations_by_relationship(con, coord_space, annotation_type, proper
 
 
 def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type, property_specs, relationship,
+                                                polyline_geom,
                                                 pairs_view, shard_assignments_table, chunk_segments_view,
                                                 output_dir, max_shards_per_transaction, ts_context):
     """Sharded by-rel write. Uses the pre-built pairs view as its row source."""
+    polyline_id_lookup = (
+        pd.Index(polyline_geom.annotation_ids) if polyline_geom is not None else None
+    )
     # 1. Distinct related-object ids (= the output keys for this relationship).
     distinct_ids_table = con.execute(f"""
         SELECT DISTINCT segment_id FROM {pairs_view} ORDER BY segment_id
@@ -139,7 +140,7 @@ def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type
 
     # 2. Choose shard spec from a payload-size estimate.
     total_bytes = _estimate_total_bytes_for_by_rel(
-        con, n_segments, pairs_view, coord_space, annotation_type, property_specs,
+        con, n_segments, pairs_view, coord_space, annotation_type, property_specs, polyline_geom,
     )
     shard_spec = _write_buffers._choose_output_spec(
         total_count=int(n_segments),
@@ -216,12 +217,18 @@ def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type
                 pbar.update(len(segs_in_chunk))
                 continue
 
+            batch_polyline_geom = None
+            if polyline_geom is not None:
+                rows = polyline_id_lookup.get_indexer(df_batch['annotation_id'].to_numpy())
+                batch_polyline_geom = _slice_polyline_geom(polyline_geom, rows)
+
             buffers, chunk_segs_with_data = _build_grouped_record_buffers(
                 df_batch, '_segment_id', coord_space, annotation_type, property_specs,
+                polyline_geom=batch_polyline_geom,
             )
             _write_one_transaction(kvstore, chunk_segs_with_data, buffers)
             pbar.update(len(segs_in_chunk))
-            del df_batch, buffers, chunk_segs_with_data, segs_in_chunk
+            del df_batch, buffers, chunk_segs_with_data, segs_in_chunk, batch_polyline_geom
 
     con.execute(f"DROP TABLE {shard_assignments_table}")
     metadata = _sharded_metadata(f"by_rel_{relationship}", shard_spec)
@@ -294,15 +301,26 @@ def _drop_pairs_source(con, name, kind):
         con.execute(f"DROP VIEW IF EXISTS {name}")
 
 
-def _estimate_total_bytes_for_by_rel(con, n_segments, pairs_view, coord_space, annotation_type, property_specs):
+def _estimate_total_bytes_for_by_rel(con, n_segments, pairs_view, coord_space, annotation_type, property_specs,
+                                     polyline_geom):
     """
     Rough upper-bound estimate of the by-rel payload bytes for one
     relationship: 8 bytes per segment for the count header plus
     ``(ann_recsize + 8) * total_pairs`` for the encoded records and
     annotation-id buffers. Used only by ``_choose_output_spec``.
+
+    Polylines have variable per-record size, so the per-record byte
+    cost is estimated as the by-id polyline payload divided by the
+    polyline count (i.e. the average per-annotation record size).
     """
     if n_segments == 0:
         return 0
+
+    n_total_rows = con.execute(f"SELECT COUNT(*) FROM {pairs_view}").fetchone()[0]
+
+    if annotation_type == 'polyline':
+        ann_recsize = _avg_polyline_recsize(polyline_geom, property_specs)
+        return 8 * n_segments + (ann_recsize + 8) * int(n_total_rows)
 
     probe_df = (
         con.execute(f"SELECT * FROM {INPUT_VIEW} LIMIT 0")
@@ -313,13 +331,25 @@ def _estimate_total_bytes_for_by_rel(con, n_segments, pairs_view, coord_space, a
         probe_df, coord_space, annotation_type, property_specs, polyline_geom=None,
     )
     ann_recsize = int(ann_pb.layout) if isinstance(ann_pb.layout, (int, np.integer)) else 0
-
-    n_total_rows = con.execute(f"SELECT COUNT(*) FROM {pairs_view}").fetchone()[0]
     return 8 * n_segments + (ann_recsize + 8) * int(n_total_rows)
 
 
+def _avg_polyline_recsize(polyline_geom, property_specs):
+    """
+    Average per-annotation record size for polylines: 4-byte count
+    header plus the per-polyline vertex bytes plus the property record
+    (padded). Used for shard-size heuristics where a single recsize
+    must stand in for the encoder's variable-width records.
+    """
+    if polyline_geom is None or len(polyline_geom.starts) == 0:
+        return 0
+    n = len(polyline_geom.starts)
+    avg_vertex_bytes = int(polyline_geom.points.nbytes) // n
+    return 4 + avg_vertex_bytes + _property_recsize(property_specs)
+
+
 def _write_annotations_by_relationship_unsharded(con, coord_space, annotation_type, property_specs, relationship,
-                                                 output_dir, ts_context):
+                                                 polyline_geom, output_dir, ts_context):
     """
     Unsharded variant: one file per related-object id, with the decimal
     id as the filename. The file contents follow the same
@@ -353,8 +383,15 @@ def _write_annotations_by_relationship_unsharded(con, coord_space, annotation_ty
         if len(df_full) == 0:
             return {"key": f"by_rel_{relationship}", "id": relationship}
 
+        sliced_polyline_geom = None
+        if polyline_geom is not None:
+            polyline_id_lookup = pd.Index(polyline_geom.annotation_ids)
+            rows = polyline_id_lookup.get_indexer(df_full['annotation_id'].to_numpy())
+            sliced_polyline_geom = _slice_polyline_geom(polyline_geom, rows)
+
         buffers, unique_segs = _build_grouped_record_buffers(
             df_full, '_segment_id', coord_space, annotation_type, property_specs,
+            polyline_geom=sliced_polyline_geom,
         )
 
         logger.info(f"Writing annotations to 'by_rel_{relationship}' index "
