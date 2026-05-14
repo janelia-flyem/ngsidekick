@@ -25,6 +25,8 @@ classifiers = [
 dependencies = [
   "numpy",
   "pandas",
+  "pyarrow",
+  "duckdb",
   "numba",
   "tqdm",
   "tensorstore",

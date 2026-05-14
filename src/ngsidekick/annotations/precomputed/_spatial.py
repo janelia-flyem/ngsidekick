@@ -1,16 +1,33 @@
 import logging
-from itertools import chain
+import os
 from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import tensorstore as ts
 from numba import njit
 from numba.typed import List
 
+from . import _write_buffers
 from .compressed_morton import compressed_morton_code, compressed_morton_decode, _compressed_morton_code_no_alloc
-from ._encode import PartitionedBuffer, _encode_annotation_records, _encode_id_bytes
-from ._write_buffers import _write_buffers
+from ._db import INPUT_VIEW
+from ._encode import (
+    PartitionedBuffer,
+    _build_grouped_record_buffers,
+    _encode_annotation_records,
+    _encode_id_bytes,
+)
+from ._shard_hash import shards_for_keys
+from ._write_buffers import (
+    _open_sharded_kvstore,
+    _prepare_output_subdir,
+    _sharded_metadata,
+    _write_one_transaction,
+)
 from ._util import _ann_required_cols, _geometry_cols, _unravel_index, PolylineGeometry
+
+from tqdm.auto import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -228,9 +245,8 @@ def _compute_target_annotations_per_level(num_annotations, gridspec, target_chun
     if target_chunk_limit != 0:
         annotation_counts = chunk_counts_by_level * target_chunk_limit
     else:
-        assert num_levels == 1, \
-            "The special target_chunk_limit of 0 is only permitted when num_spatial_levels=1"
-        assert chunk_counts_by_level.tolist() == [1]
+        # target_chunk_limit=0 → no subsampling, single-level (validated
+        # at the entry point). All annotations land at level 0.
         annotation_counts = np.array([num_annotations])
     
     # Clamp to total number of annotations remaining after earlier levels
@@ -615,156 +631,358 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
     return rows, codes
 
 
-def _write_annotations_by_spatial_chunk(df, coord_space, annotation_type, property_specs, polyline_geom,
+SPATIAL_ASSIGNMENTS_TABLE = '_by_spatial_assignments'
+
+
+def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, property_specs, polyline_geom,
                                         bounds, num_spatial_levels, target_chunk_limit,
                                         shuffle_before_assigning_spatial_levels,
                                         disable_subsampling, output_dir, write_sharded,
                                         max_shards_per_transaction, ts_context):
     """
-    Write the spatial index.
+    Write the spatial index using DuckDB-backed streaming.
 
-    Computes the (level, chunk_code, row) spatial assignment up front
-    (already sorted by ``(level, chunk_code)``), then for each level
-    encodes that level's annotations once in sorted order and expresses
-    each chunk's output as contiguous byte ranges into that single buffer.
+    The numba geometry kernels still run once on the input df (they
+    need numpy array access to the geometry columns) to produce a
+    ``(level, chunk_code, annotation_id)`` assignment, which is then
+    materialized as a DuckDB table. For each spatial level we open a
+    sharded kvstore and stream per-batch transactions: query the
+    relevant chunks' rows, encode, write, release.
 
     Args:
+        con:
+            DuckDB connection with the input registered as
+            :data:`INPUT_VIEW`.
         df:
-            DataFrame of geometry + property columns (relationships dropped
-            by the caller). Not mutated.
+            The native-dtype DataFrame (also registered with DuckDB
+            above). Needed here because the numba grid-code kernels
+            operate on its geometry columns directly; not used by the
+            streaming write loop itself.
         coord_space, annotation_type, property_specs, polyline_geom:
             See :func:`write_precomputed_annotations`.
-
         bounds, num_spatial_levels, target_chunk_limit,
         shuffle_before_assigning_spatial_levels:
             See :func:`_compute_spatial_assignment` /
             :func:`write_precomputed_annotations`.
-
         disable_subsampling:
             Whether to disable subsampling by setting "limit" to 1 in
-            the info file. (See inline comments.)
-
+            the info file.
         output_dir, write_sharded, max_shards_per_transaction, ts_context:
             See :func:`._write_buffers._write_buffers`.
 
     Returns:
         JSON metadata to write into the 'spatial' key of the info file.
     """
+    if annotation_type == 'polyline':
+        raise NotImplementedError(
+            "by-spatial streaming writer does not yet support polyline annotations"
+        )
+
+    # 1. Run the numba kernels and stable-sort to produce the assignment.
     assignment_df, gridspec = _compute_spatial_assignment(
-        df,
-        coord_space,
-        annotation_type,
-        bounds,
-        num_spatial_levels,
-        target_chunk_limit,
-        shuffle_before_assigning_spatial_levels,
+        df, coord_space, annotation_type, bounds, num_spatial_levels,
+        target_chunk_limit, shuffle_before_assigning_spatial_levels,
         polyline_geom=polyline_geom,
     )
+
+    # 2. Convert (positional row -> annotation_id) and register the
+    #    assignment as a DuckDB table. The ``seq`` column preserves the
+    #    stable-sorted order within each (level, chunk_code) group, so
+    #    queries that ``ORDER BY chunk_code, seq`` reproduce the
+    #    subsampling-friendly per-chunk row order downstream code expects.
+    ann_ids = df.index.to_numpy(np.uint64, copy=False)
     sorted_rows = assignment_df['row_pos'].to_numpy()
+    n_rows = len(assignment_df)
 
-    # Permute the source data to match the sorted order and drop columns we
-    # don't want. After this rebind ``df`` is the small permuted work df;
-    # the original (potentially large) source df has no remaining references
-    # and gets freed.
-    cols = _ann_required_cols(coord_space, annotation_type, property_specs)
-    df = df[cols].iloc[sorted_rows]
-    if polyline_geom is not None:
-        polyline_geom = PolylineGeometry(
-            points=polyline_geom.points,
-            starts=polyline_geom.starts[sorted_rows],
-            ends=polyline_geom.ends[sorted_rows],
-        )
-    del sorted_rows
+    arrow_assignment = pa.table({
+        'seq': np.arange(n_rows, dtype=np.int64),
+        'level': assignment_df['level'].to_numpy(np.uint8, copy=False),
+        'chunk_code': assignment_df['chunk_code'].to_numpy(np.uint64, copy=False),
+        'annotation_id': ann_ids[sorted_rows],
+    })
+    del assignment_df, sorted_rows
 
-    logger.info("Encoding annotations sorted by (level, chunk_code)")
-    ann_pb = _encode_annotation_records(
-        df, coord_space, annotation_type, property_specs, polyline_geom,
-    )
-    id_pb = _encode_id_bytes(df.index)
-    del df
+    con.execute(f"DROP TABLE IF EXISTS {SPATIAL_ASSIGNMENTS_TABLE}")
+    con.register('_by_spatial_assignments_arrow', arrow_assignment)
+    try:
+        con.execute(f"CREATE TABLE {SPATIAL_ASSIGNMENTS_TABLE} AS SELECT * FROM _by_spatial_assignments_arrow")
+    finally:
+        con.unregister('_by_spatial_assignments_arrow')
+    del arrow_assignment
 
-    # Count the annotations in each chunk and assemble a per-chunk metadata
-    # DataFrame indexed by (level, chunk_code). The columns hold the chunk's
-    # byte ranges in each of the two flat encoded buffers we just produced.
-    # ``assignment_df`` is already sorted by (level, chunk_code), so
-    # ``sort=False`` here just walks the contiguous runs.
-    counts_per_chunk = assignment_df.groupby(['level', 'chunk_code'], sort=False).size()
-    del assignment_df
+    try:
+        # 3. For each level, write that level's portion as one sharded
+        #    (or unsharded) kvstore subdirectory.
+        metadata = []
+        for level_idx in range(num_spatial_levels):
+            n_level_rows = con.execute(
+                f"SELECT COUNT(*) FROM {SPATIAL_ASSIGNMENTS_TABLE} WHERE level = ?",
+                [level_idx],
+            ).fetchone()[0]
+            if n_level_rows == 0:
+                continue
 
-    row_boundaries = np.concatenate(([0], np.cumsum(counts_per_chunk.to_numpy()))).astype(np.int64)
-    if isinstance(ann_pb.layout, (int, np.integer)):
-        ann_offsets = row_boundaries * int(ann_pb.layout)
-    else:
-        ann_offsets = ann_pb.layout[row_boundaries].astype(np.int64, copy=False)
-    id_offsets = row_boundaries * int(id_pb.layout)
-
-    chunk_offsets_df = counts_per_chunk.to_frame('count')
-    chunk_offsets_df['ann_start'] = ann_offsets[:-1]
-    chunk_offsets_df['ann_end']   = ann_offsets[1:]
-    chunk_offsets_df['id_start']  = id_offsets[:-1]
-    chunk_offsets_df['id_end']    = id_offsets[1:]
-    del row_boundaries, ann_offsets, id_offsets, counts_per_chunk
-
-    # Walk one level at a time, slicing the global buffers for that level's
-    # chunks and writing them out.
-    metadata = []
-    for level, level_info in chunk_offsets_df.groupby(level='level', sort=False):
-        level = int(level)
-
-        level_codes = level_info.index.get_level_values('chunk_code').to_numpy(np.uint64)
-        if write_sharded:
-            keys = level_codes
-        else:
-            grid_coords = compressed_morton_decode(level_codes, gridspec.grid_shapes[level])
-            keys = np.array(list(map('_'.join, grid_coords.astype(str))))
-
-        level_count_buf = PartitionedBuffer(level_info['count'].to_numpy(np.uint64).tobytes(), 8)
-
-        ann_absolute_start = level_info['ann_start'].iloc[0]
-        ann_absolute_end = level_info['ann_end'].iloc[-1]
-        ann_relative_starts = level_info['ann_start'] - ann_absolute_start
-        ann_relative_last_end = ann_absolute_end - ann_absolute_start
-        level_ann_layout = np.concatenate((ann_relative_starts.to_numpy(), [ann_relative_last_end])).astype(np.int64)
-        level_ann_buf = PartitionedBuffer(
-            buf=ann_pb.buf[ann_absolute_start:ann_absolute_end],
-            layout=level_ann_layout,
-        )
-
-        id_absolute_start = level_info['id_start'].iloc[0]
-        id_absolute_end = level_info['id_end'].iloc[-1]
-        id_relative_starts = level_info['id_start'] - id_absolute_start
-        id_relative_last_end = id_absolute_end - id_absolute_start
-        level_id_layout = np.concatenate((id_relative_starts.to_numpy(), [id_relative_last_end])).astype(np.int64)
-        level_id_buf = PartitionedBuffer(
-            buf=id_pb.buf[id_absolute_start:id_absolute_end],
-            layout=level_id_layout,
-        )
-
-        logger.info(f"Writing annotations to 'by_spatial_level_{level}' index")
-        level_metadata = _write_buffers(
-            keys,
-            [level_count_buf, level_ann_buf, level_id_buf],
-            output_dir,
-            f"by_spatial_level_{level}",
-            write_sharded,
-            max_shards_per_transaction,
-            ts_context,
-        )
-        level_metadata['chunk_size'] = gridspec.chunk_shapes[level].tolist()
-        level_metadata['grid_shape'] = gridspec.grid_shapes[level].tolist()
-
-        if disable_subsampling:
-            # To be honest, I don't completely understand why this
-            # disables subsampling, but according to jbms[1]:
-            #
-            #   > Neuroglancer "subsamples" by showing only a prefix of the list of
-            #   > annotations according to the spacing setting.  If you set "limit" to 1 in
-            #   > the info file, you won't get subsampling by default.
-            #
-            # [1]: https://github.com/google/neuroglancer/issues/227#issuecomment-651944575
-            level_metadata['limit'] = 1
-        else:
-            level_metadata['limit'] = int(level_info['count'].max())
-        metadata.append(level_metadata)
+            level_metadata = _write_one_spatial_level(
+                con, level_idx, gridspec,
+                coord_space, annotation_type, property_specs,
+                output_dir, write_sharded, max_shards_per_transaction, ts_context,
+                disable_subsampling,
+            )
+            metadata.append(level_metadata)
+    finally:
+        con.execute(f"DROP TABLE IF EXISTS {SPATIAL_ASSIGNMENTS_TABLE}")
 
     return metadata
+
+
+def _write_one_spatial_level(con, level, gridspec,
+                              coord_space, annotation_type, property_specs,
+                              output_dir, write_sharded, max_shards_per_transaction, ts_context,
+                              disable_subsampling):
+    """
+    Write a single spatial level's subdirectory (``by_spatial_level_<level>``).
+    """
+    subdir = f"by_spatial_level_{level}"
+    logger.info(f"Preparing 'by_spatial_level_{level}' index")
+
+    if not write_sharded:
+        return _write_one_spatial_level_unsharded(
+            con, level, gridspec,
+            coord_space, annotation_type, property_specs,
+            output_dir, subdir, ts_context, disable_subsampling,
+        )
+
+    # 1. Distinct chunk codes for this level (= the output keys).
+    distinct_chunks = con.execute(f"""
+        SELECT DISTINCT chunk_code FROM {SPATIAL_ASSIGNMENTS_TABLE}
+        WHERE level = ?
+        ORDER BY chunk_code
+    """, [level]).to_arrow_table().column('chunk_code').to_numpy(zero_copy_only=False).astype(np.uint64, copy=False)
+    n_chunks = len(distinct_chunks)
+
+    # 2. Choose shard spec from a payload-size estimate.
+    total_bytes = _estimate_total_bytes_for_spatial_level(
+        con, level, n_chunks, coord_space, annotation_type, property_specs,
+    )
+    shard_spec = _write_buffers._choose_output_spec(
+        total_count=int(n_chunks),
+        total_bytes=int(total_bytes),
+        max_key=int(distinct_chunks.max()),
+        hashtype='murmurhash3_x86_128',
+        gzip_compress=True,
+    )
+
+    # 3. Compute shards for each distinct chunk_code, store as DuckDB table.
+    shards = shards_for_keys(distinct_chunks, shard_spec)
+    pairs = pa.table({
+        'chunk_code': distinct_chunks,
+        'shard_id': shards.astype(np.uint64, copy=False),
+    })
+    del distinct_chunks, shards
+
+    shard_assignments_table = f'_by_spatial_shards_level_{level}'
+    batch_shards_view = f'_by_spatial_batch_shards_level_{level}'
+
+    con.execute(f"DROP TABLE IF EXISTS {shard_assignments_table}")
+    con.register('_by_spatial_shards_arrow', pairs)
+    try:
+        con.execute(f"CREATE TABLE {shard_assignments_table} AS SELECT * FROM _by_spatial_shards_arrow")
+    finally:
+        con.unregister('_by_spatial_shards_arrow')
+    del pairs
+
+    try:
+        _prepare_output_subdir(output_dir, subdir)
+        kvstore = _open_sharded_kvstore(output_dir, subdir, shard_spec, ts_context)
+
+        # 4. Iterate occupied shards in batches.
+        occupied_shards = con.execute(f"""
+            SELECT DISTINCT shard_id FROM {shard_assignments_table}
+            ORDER BY shard_id
+        """).to_arrow_table().column('shard_id').to_numpy(zero_copy_only=False)
+
+        batch_size = int(max_shards_per_transaction)
+        n_transactions = (len(occupied_shards) + batch_size - 1) // batch_size
+        logger.info(f"Writing annotations to '{subdir}' index "
+                    f"({n_transactions} transactions over "
+                    f"{len(occupied_shards)} occupied shards "
+                    f"(of {1 << shard_spec.shard_bits} possible))")
+
+        needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
+        select_cols = ', '.join(f'v.{c}' for c in (['annotation_id'] + needed_cols))
+
+        n_level_rows = con.execute(
+            f"SELECT COUNT(*) FROM {SPATIAL_ASSIGNMENTS_TABLE} WHERE level = ?",
+            [level],
+        ).fetchone()[0]
+        with tqdm(total=int(n_level_rows)) as pbar:
+            for chunk_start in range(0, len(occupied_shards), batch_size):
+                batch_shards = occupied_shards[chunk_start:chunk_start + batch_size]
+                con.register(batch_shards_view, pa.table({'shard_id': batch_shards}))
+                try:
+                    # Select the annotations for this batch of shards,
+                    # i.e. those whose chunk_code maps to a shard_id in this batch.
+                    # This is achieved by joining our specific list of batch shards (batch_shards_view)
+                    # with the set of distinct chunk_code -> shard_id assignments (shard_assignments_table),
+                    # joining that with the annotation_id -> chunk_code assignments
+                    # and finally joining those with the actual annotation geometries.
+                    # 
+                    # Note that some annotations should appear in multiple chunks if
+                    # they cross chunk boundaries. This is achieved here via the fact
+                    # that the SPATIAL_ASSIGNMENTS_TABLE lists those annotation_ids
+                    # multiple times (with different chunk_codes), and we join on the
+                    # chunk_code.
+                    # 
+                    # The annotation order (which we may or may not have shuffled before computing level assignments).
+                    # is preserved via sorting with 'seq' column inserted into the SPATIAL_ASSIGNMENTS_TABLE.
+                    # That's important because our API gives users the option to *not* shuffle,
+                    # thus preserving their annotation order, which becomes the rendering
+                    # priority order in neuroglancer (in cases when neuroglancer chooses
+                    # to show only a only prefix subset of annotations).
+                    df_batch = con.execute(f"""
+                        SELECT {select_cols}, a.chunk_code AS _chunk_code
+                        FROM {batch_shards_view} bsv
+                        JOIN {shard_assignments_table} s ON s.shard_id = bsv.shard_id
+                        JOIN {SPATIAL_ASSIGNMENTS_TABLE} a
+                            ON a.chunk_code = s.chunk_code AND a.level = ?
+                        JOIN {INPUT_VIEW} v ON v.annotation_id = a.annotation_id
+                        ORDER BY a.chunk_code, a.seq
+                    """, [level]).df()
+                finally:
+                    con.unregister(batch_shards_view)
+
+                if len(df_batch) == 0:
+                    continue
+
+                buffers, batch_chunks = _build_grouped_record_buffers(
+                    df_batch, '_chunk_code', coord_space, annotation_type, property_specs,
+                )
+                _write_one_transaction(kvstore, batch_chunks, buffers)
+                pbar.update(len(df_batch))
+                del df_batch, buffers, batch_chunks
+
+        # 5. Build level metadata.
+        level_metadata = _sharded_metadata(subdir, shard_spec)
+        level_metadata['chunk_size'] = gridspec.chunk_shapes[level].tolist()
+        level_metadata['grid_shape'] = gridspec.grid_shapes[level].tolist()
+        level_metadata['limit'] = _compute_subsampling_limit(con, level, disable_subsampling)
+        return level_metadata
+    finally:
+        con.execute(f"DROP TABLE IF EXISTS {shard_assignments_table}")
+
+
+def _write_one_spatial_level_unsharded(con, level, gridspec,
+                                       coord_space, annotation_type, property_specs,
+                                       output_dir, subdir, ts_context, disable_subsampling):
+    """
+    Unsharded variant: one file per chunk, named by underscore-joined grid
+    coordinates (e.g. ``'0_3_2'``). The file contents follow the same
+    ``<count><records><ids>`` layout as the sharded case.
+    """
+    _prepare_output_subdir(output_dir, subdir)
+
+    needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
+    select_cols = ', '.join(f'v.{c}' for c in (['annotation_id'] + needed_cols))
+
+    df_full = con.execute(f"""
+        SELECT {select_cols}, a.chunk_code AS _chunk_code
+        FROM {SPATIAL_ASSIGNMENTS_TABLE} a
+        JOIN {INPUT_VIEW} v ON v.annotation_id = a.annotation_id
+        WHERE a.level = ?
+        ORDER BY a.chunk_code, a.seq
+    """, [level]).df()
+
+    output_dir = os.path.abspath(output_dir)
+    kvstore = ts.KvStore.open(f"file://{output_dir}/{subdir}/", context=ts_context).result()
+
+    level_metadata = {
+        "key": subdir,
+        "chunk_size": gridspec.chunk_shapes[level].tolist(),
+        "grid_shape": gridspec.grid_shapes[level].tolist(),
+        "limit": _compute_subsampling_limit(con, level, disable_subsampling),
+    }
+    if len(df_full) == 0:
+        return level_metadata
+
+    buffers, unique_chunks = _build_grouped_record_buffers(
+        df_full, '_chunk_code', coord_space, annotation_type, property_specs,
+    )
+
+    # For unsharded the key is the chunk's grid coordinate joined with '_'.
+    grid_coords = compressed_morton_decode(unique_chunks, gridspec.grid_shapes[level])
+    string_keys = list(map('_'.join, grid_coords.astype(str)))
+
+    logger.info(f"Writing annotations to '{subdir}' index "
+                f"({len(unique_chunks)} chunks, unsharded)")
+    with tqdm(total=len(unique_chunks)) as pbar, ts.Transaction() as txn:
+        txn_kv = kvstore.with_transaction(txn)
+        for i, key in enumerate(string_keys):
+            txn_kv[key] = b''.join(pb.slice_for_partition(i) for pb in buffers)
+            pbar.update(1)
+
+    return level_metadata
+
+
+def _compute_subsampling_limit(con, level, disable_subsampling):
+    """
+    Return the ``limit`` value to record in this level's spatial-index
+    metadata. Normally this is the max per-chunk annotation count at
+    this level.
+
+    The spec defines ``limit`` as the per-cell annotation target used
+    during index *construction* (each annotation emitted at this level
+    with probability ``min(1, limit / maxCount(level))``). But the
+    renderer also consults ``limit`` at *display* time as a denominator:
+    ``drawFraction = min(1, desiredCount / limit)``, where the chunk's
+    stored list is then truncated to ``count * drawFraction``
+    (see ``annotation/base.ts`` and ``annotation/renderlayer.ts`` in
+    the neuroglancer source).
+
+    So when the caller asks to disable subsampling
+    (``target_chunk_limit == 0``) we emit ``limit=1``: that saturates
+    ``drawFraction`` at 1 and the renderer draws every annotation in
+    each chunk. As explained[1] by jbms:
+
+        > Neuroglancer "subsamples" by showing only a prefix of the list of
+        > annotations according to the spacing setting.  If you set "limit" to 1 in
+        > the info file, you won't get subsampling by default.
+
+    [1]: https://github.com/google/neuroglancer/issues/227#issuecomment-651944575
+    """
+    if disable_subsampling:
+        return 1
+    max_count = con.execute(f"""
+        SELECT MAX(c) FROM (
+            SELECT COUNT(*) AS c
+            FROM {SPATIAL_ASSIGNMENTS_TABLE}
+            WHERE level = ?
+            GROUP BY chunk_code
+        )
+    """, [level]).fetchone()[0]
+    return int(max_count or 1)
+
+
+def _estimate_total_bytes_for_spatial_level(con, level, n_chunks, coord_space, annotation_type, property_specs):
+    """
+    Rough estimate of one spatial level's payload bytes: 8 bytes per
+    chunk for the count header plus ``(ann_recsize + 8) * total_rows``
+    for the encoded records and annotation-id buffers.
+    """
+    if n_chunks == 0:
+        return 0
+
+    probe_df = (
+        con.execute(f"SELECT * FROM {INPUT_VIEW} LIMIT 0")
+        .df()
+        .set_index('annotation_id')
+    )
+    ann_pb = _encode_annotation_records(
+        probe_df, coord_space, annotation_type, property_specs, polyline_geom=None,
+    )
+    ann_recsize = int(ann_pb.layout) if isinstance(ann_pb.layout, (int, np.integer)) else 0
+
+    n_total_rows = con.execute(
+        f"SELECT COUNT(*) FROM {SPATIAL_ASSIGNMENTS_TABLE} WHERE level = ?",
+        [level],
+    ).fetchone()[0]
+    return 8 * n_chunks + (ann_recsize + 8) * int(n_total_rows)

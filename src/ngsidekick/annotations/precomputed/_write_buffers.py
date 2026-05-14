@@ -48,7 +48,11 @@ def _build_ts_context(user_spec, max_threads):
 
 def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, write_sharded, max_shards_per_transaction, ts_context):
     """
-    Write per-key byte values to a tensorstore kvstore.
+    Write per-key byte values to a tensorstore kvstore (all data at once).
+
+    Used by writers that have already encoded the full per-key output into
+    PartitionedBuffers. For streaming writes where each transaction's
+    buffers are encoded on the fly, see :func:`_write_buffers_streaming`.
 
     Args:
         keys:
@@ -82,8 +86,7 @@ def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, w
     Returns:
         JSON metadata dict for the written subdir.
     """
-    if os.path.exists(f"{output_dir}/{subdir}"):
-        shutil.rmtree(f"{output_dir}/{subdir}")
+    _prepare_output_subdir(output_dir, subdir)
 
     keys = keys.astype(np.uint64, copy=False)
 
@@ -96,6 +99,59 @@ def _write_buffers(keys, buffers: list[PartitionedBuffer], output_dir, subdir, w
     if write_sharded:
         return _write_buffers_sharded(keys, buffers, output_dir, subdir, max_shards_per_transaction, ts_context)
     return _write_buffers_unsharded(keys, buffers, output_dir, subdir, ts_context)
+
+
+def _prepare_output_subdir(output_dir, subdir):
+    """Wipe any previous data at ``output_dir/subdir``."""
+    if os.path.exists(f"{output_dir}/{subdir}"):
+        shutil.rmtree(f"{output_dir}/{subdir}")
+
+
+def _open_sharded_kvstore(output_dir, subdir, shard_spec, ts_context):
+    """
+    Open a sharded tensorstore kvstore at ``output_dir/subdir`` with the
+    given ``shard_spec``. The caller is responsible for choosing the
+    shard spec (see :func:`_choose_output_spec`) and then writing
+    transactions to the returned kvstore (see
+    :func:`_write_one_transaction`).
+    """
+    output_dir = os.path.abspath(output_dir)
+    spec = {
+        "driver": "neuroglancer_uint64_sharded",
+        "metadata": shard_spec.to_json(),
+        "base": f"file://{output_dir}/{subdir}",
+    }
+    return ts.KvStore.open(spec, context=ts_context).result()
+
+
+def _write_one_transaction(kvstore, batch_keys, batch_buffers):
+    """
+    Commit one tensorstore transaction containing ``len(batch_keys)``
+    key/value pairs.
+
+    ``batch_keys`` is a uint64 ndarray; ``batch_buffers`` is a list of
+    :class:`PartitionedBuffer` (each describing one "column" of the
+    per-key value, with length matching ``batch_keys``). The value
+    written for key ``batch_keys[i]`` is the concatenation of each
+    buffer's slice for row ``i``.
+    """
+    with ts.Transaction() as txn:
+        txn_kv = kvstore.with_transaction(txn)
+        n = len(batch_keys)
+        if len(batch_buffers) == 1:
+            pb = batch_buffers[0]
+            for i in range(n):
+                key = int(batch_keys[i]).to_bytes(8, 'big')
+                txn_kv[key] = pb.slice_for_partition(i)
+        else:
+            for i in range(n):
+                key = int(batch_keys[i]).to_bytes(8, 'big')
+                txn_kv[key] = b''.join(pb.slice_for_partition(i) for pb in batch_buffers)
+
+
+def _sharded_metadata(subdir, shard_spec):
+    """Build the JSON metadata block for a sharded index subdir."""
+    return {"key": subdir, "sharding": shard_spec.to_json()}
 
 
 def _write_buffers_unsharded(keys, buffers: list[PartitionedBuffer], output_dir, subdir, ts_context):

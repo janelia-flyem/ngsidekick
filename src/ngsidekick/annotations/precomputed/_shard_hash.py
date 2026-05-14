@@ -140,6 +140,61 @@ def _shards_for_keys_jit(keys, hash_id, preshift_bits, minishard_bits, shard_bit
     return out
 
 
+def compute_shard_assignments_in_db(
+    con,
+    src_view,
+    dest_table,
+    shard_spec,
+    key_col='annotation_id',
+):
+    """
+    Compute the shard number for every key in ``src_view`` and store the
+    result as a DuckDB table ``dest_table`` with columns
+    ``(key_col, shard_id)``, both uint64.
+
+    Args:
+        con:
+            DuckDB connection.
+        src_view:
+            Name of the view/table containing ``key_col`` (and other
+            columns, which are ignored).
+        dest_table:
+            Name of the table to create (or replace) with the
+            assignments. Any prior table of the same name is dropped.
+        shard_spec:
+            ``ShardSpec`` whose hash + bit fields determine the
+            assignments.
+        key_col:
+            Column name to read from ``src_view`` and write to
+            ``dest_table``.
+    """
+    import pyarrow as pa
+
+    # Materialize keys + shards in one shot, then ingest into DuckDB. For
+    # 312M annotations this is ~5 GB transient (2.5 GB keys + 2.5 GB
+    # shards), which is one-shot and recoverable. A truly streaming
+    # variant is hard to express cleanly here -- DuckDB's connection
+    # cursors don't share registered views, and using a streaming
+    # ``RecordBatchReader`` + ``CREATE TABLE AS SELECT`` on the same
+    # connection deadlocks. The dominant RAM win for the by-id phase is
+    # in per-batch encoding (one batch's worth of encoded buffers at a
+    # time) rather than here, so we accept the one-shot transient.
+    keys_arrow = con.execute(f"SELECT {key_col} FROM {src_view}").to_arrow_table()
+    keys = keys_arrow.column(key_col).to_numpy(zero_copy_only=False).astype(np.uint64, copy=False)
+    del keys_arrow
+    shards = shards_for_keys(keys, shard_spec)
+    pairs = pa.table({key_col: keys, 'shard_id': shards.astype(np.uint64, copy=False)})
+    del keys, shards
+
+    con.execute(f"DROP TABLE IF EXISTS {dest_table}")
+    con.register('_shard_pairs', pairs)
+    try:
+        con.execute(f"CREATE TABLE {dest_table} AS SELECT * FROM _shard_pairs")
+    finally:
+        con.unregister('_shard_pairs')
+    del pairs
+
+
 def shards_for_keys(keys, shard_spec):
     """
     Compute the shard number for each uint64 key under ``shard_spec``.

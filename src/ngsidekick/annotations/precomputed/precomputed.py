@@ -11,6 +11,7 @@ from neuroglancer.coordinate_space import CoordinateSpace
 from neuroglancer.viewer_state import AnnotationPropertySpec
 
 from ..util import annotation_property_specs
+from ._db import open_connection, register_input
 from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships
@@ -243,6 +244,11 @@ def write_precomputed_annotations(
             "If you want to write the spatial index, you must "
             "specify a non-zero value for num_spatial_levels."
         )
+    if write_by_spatial_chunk and target_chunk_limit == 0 and num_spatial_levels != 1:
+        raise ValueError(
+            "target_chunk_limit=0 disables subsampling and is only valid "
+            "with num_spatial_levels=1."
+        )
 
     # Resolve concurrency parameters once so all index writes share the
     # same batching and thread-cap behavior.
@@ -278,38 +284,42 @@ def write_precomputed_annotations(
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Each writer encodes its own bytes lazily from the native ``df`` (plus
-    # polyline_geom for polyline). This trades the small cost of re-encoding
-    # in each writer for a large RAM saving: nothing persists between
-    # writers except the native-dtype DataFrame, whose per-row Python-object
-    # overhead is zero.
+    # The by-id, by-rel, and by-spatial writers all use DuckDB-backed
+    # streaming: they query one batch of annotations per tensorstore
+    # transaction, encode that batch on the fly, and discard before the
+    # next batch runs. Peak RAM during these phases is one batch's worth
+    # of encoded bytes rather than the full encoded payload.
     by_id_metadata = {}
-    if write_by_id:
-        by_id_metadata = _write_annotations_by_id(
-            df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-            output_dir, write_sharded, max_shards_per_transaction, ts_context,
-        )
-
     by_rel_metadata = []
-    if write_by_relationship:
-        by_rel_metadata = _write_annotations_by_relationships(
-            df, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-            output_dir, write_sharded, max_shards_per_transaction, ts_context,
-        )
-
     spatial_metadata = []
-    if write_by_spatial_chunk:
-        spatial_metadata = _write_annotations_by_spatial_chunk(
-            df.drop(columns=list(relationships)),
-            coord_space, annotation_type, property_specs, polyline_geom,
-            bounds, num_spatial_levels, target_chunk_limit,
-            shuffle_before_assigning_spatial_levels,
-            disable_subsampling=(target_chunk_limit == 0),
-            output_dir=output_dir,
-            write_sharded=write_sharded,
-            max_shards_per_transaction=max_shards_per_transaction,
-            ts_context=ts_context,
-        )
+    if write_by_id or write_by_relationship or write_by_spatial_chunk:
+        con = open_connection(threads=max_threads)
+        try:
+            register_input(con, df)
+            if write_by_id:
+                by_id_metadata = _write_annotations_by_id(
+                    con, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+                    output_dir, write_sharded, max_shards_per_transaction, ts_context,
+                )
+            if write_by_relationship:
+                by_rel_metadata = _write_annotations_by_relationships(
+                    con, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+                    output_dir, write_sharded, max_shards_per_transaction, ts_context,
+                )
+            if write_by_spatial_chunk:
+                spatial_metadata = _write_annotations_by_spatial_chunk(
+                    con, df.drop(columns=list(relationships)),
+                    coord_space, annotation_type, property_specs, polyline_geom,
+                    bounds, num_spatial_levels, target_chunk_limit,
+                    shuffle_before_assigning_spatial_levels,
+                    disable_subsampling=(target_chunk_limit == 0),
+                    output_dir=output_dir,
+                    write_sharded=write_sharded,
+                    max_shards_per_transaction=max_shards_per_transaction,
+                    ts_context=ts_context,
+                )
+        finally:
+            con.close()
 
     polyline_geom = None
 
