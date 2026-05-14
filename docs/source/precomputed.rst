@@ -338,6 +338,28 @@ in from ``max_threads`` only when your dict doesn't already specify
 them, so you can override one without touching the other.
 
 
+Bounding DuckDB's working set
+-----------------------------
+
+The shard-streamed write pipeline materializes a per-level working
+table inside DuckDB (joining the spatial assignments with the input
+geometry+properties, sorted by ``shard_id``). For large inputs this
+working set can become several GB. If you want to cap how much of it
+DuckDB keeps resident, pass ``duckdb_memory_limit``:
+
+.. code-block:: python
+
+    write_precomputed_annotations(
+        'annotations.feather', 'xyz', 'line', output_dir='out/lines',
+        duckdb_memory_limit='40GB',
+    )
+
+DuckDB spills excess to its temp directory once the limit is reached,
+trading some I/O for a tighter resident-RAM ceiling. Leaving the
+argument as ``None`` (the default) lets DuckDB choose -- typically
+~80% of system RAM, which is fine for most jobs.
+
+
 API reference
 -------------
 

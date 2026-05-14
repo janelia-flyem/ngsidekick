@@ -176,20 +176,25 @@ def _compute_grid_codes_batched(annotation_type, input_df, con, coord_space, bou
     identical to a single full-data kernel call.
     """
     geometry_cols = _geometry_cols(coord_space.names, annotation_type)
+    n_batches = max(1, (n_total + batch_size - 1) // batch_size)
+    logger.info(f"Computing grid codes for {n_total} {annotation_type} annotations "
+                f"in {n_batches} batch(es) of up to {batch_size:,} rows")
 
     all_rows = []
     all_codes = []
-    for batch_start, batch_end, batch_df in _iter_geom_batches(
-        input_df, con, coord_space, annotation_type, n_total, batch_size,
-    ):
-        batch_levels = per_row_levels[batch_start:batch_end]
-        rows, codes = _dispatch_grid_code_kernel(
-            annotation_type, batch_df, geometry_cols, bounds, gridspec, batch_levels,
-        )
-        if batch_start:
-            rows = rows + np.uint32(batch_start)
-        all_rows.append(rows)
-        all_codes.append(codes)
+    with tqdm(total=int(n_total)) as pbar:
+        for batch_start, batch_end, batch_df in _iter_geom_batches(
+            input_df, con, coord_space, annotation_type, n_total, batch_size,
+        ):
+            batch_levels = per_row_levels[batch_start:batch_end]
+            rows, codes = _dispatch_grid_code_kernel(
+                annotation_type, batch_df, geometry_cols, bounds, gridspec, batch_levels,
+            )
+            if batch_start:
+                rows = rows + np.uint32(batch_start)
+            all_rows.append(rows)
+            all_codes.append(codes)
+            pbar.update(batch_end - batch_start)
 
     return np.concatenate(all_rows), np.concatenate(all_codes)
 
@@ -404,7 +409,6 @@ def _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bound
     swap_mask = np.concatenate([swap_mask, swap_mask], axis=1)
     boxes[swap_mask] = boxes[:, ::-1, :][swap_mask]
 
-    logger.info(f"Computing grid codes for {len(df)} boxes")
     return _box_grid_codes(
         boxes,
         per_row_levels,
@@ -464,7 +468,6 @@ def _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_
     centroids = df[geometry_cols[0]].to_numpy()
     radii = df[geometry_cols[1]].to_numpy()
 
-    logger.info(f"Computing grid codes for {len(df)} ellipsoids")
     return _ellipsoid_grid_codes(
         centroids,
         radii,
@@ -559,7 +562,6 @@ def _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_l
     swap_mask = np.concatenate([swap_mask, swap_mask], axis=1)
     endpoints[swap_mask] = endpoints[:, ::-1, :][swap_mask]
 
-    logger.info(f"Computing grid codes for {len(df)} lines")
     return _line_grid_codes(
         endpoints,
         per_row_levels,
@@ -917,6 +919,7 @@ def _write_one_spatial_level(con, level, gridspec,
     del distinct_chunks, shards
 
     shard_assignments_table = f'_by_spatial_shards_level_{level}'
+    working_data_table = f'_by_spatial_level_{level}_working_data'
     batch_shards_view = f'_by_spatial_batch_shards_level_{level}'
 
     con.execute(f"DROP TABLE IF EXISTS {shard_assignments_table}")
@@ -931,7 +934,52 @@ def _write_one_spatial_level(con, level, gridspec,
         _prepare_output_subdir(output_dir, subdir)
         kvstore = _open_sharded_kvstore(output_dir, subdir, shard_spec, ts_context)
 
-        # 4. Iterate occupied shards in batches.
+        # 4. Materialize a per-level working table that already carries
+        #    the full per-row payload (annotation_id + geometry +
+        #    properties), tagged with shard_id and chunk_code, and
+        #    sorted by shard_id. Each per-batch read below then becomes
+        #    a simple WHERE filter against this table.
+        #
+        #    The alternative -- joining SPATIAL_ASSIGNMENTS_TABLE,
+        #    shard_assignments_table, and INPUT_VIEW once per batch --
+        #    forces DuckDB to scan all ~N rows of the inputs on every
+        #    batch via hash joins (no zone-map pruning across joins).
+        #    For an N-batch level that's an N× scan cost.
+        #
+        #    Materialized once and sorted by shard_id, the working table
+        #    gets tight per-row-group min/max statistics on shard_id, so
+        #    a WHERE-IN filter reads only the row groups that actually
+        #    contain the batch's shards. DuckDB will spill the working
+        #    table to its temp directory if the user has set
+        #    ``duckdb_memory_limit`` tight; otherwise it stays resident.
+        #
+        #    Note that some annotations appear in the assignments table
+        #    multiple times -- once per chunk they intersect -- so the
+        #    JOIN may duplicate rows from INPUT_VIEW. The annotation
+        #    order (preserved by ``seq``) determines per-chunk
+        #    subsampling prefix order in neuroglancer when the user
+        #    chose not to shuffle.
+        needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
+        data_cols = ['annotation_id'] + needed_cols
+        materialize_cols = ', '.join(f'ann_table.{c}' for c in data_cols)
+        con.execute(f"DROP TABLE IF EXISTS {working_data_table}")
+        con.execute(f"""
+            CREATE TABLE {working_data_table} AS
+            SELECT
+                chunk_to_shard.shard_id,
+                ann_to_chunk.chunk_code,
+                ann_to_chunk.seq,
+                {materialize_cols}
+            FROM {SPATIAL_ASSIGNMENTS_TABLE} ann_to_chunk
+            JOIN {shard_assignments_table} chunk_to_shard
+                ON chunk_to_shard.chunk_code = ann_to_chunk.chunk_code
+            JOIN {INPUT_VIEW} ann_table
+                ON ann_table.annotation_id = ann_to_chunk.annotation_id
+            WHERE ann_to_chunk.level = ?
+            ORDER BY chunk_to_shard.shard_id, ann_to_chunk.chunk_code, ann_to_chunk.seq
+        """, [level])
+
+        # 5. Iterate occupied shards in batches.
         occupied_shards = con.execute(f"""
             SELECT DISTINCT shard_id FROM {shard_assignments_table}
             ORDER BY shard_id
@@ -944,46 +992,24 @@ def _write_one_spatial_level(con, level, gridspec,
                     f"{len(occupied_shards)} occupied shards "
                     f"(of {1 << shard_spec.shard_bits} possible))")
 
-        needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
-        select_cols = ', '.join(f'v.{c}' for c in (['annotation_id'] + needed_cols))
+        select_cols = ', '.join(data_cols)
 
         n_level_rows = con.execute(
-            f"SELECT COUNT(*) FROM {SPATIAL_ASSIGNMENTS_TABLE} WHERE level = ?",
-            [level],
+            f"SELECT COUNT(*) FROM {working_data_table}",
         ).fetchone()[0]
         with tqdm(total=int(n_level_rows)) as pbar:
             for chunk_start in range(0, len(occupied_shards), batch_size):
                 batch_shards = occupied_shards[chunk_start:chunk_start + batch_size]
                 con.register(batch_shards_view, pa.table({'shard_id': batch_shards}))
                 try:
-                    # Select the annotations for this batch of shards,
-                    # i.e. those whose chunk_code maps to a shard_id in this batch.
-                    # This is achieved by joining our specific list of batch shards (batch_shards_view)
-                    # with the set of distinct chunk_code -> shard_id assignments (shard_assignments_table),
-                    # joining that with the annotation_id -> chunk_code assignments
-                    # and finally joining those with the actual annotation geometries.
-                    # 
-                    # Note that some annotations should appear in multiple chunks if
-                    # they cross chunk boundaries. This is achieved here via the fact
-                    # that the SPATIAL_ASSIGNMENTS_TABLE lists those annotation_ids
-                    # multiple times (with different chunk_codes), and we join on the
-                    # chunk_code.
-                    # 
-                    # The annotation order (which we may or may not have shuffled before computing level assignments).
-                    # is preserved via sorting with 'seq' column inserted into the SPATIAL_ASSIGNMENTS_TABLE.
-                    # That's important because our API gives users the option to *not* shuffle,
-                    # thus preserving their annotation order, which becomes the rendering
-                    # priority order in neuroglancer (in cases when neuroglancer chooses
-                    # to show only a only prefix subset of annotations).
                     df_batch = con.execute(f"""
-                        SELECT {select_cols}, a.chunk_code AS _chunk_code
-                        FROM {batch_shards_view} bsv
-                        JOIN {shard_assignments_table} s ON s.shard_id = bsv.shard_id
-                        JOIN {SPATIAL_ASSIGNMENTS_TABLE} a
-                            ON a.chunk_code = s.chunk_code AND a.level = ?
-                        JOIN {INPUT_VIEW} v ON v.annotation_id = a.annotation_id
-                        ORDER BY a.chunk_code, a.seq
-                    """, [level]).df()
+                        SELECT
+                            {select_cols},
+                            chunk_code AS _chunk_code
+                        FROM {working_data_table}
+                        WHERE shard_id IN (SELECT shard_id FROM {batch_shards_view})
+                        ORDER BY chunk_code, seq
+                    """).df()
                 finally:
                     con.unregister(batch_shards_view)
 
@@ -1003,13 +1029,14 @@ def _write_one_spatial_level(con, level, gridspec,
                 pbar.update(len(df_batch))
                 del df_batch, buffers, batch_chunks, batch_polyline_geom
 
-        # 5. Build level metadata.
+        # 6. Build level metadata.
         level_metadata = _sharded_metadata(subdir, shard_spec)
         level_metadata['chunk_size'] = gridspec.chunk_shapes[level].tolist()
         level_metadata['grid_shape'] = gridspec.grid_shapes[level].tolist()
         level_metadata['limit'] = _compute_subsampling_limit(con, level, disable_subsampling)
         return level_metadata
     finally:
+        con.execute(f"DROP TABLE IF EXISTS {working_data_table}")
         con.execute(f"DROP TABLE IF EXISTS {shard_assignments_table}")
 
 

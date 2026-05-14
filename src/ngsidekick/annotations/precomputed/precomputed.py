@@ -40,6 +40,7 @@ def write_precomputed_annotations(
     shuffle_before_assigning_spatial_levels: bool = True,
     max_threads: int | None = None,
     max_shards_per_transaction: int | None = None,
+    duckdb_memory_limit: str | None = None,
     tensorstore_context: dict | None = None,
     description: str = "",
 ):
@@ -244,6 +245,16 @@ def write_precomputed_annotations(
             the available threads. Set higher for better throughput at
             extra RAM cost, or lower to reduce peak RAM.
 
+        duckdb_memory_limit:
+            str or None
+            Forwarded to DuckDB's ``memory_limit`` setting (e.g.
+            ``'40GB'``) when opening the connection used for all
+            shard-streamed writes. DuckDB will spill to its temp
+            directory once its working set exceeds this value, which
+            caps DuckDB's contribution to peak RAM at the cost of some
+            extra I/O. Defaults to ``None``, which lets DuckDB pick its
+            own limit (~80% of system RAM).
+
         tensorstore_context:
             dict or None
             Optional JSON spec for the tensorstore
@@ -329,7 +340,7 @@ def write_precomputed_annotations(
     by_id_metadata = {}
     by_rel_metadata = []
     spatial_metadata = []
-    con = open_connection(threads=max_threads)
+    con = open_connection(memory_limit=duckdb_memory_limit, threads=max_threads)
     try:
         if input_df is not None:
             register_input(con, input_df)
