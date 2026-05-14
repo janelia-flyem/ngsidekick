@@ -242,14 +242,37 @@ def _encode_geometry_prop_df(geometry_prop_df, geometry_cols, property_specs):
             "so consider casting to uint8 or int16 if your annotations don't load."
         )
 
-    # Convert category columns to their integer equivalents
+    # Convert enum columns to their integer code equivalents.
+    #
+    # A categorical column may arrive here in one of two shapes
+    # depending on the upstream path:
+    #
+    #   - dtype='category' -- the pandas Categorical survived (e.g. for
+    #     direct pandas input registered with DuckDB, where DuckDB
+    #     recognizes the column as ENUM). Use .cat.codes.
+    #
+    #   - dtype=object (strings) -- the categorical-ness was stripped on
+    #     the way through DuckDB. This is what happens for Feather input:
+    #     Arrow dictionary-encoded columns get registered as VARCHAR, and
+    #     queries return them as object dtype. We recover the codes by
+    #     reconstructing a Categorical against ``enum_labels`` from the
+    #     spec (which was captured before streaming).
     for spec in property_specs:
         p = spec['id']
         if spec['type'] in ('rgb', 'rgba'):
             continue
-        if geometry_prop_df[p].dtype == 'category':
-            geometry_prop_df[p] = geometry_prop_df[p].cat.codes
-            dtypes[p] = spec['type']
+        col_series = geometry_prop_df[p]
+        if col_series.dtype == 'category':
+            geometry_prop_df[p] = col_series.cat.codes
+        elif 'enum_labels' in spec:
+            cat = pd.Categorical(col_series, categories=spec['enum_labels'], ordered=False)
+            if (cat.codes == -1).any():
+                unknown = sorted({v for v in col_series[cat.codes == -1].unique() if v is not None})
+                raise ValueError(
+                    f"Column {p!r}: values not present in enum_labels {spec['enum_labels']}: "
+                    f"{unknown}"
+                )
+            geometry_prop_df[p] = cat.codes
 
     return _records_to_uint8(geometry_prop_df, dtypes)
 

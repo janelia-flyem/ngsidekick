@@ -178,6 +178,40 @@ def test_feather_input_with_default_rangeindex(point_testdata, test_output_dir, 
     assert (out / 'info').exists()
 
 
+def test_feather_input_with_categorical_property(test_output_dir, tmp_path):
+    """Feather files store pandas categoricals as Arrow dictionary-encoded
+    columns. DuckDB registers those as plain VARCHAR, so by the time the
+    encoder sees the column it's object-dtype strings, not pandas
+    Categorical. The encoder must recover the codes from the spec's
+    ``enum_labels``."""
+    import pyarrow.feather as feather
+
+    rng = np.random.default_rng(0)
+    n = 100
+    df = pd.DataFrame({
+        'x': rng.random(n).astype(np.float32),
+        'y': rng.random(n).astype(np.float32),
+        'z': rng.random(n).astype(np.float32),
+        # Includes a label with bracket characters that look like a
+        # number-coercion failure when surfaced in error messages,
+        # matching the field-report case.
+        'kind': pd.Categorical(rng.choice(['a', 'b', '<unspecified>'], n)),
+    })
+    feather_path = tmp_path / 'cat.feather'
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
+    out_dir = test_output_dir / 'feather-categorical'
+    write_precomputed_annotations(
+        str(feather_path), cs, 'point',
+        properties=['kind'],
+        output_dir=out_dir,
+        num_spatial_levels=2,
+        target_chunk_limit=50,
+    )
+    assert (out_dir / 'info').exists()
+
+
 @pytest.mark.parametrize('annotation_type,geom_cols', [
     ('point', ['x', 'y', 'z']),
     ('line', ['xa', 'ya', 'za', 'xb', 'yb', 'zb']),
