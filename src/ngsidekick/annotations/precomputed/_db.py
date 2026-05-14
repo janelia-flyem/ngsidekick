@@ -26,8 +26,21 @@ import duckdb
 
 INPUT_VIEW = 'annotations_input'
 
-# Internal helper handle used when we need to wrap a registered source
-# with an additional view (e.g. for polyline orphan filtering).
+# Internal helper handles. We layer two views over the user's raw input:
+#
+#   _INPUT_RAW_SOURCE: the registered pandas DataFrame or Arrow table.
+#                      May or may not have an ``annotation_id`` column
+#                      (Feather files might rely on a pandas-index
+#                      column or have no id column at all).
+#   _INPUT_VIEW_RAW:   a view over the raw source that is guaranteed to
+#                      expose ``annotation_id`` -- either by passthrough,
+#                      by renaming a pandas-index column, or by
+#                      synthesizing it via ROW_NUMBER().
+#   INPUT_VIEW:        the public view callers consume. Usually a
+#                      passthrough of _INPUT_VIEW_RAW; may be replaced
+#                      with a JOIN-filtered version via
+#                      restrict_input_to_ids (polyline orphans).
+_INPUT_RAW_SOURCE = '_annotations_input_source'
 _INPUT_VIEW_RAW = '_annotations_input_raw'
 _FILTER_ANN_IDS = '_annotations_input_filter_ids'
 
@@ -60,32 +73,86 @@ def register_input(
     ``annotation_id`` column (zero-copy for typical uint64 indexes — the
     column shares its buffer with the index).
 
-    For path-like inputs, the file is read via DuckDB's ``read_ipc``.
-    The file must contain an ``annotation_id`` column.
-
-    A raw view is stashed under an internal name so callers can later
-    swap INPUT_VIEW for a filtered version via
-    :func:`restrict_input_to_ids` without losing the original source.
+    For path-like inputs, the Feather/Arrow IPC file is memory-mapped
+    via PyArrow and registered as an Arrow table; the kernel handles
+    demand paging so multi-GB files don't go fully resident. The
+    ``annotation_id`` column is sourced according to
+    :func:`_annotation_id_strategy` -- if the file already has an
+    ``annotation_id`` column it's used as-is; if the file was written by
+    pandas and carries a real index column in its schema metadata, that
+    column is renamed to ``annotation_id`` via zero-copy PyArrow rename;
+    otherwise ``annotation_id`` is synthesized via a DuckDB view that
+    adds ``ROW_NUMBER() OVER ()`` (honoring start/step from a pandas
+    RangeIndex descriptor when present).
     """
     if isinstance(df_or_path, pd.DataFrame):
         df = df_or_path
         if 'annotation_id' not in df.columns:
             df = df.copy(deep=False)
             df.insert(0, 'annotation_id', df.index.to_numpy())
-        con.register(_INPUT_VIEW_RAW, df)
+        con.register(_INPUT_RAW_SOURCE, df)
+        con.execute(f"CREATE OR REPLACE VIEW {_INPUT_VIEW_RAW} AS SELECT * FROM {_INPUT_RAW_SOURCE}")
     elif isinstance(df_or_path, (str, os.PathLike)):
-        # Memory-map the file via PyArrow and register the resulting
-        # Arrow table. The kernel handles demand paging, so a multi-GB
-        # file doesn't get fully resident in RAM -- DuckDB scans through
-        # touched pages and lets the rest stay on disk.
         path = os.fspath(df_or_path)
         arrow_table = pa.feather.read_table(path, memory_map=True)
-        con.register(_INPUT_VIEW_RAW, arrow_table)
+        strategy, info = _annotation_id_strategy(arrow_table)
+        if strategy == 'rename':
+            # rename_columns shares the underlying buffers; the new
+            # Table object is a thin schema-only wrapper.
+            new_names = [
+                'annotation_id' if c == info else c
+                for c in arrow_table.column_names
+            ]
+            arrow_table = arrow_table.rename_columns(new_names)
+        con.register(_INPUT_RAW_SOURCE, arrow_table)
+        if strategy == 'synthesize':
+            start, step = info
+            con.execute(f"""
+                CREATE OR REPLACE VIEW {_INPUT_VIEW_RAW} AS
+                SELECT
+                    ({start} + (ROW_NUMBER() OVER () - 1) * {step})::BIGINT AS annotation_id,
+                    *
+                FROM {_INPUT_RAW_SOURCE}
+            """)
+        else:
+            con.execute(f"CREATE OR REPLACE VIEW {_INPUT_VIEW_RAW} AS SELECT * FROM {_INPUT_RAW_SOURCE}")
     else:
         raise TypeError(
             f"Expected pandas DataFrame or path-like, got {type(df_or_path).__name__}"
         )
     con.execute(f"CREATE OR REPLACE VIEW {INPUT_VIEW} AS SELECT * FROM {_INPUT_VIEW_RAW}")
+
+
+def _annotation_id_strategy(arrow_table):
+    """
+    Decide how to expose ``annotation_id`` for a Feather-loaded Arrow
+    table.
+
+    Priority order:
+
+    1. ``('present', None)`` -- the file already has an
+       ``annotation_id`` column. Use as-is. (If both this and a pandas
+       index column exist, the explicit column wins.)
+    2. ``('rename', col_name)`` -- the file was written by pandas with
+       a real index column (either user-named or the synthetic
+       ``'__index_level_0__'`` for anonymous indexes). Rename it to
+       ``annotation_id``.
+    3. ``('synthesize', (start, step))`` -- no usable id column. The
+       view layer should add one via ROW_NUMBER. ``start``/``step``
+       come from a pandas RangeIndex descriptor when present, else
+       ``(0, 1)``.
+    """
+    if 'annotation_id' in arrow_table.column_names:
+        return 'present', None
+    pandas_meta = arrow_table.schema.pandas_metadata
+    range_info = (0, 1)
+    if pandas_meta:
+        for entry in pandas_meta.get('index_columns', []):
+            if isinstance(entry, str):
+                return 'rename', entry
+            if isinstance(entry, dict) and entry.get('kind') == 'range':
+                range_info = (entry.get('start', 0), entry.get('step', 1))
+    return 'synthesize', range_info
 
 
 def restrict_input_to_ids(

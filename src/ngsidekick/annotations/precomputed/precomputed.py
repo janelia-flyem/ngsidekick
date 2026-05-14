@@ -52,8 +52,12 @@ def write_precomputed_annotations(
 
     Note:
 
-        Internally, the data will be copied during processing and again
-        during writing, incurring significant RAM usage for large datasets.
+        Internally the writers stream through the input in shard-aligned
+        batches via DuckDB, so peak RAM during the encode+write phase is
+        roughly one batch's worth of encoded bytes rather than the full
+        dataset. To take maximum advantage of this for large inputs,
+        pass the path to a Feather/Arrow IPC file in ``df`` rather than
+        a fully-materialized pandas DataFrame.
 
     Args:
         df:
@@ -63,10 +67,14 @@ def write_precomputed_annotations(
               annotation ID and must be unique. Columns supply geometry,
               properties, and relationships per the rules below.
             - **Path-like (str or os.PathLike)**: a Feather/Arrow IPC file
-              with the same columns as the DataFrame form *plus* an
-              ``annotation_id`` column (since the file has no index).
-              The data is streamed from the file via DuckDB and never
-              fully materialized in pandas memory.
+              carrying the same columns as the DataFrame form. The
+              annotation ID is taken from an explicit ``annotation_id``
+              column if present; otherwise from a pandas-index column
+              recorded in the file's schema metadata (so a file written
+              via ``df.to_feather(path)`` just works); otherwise
+              synthesized as ``0, 1, 2, ...``. The data is streamed from
+              the file via DuckDB and never fully materialized in pandas
+              memory.
             - **None**: only valid for ``annotation_type='polyline'`` when
               you have no properties or relationships -- the main table
               is synthesized from the unique annotation IDs in
@@ -157,7 +165,9 @@ def write_precomputed_annotations(
 
         polyline_points:
             pandas DataFrame. Required when ``annotation_type='polyline'``;
-            must be ``None`` otherwise.
+            must be ``None`` otherwise. (Feather input is not supported
+            here -- the polyline aux table must be an in-memory pandas
+            DataFrame.)
 
             One row per polyline vertex, with one column per coordinate axis
             plus an ``'annotation_id'`` column indicating which polyline each

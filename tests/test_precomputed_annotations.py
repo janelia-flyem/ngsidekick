@@ -135,6 +135,85 @@ def test_point_annotations_from_feather(point_testdata, test_output_dir, tmp_pat
     assert (out_dir / 'by_id').exists()
 
 
+def _write_and_run(point_df, cs, tmp_path, out_dir):
+    """Helper: write a df to feather, run write_precomputed_annotations, return out_dir."""
+    import pyarrow.feather as feather
+    feather_path = tmp_path / 'pts.feather'
+    feather.write_feather(point_df, feather_path)
+    write_precomputed_annotations(
+        str(feather_path), cs, 'point',
+        output_dir=out_dir,
+        write_by_spatial_chunk=True,
+        num_spatial_levels=2,
+        target_chunk_limit=10_000,
+    )
+    return out_dir
+
+
+def test_feather_input_with_explicit_annotation_id(point_testdata, test_output_dir, tmp_path):
+    """File has an explicit ``annotation_id`` column: used as-is."""
+    cs = CoordinateSpace(names=[*'xyz'], units=['m']*3, scales=[100, 10, 1])
+    df = point_testdata[[*'xyz']].copy()
+    df['annotation_id'] = np.arange(len(df), dtype=np.uint64)
+    out = _write_and_run(df, cs, tmp_path, test_output_dir / 'feather-explicit-ann-id')
+    assert (out / 'info').exists()
+
+
+def test_feather_input_with_named_index(point_testdata, test_output_dir, tmp_path):
+    """File was written by pandas with a named index: column is renamed
+    to annotation_id via zero-copy PyArrow rename."""
+    cs = CoordinateSpace(names=[*'xyz'], units=['m']*3, scales=[100, 10, 1])
+    df = point_testdata[[*'xyz']].copy()
+    df.index = pd.Index(np.arange(len(df), dtype=np.uint64) + 1000, name='my_id')
+    out = _write_and_run(df, cs, tmp_path, test_output_dir / 'feather-named-index')
+    assert (out / 'info').exists()
+
+
+def test_feather_input_with_default_rangeindex(point_testdata, test_output_dir, tmp_path):
+    """File was written from a default RangeIndex: no real id column;
+    annotation_id is synthesized via ROW_NUMBER()."""
+    cs = CoordinateSpace(names=[*'xyz'], units=['m']*3, scales=[100, 10, 1])
+    df = point_testdata[[*'xyz']].copy()  # default RangeIndex
+    out = _write_and_run(df, cs, tmp_path, test_output_dir / 'feather-rangeindex')
+    assert (out / 'info').exists()
+
+
+@pytest.mark.parametrize('annotation_type,geom_cols', [
+    ('point', ['x', 'y', 'z']),
+    ('line', ['xa', 'ya', 'za', 'xb', 'yb', 'zb']),
+    ('axis_aligned_bounding_box', ['xa', 'ya', 'za', 'xb', 'yb', 'zb']),
+    ('ellipsoid', ['x', 'y', 'z', 'rx', 'ry', 'rz']),
+])
+def test_integer_geometry_columns(annotation_type, geom_cols, test_output_dir, tmp_path):
+    """Geometry columns stored as int32 must round-trip through bounds,
+    spatial assignment, and encoding. The DuckDB ``isnan()`` check, the
+    numba grid-code kernels, and the float32 encoder cast all need to
+    cope with integer-dtype input."""
+    import pyarrow.feather as feather
+
+    rng = np.random.default_rng(42)
+    n = 50
+    df = pd.DataFrame({c: rng.integers(0, 1000, n).astype(np.int32) for c in geom_cols})
+    # For line/aabb the geometry expects ``a < b``; nudge so each axis's
+    # second point is strictly greater than the first.
+    if annotation_type in ('line', 'axis_aligned_bounding_box'):
+        for axis in 'xyz':
+            df[f'{axis}b'] = df[f'{axis}a'] + 10
+
+    feather_path = tmp_path / f'int-{annotation_type}.feather'
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
+    out_dir = test_output_dir / f'int-geom-{annotation_type}'
+    write_precomputed_annotations(
+        str(feather_path), cs, annotation_type,
+        output_dir=out_dir,
+        num_spatial_levels=2,
+        target_chunk_limit=20,
+    )
+    assert (out_dir / 'info').exists()
+
+
 def test_spatial_kernel_batched_matches_single_batch(point_testdata, test_output_dir, tmp_path, monkeypatch):
     """The batched spatial kernel must produce identical (level,
     chunk_code, row_pos) assignments to a single full-data kernel call,
