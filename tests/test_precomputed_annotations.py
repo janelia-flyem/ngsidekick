@@ -107,6 +107,34 @@ def test_point_annotations(point_testdata, test_output_dir):
     )
 
 
+def test_point_annotations_from_feather(point_testdata, test_output_dir, tmp_path):
+    """End-to-end Feather input path: write to .feather, then pass the
+    path to write_precomputed_annotations and verify the output exists."""
+    import pyarrow.feather as feather
+
+    feather_path = tmp_path / 'points.feather'
+    df = point_testdata.copy()
+    # Feather has no index column; surface annotation_id explicitly.
+    df.insert(0, 'annotation_id', df.index.to_numpy(np.uint64))
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
+    out_dir = test_output_dir / 'test-point-annotations-feather'
+    write_precomputed_annotations(
+        str(feather_path),
+        cs,
+        'point',
+        ['cluster_color'],
+        ['cluster_id'],
+        output_dir=out_dir,
+        write_by_spatial_chunk=True,
+        num_spatial_levels=4,
+        target_chunk_limit=10_000,
+    )
+    assert (out_dir / 'info').exists()
+    assert (out_dir / 'by_id').exists()
+
+
 def test_line_annotations(pointpair_testdata, test_output_dir):
     cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
     write_precomputed_annotations(
@@ -262,7 +290,7 @@ def test_polyline_annotations(polyline_testdata, test_output_dir):
 
 
 def test_polyline_annotations_aux_only(test_output_dir):
-    """Convenience: pass aux table as the first arg and omit a main table."""
+    """df=None convenience: main table is synthesized from polyline_points."""
     aux_df = pd.DataFrame({
         'x': [0.1, 0.2, 0.3, 0.5, 0.9],
         'y': [0.1, 0.2, 0.3, 0.5, 0.5],
@@ -271,9 +299,10 @@ def test_polyline_annotations_aux_only(test_output_dir):
     })
     cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
     write_precomputed_annotations(
-        aux_df,
+        None,
         cs,
         'polyline',
+        polyline_points=aux_df,
         output_dir=test_output_dir / 'test-polyline-aux-only',
         write_by_spatial_chunk=True,
         num_spatial_levels=2,

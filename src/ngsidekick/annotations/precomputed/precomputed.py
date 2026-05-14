@@ -2,16 +2,18 @@ import os
 import json
 import logging
 from itertools import chain
-from typing import Literal
+from typing import Literal, Union
 
 import pandas as pd
 import numpy as np
+import pyarrow as pa
+import pyarrow.feather
 
 from neuroglancer.coordinate_space import CoordinateSpace
 from neuroglancer.viewer_state import AnnotationPropertySpec
 
 from ..util import annotation_property_specs
-from ._db import open_connection, register_input
+from ._db import INPUT_VIEW, open_connection, register_input, restrict_input_to_ids
 from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships
@@ -22,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def write_precomputed_annotations(
-    df: pd.DataFrame | None,
+    df: Union[pd.DataFrame, str, os.PathLike, None],
     coord_space: CoordinateSpace | str | list[str] | dict[str, list],
     annotation_type: Literal['point', 'line', 'ellipsoid', 'axis_aligned_bounding_box', 'polyline'],
     properties: list[str] | list[AnnotationPropertySpec] | dict[str, AnnotationPropertySpec] | list[dict] = (),
@@ -56,11 +58,24 @@ def write_precomputed_annotations(
 
     Args:
         df:
-            pandas DataFrame.
-            The index of the DataFrame is used as the annotation ID, so it must be unique.
-            The required columns depend on the annotation_type and the coordinate space.
-            For example, assuming ``coord_space.names == ['x', 'y', 'z']``,
-            then provide the following columns:
+            The annotations table. Accepted forms:
+
+            - **pandas DataFrame**: the DataFrame's index is used as the
+              annotation ID and must be unique. Columns supply geometry,
+              properties, and relationships per the rules below.
+            - **Path-like (str or os.PathLike)**: a Feather/Arrow IPC file
+              with the same columns as the DataFrame form *plus* an
+              ``annotation_id`` column (since the file has no index).
+              The data is streamed from the file via DuckDB and never
+              fully materialized in pandas memory.
+            - **None**: only valid for ``annotation_type='polyline'`` when
+              you have no properties or relationships -- the main table
+              is synthesized from the unique annotation IDs in
+              ``polyline_points``.
+
+            Required geometry columns depend on the annotation_type and
+            the coordinate space. For example, assuming
+            ``coord_space.names == ['x', 'y', 'z']``:
 
             - For point annotations, provide ['x', 'y', 'z']
             - For line annotations or axis_aligned_bounding_box annotations,
@@ -69,8 +84,6 @@ def write_precomputed_annotations(
               for the center point and radii.
             - For polyline annotations, do not provide x/y/z columns here.
               Instead, provide them in the ``polyline_points`` argument.
-              If your polyline annotations have no properties or relationships,
-              you may set df to None and pass only polyline_points.
 
             You may also provide additional columns to use as annotation properties, in which
             case their column names should be listed in the 'properties' argument. (See below.)
@@ -268,18 +281,33 @@ def write_precomputed_annotations(
     annotation_type = annotation_type.lower()
     coord_space = _construct_coord_space(coord_space)
 
-    df, polyline_geom = _resolve_polyline_inputs(
-        df, annotation_type, polyline_points, coord_space, properties, relationships
+    # Normalize the user's first argument into one of two shapes:
+    # ``input_df`` (in-memory pandas) or ``input_path`` (Feather file
+    # path streamed through DuckDB). For the polyline-only convenience
+    # path (df=None), we synthesize a column-less input_df from the
+    # aux table's unique annotation_ids below.
+    input_df, input_path = _classify_input(df, annotation_type, polyline_points,
+                                           properties, relationships)
+
+    # Resolve polyline geometry. For the in-memory cases we may filter
+    # ``input_df`` to drop orphan annotations; for the Feather path we
+    # defer the equivalent filter to DuckDB (after the view is
+    # registered) via ``restrict_input_to_ids``.
+    polyline_geom, input_df, needs_polyline_filter = _resolve_polyline_geometry(
+        input_df, input_path, annotation_type, polyline_points, coord_space,
     )
 
-    # Compute property specs, drop unused columns up front, then derive
-    # bounds. Dropping unused columns first reduces RAM pressure during
-    # bounds/encoding when the input df carries extra columns we don't
-    # consume; and it makes ``df`` thereafter a shallow view that holds
-    # only the data the writers need.
-    property_specs = annotation_property_specs(df, properties)
-    df = _drop_unused_columns(df, coord_space, annotation_type, property_specs, relationships)
-    bounds = _get_bounds(df, coord_space, annotation_type, polyline_geom=polyline_geom)
+    # Property specs are inferred from a schema-only sample so we don't
+    # have to load the full Feather file. For pandas input the "sample"
+    # is just the full df (zero overhead -- only ``columns`` and dtype
+    # metadata get inspected).
+    schema_sample = _schema_sample(input_df, input_path)
+    property_specs = annotation_property_specs(schema_sample, properties)
+    if input_df is not None:
+        # ``_drop_unused_columns`` is a pandas memory hygiene step; the
+        # Feather path doesn't carry full data in pandas to begin with,
+        # so this is a no-op there.
+        input_df = _drop_unused_columns(input_df, coord_space, annotation_type, property_specs, relationships)
 
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -292,34 +320,44 @@ def write_precomputed_annotations(
     by_id_metadata = {}
     by_rel_metadata = []
     spatial_metadata = []
-    if write_by_id or write_by_relationship or write_by_spatial_chunk:
-        con = open_connection(threads=max_threads)
-        try:
-            register_input(con, df)
-            if write_by_id:
-                by_id_metadata = _write_annotations_by_id(
-                    con, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-                    output_dir, write_sharded, max_shards_per_transaction, ts_context,
-                )
-            if write_by_relationship:
-                by_rel_metadata = _write_annotations_by_relationships(
-                    con, coord_space, annotation_type, property_specs, relationships, polyline_geom,
-                    output_dir, write_sharded, max_shards_per_transaction, ts_context,
-                )
-            if write_by_spatial_chunk:
-                spatial_metadata = _write_annotations_by_spatial_chunk(
-                    con, df.drop(columns=list(relationships)),
-                    coord_space, annotation_type, property_specs, polyline_geom,
-                    bounds, num_spatial_levels, target_chunk_limit,
-                    shuffle_before_assigning_spatial_levels,
-                    disable_subsampling=(target_chunk_limit == 0),
-                    output_dir=output_dir,
-                    write_sharded=write_sharded,
-                    max_shards_per_transaction=max_shards_per_transaction,
-                    ts_context=ts_context,
-                )
-        finally:
-            con.close()
+    con = open_connection(threads=max_threads)
+    try:
+        if input_df is not None:
+            register_input(con, input_df)
+        else:
+            register_input(con, input_path)
+        if needs_polyline_filter:
+            restrict_input_to_ids(con, polyline_geom.annotation_ids)
+
+        bounds = _get_bounds(con, coord_space, annotation_type, polyline_geom=polyline_geom)
+
+        if write_by_id:
+            by_id_metadata = _write_annotations_by_id(
+                con, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+                output_dir, write_sharded, max_shards_per_transaction, ts_context,
+            )
+        if write_by_relationship:
+            by_rel_metadata = _write_annotations_by_relationships(
+                con, coord_space, annotation_type, property_specs, relationships, polyline_geom,
+                output_dir, write_sharded, max_shards_per_transaction, ts_context,
+            )
+        if write_by_spatial_chunk:
+            spatial_df = _build_spatial_df(
+                con, input_df, polyline_geom, coord_space, annotation_type, relationships,
+            )
+            spatial_metadata = _write_annotations_by_spatial_chunk(
+                con, spatial_df,
+                coord_space, annotation_type, property_specs, polyline_geom,
+                bounds, num_spatial_levels, target_chunk_limit,
+                shuffle_before_assigning_spatial_levels,
+                disable_subsampling=(target_chunk_limit == 0),
+                output_dir=output_dir,
+                write_sharded=write_sharded,
+                max_shards_per_transaction=max_shards_per_transaction,
+                ts_context=ts_context,
+            )
+    finally:
+        con.close()
 
     polyline_geom = None
 
@@ -390,120 +428,221 @@ def _construct_coord_space(coord_space):
     raise ValueError(f"Invalid coordinate space: {coord_space!r}.")
 
 
-def _get_bounds(df, coord_space, annotation_type, *, polyline_geom=None):
+def _get_bounds(con, coord_space, annotation_type, *, polyline_geom=None):
     """
-    Inspect the geometry columns of the given dataframe (or, for polylines,
-    the auxiliary points array) to determine the overall upper and lower
-    bounds of the annotations.
+    Determine the upper and lower bounds of the annotation geometry by
+    aggregating across :data:`INPUT_VIEW` via DuckDB. The same code path
+    handles pandas-registered DataFrames and Feather-backed views.
 
-    Also checks for the presence of NaN values in the geometry, and raises a
-    ValueError if any are found.
+    For polylines the bounds come from ``polyline_geom.points`` directly
+    (the vertex coordinates live in memory, not in the DuckDB view).
 
-    Returns:
-        lower_bound, upper_bound
-        (both numpy arrays of length 3)
+    Raises ValueError if any geometry value is NaN or NULL, which would
+    propagate to an invalid bound in the info file and obscure a data
+    error.
     """
-    bounds = None
-
-    geometry_cols = _geometry_cols(coord_space.names, annotation_type)
-    if not (required_cols := set(chain(*geometry_cols))) <= set(df.columns):
-        raise ValueError(
-            "Dataframe does not have all required geometry columns for the given coordinate space.\n"
-            f"Required columns: {required_cols}"
-        )
-
     if annotation_type == 'polyline':
         bounds = (
-            polyline_geom.points.min(axis=0),
-            polyline_geom.points.max(axis=0),
+            polyline_geom.points.min(axis=0).astype(np.float64),
+            polyline_geom.points.max(axis=0).astype(np.float64),
         )
+    else:
+        bounds = _bounds_via_sql(con, coord_space, annotation_type)
 
-    if annotation_type == 'point':
-        points = df[geometry_cols[0]]
-        bounds = (
-            points.min(skipna=False).to_numpy(),
-            points.max(skipna=False).to_numpy()
-        )
-
-    if annotation_type in ('line', 'axis_aligned_bounding_box'):
-        points_a = df[geometry_cols[0]]
-        points_b = df[geometry_cols[1]]
-        bounds = (
-            np.minimum(points_a.min(skipna=False).to_numpy(), points_b.min(skipna=False).to_numpy()),
-            np.maximum(points_a.max(skipna=False).to_numpy(), points_b.max(skipna=False).to_numpy())
-        )
-
-    if annotation_type == 'ellipsoid':
-        center = df[geometry_cols[0]].to_numpy()
-        radii = df[geometry_cols[1]].to_numpy()
-        bounds = np.asarray([
-            (center - radii).min(axis=0),
-            (center + radii).max(axis=0)
-        ])
-
-    if bounds is None:
-        raise ValueError(f"Annotation type {annotation_type} not supported")
-
-    # Check for NaN in bounds (which would produce invalid JSON in the info file)
     if np.any(np.isnan(bounds[0])) or np.any(np.isnan(bounds[1])):
         raise ValueError(
             f"Bounds contain NaN values: lower={bounds[0]}, upper={bounds[1]}. "
             "Check your input data for missing or invalid coordinate values."
         )
-
     return bounds
 
 
-def _resolve_polyline_inputs(df, annotation_type, polyline_points, coord_space, properties, relationships):
+def _bounds_via_sql(con, coord_space, annotation_type):
     """
-    Pre-processing for the polyline argument-handling conveniences.
+    Compute per-axis (lower, upper) bounds via a single DuckDB
+    aggregation, plus a count of NaN/NULL geometry values for validation.
 
-    For ``annotation_type == 'polyline'``:
-        - If the user passed the aux table as the first positional and omitted
-          ``polyline_points``, swap them.
-        - Validate that ``polyline_points`` is supplied.
-        - Synthesize a column-less main df from the aux table's unique
-          annotation IDs if ``df`` is None (the no-properties/no-relationships
-          convenience path).
-        - Build the flat point arrays the encoder and spatial kernel need.
-        - Filter out main-df rows that have no vertices in the aux table.
+    The aggregation expression depends on annotation type:
 
-    For other annotation types, validates that ``polyline_points`` is ``None``
-    and returns ``(df, None)``.
-
-    Returns:
-        (df, polyline_geom) -- ``polyline_geom`` is a :class:`PolylineGeometry`
-        for polyline annotations, ``None`` otherwise.
+    - point: MIN/MAX of each axis column.
+    - line / axis_aligned_bounding_box: LEAST(MIN(a), MIN(b)) and
+      GREATEST(MAX(a), MAX(b)) per axis.
+    - ellipsoid: MIN(center - radius) / MAX(center + radius) per axis.
     """
-    if annotation_type == 'polyline' and df is not None and polyline_points is None:
-        polyline_points, df = df, None
+    geom_cols_groups = _geometry_cols(coord_space.names, annotation_type)
 
+    if annotation_type == 'point':
+        all_cols = list(geom_cols_groups[0])
+        lo_exprs = [f"MIN({c})" for c in all_cols]
+        hi_exprs = [f"MAX({c})" for c in all_cols]
+    elif annotation_type in ('line', 'axis_aligned_bounding_box'):
+        a_cols, b_cols = geom_cols_groups
+        all_cols = list(a_cols) + list(b_cols)
+        lo_exprs = [f"LEAST(MIN({a}), MIN({b}))" for a, b in zip(a_cols, b_cols)]
+        hi_exprs = [f"GREATEST(MAX({a}), MAX({b}))" for a, b in zip(a_cols, b_cols)]
+    elif annotation_type == 'ellipsoid':
+        center_cols, radius_cols = geom_cols_groups
+        all_cols = list(center_cols) + list(radius_cols)
+        lo_exprs = [f"MIN({c} - {r})" for c, r in zip(center_cols, radius_cols)]
+        hi_exprs = [f"MAX({c} + {r})" for c, r in zip(center_cols, radius_cols)]
+    else:
+        raise ValueError(f"Annotation type {annotation_type} not supported")
+
+    nan_check = " OR ".join(f"isnan({c}) OR {c} IS NULL" for c in all_cols)
+    select = ", ".join(
+        lo_exprs + hi_exprs
+        + [f"COUNT(*) FILTER (WHERE {nan_check})"]
+    )
+    row = con.execute(f"SELECT {select} FROM {INPUT_VIEW}").fetchone()
+
+    rank = len(lo_exprs)
+    lo = np.array(row[:rank], dtype=np.float64)
+    hi = np.array(row[rank:2*rank], dtype=np.float64)
+    nan_count = int(row[2*rank])
+
+    if nan_count:
+        raise ValueError(
+            f"Geometry columns contain {nan_count} NaN/NULL value(s). "
+            "Check your input for missing or invalid coordinate values."
+        )
+    return (lo, hi)
+
+
+def _classify_input(df, annotation_type, polyline_points, properties, relationships):
+    """
+    Resolve the polymorphic first argument into one of ``(input_df,
+    input_path)``, exactly one of which is non-None on return.
+
+    - ``pd.DataFrame``: returned as ``(df, None)``.
+    - ``str`` / ``os.PathLike``: returned as ``(None, path_str)`` so
+      downstream code knows to use DuckDB's ``read_ipc`` rather than
+      pandas registration.
+    - ``None``: only valid for ``annotation_type='polyline'`` with no
+      properties or relationships; we synthesize a column-less main
+      table from ``polyline_points``'s unique annotation_ids.
+
+    Also enforces the static invariants on ``polyline_points`` (required
+    for polyline; forbidden otherwise; must be a pandas DataFrame).
+    """
     if annotation_type == 'polyline':
         if polyline_points is None:
             raise ValueError("polyline_points must be provided for annotation_type='polyline'")
+        if not isinstance(polyline_points, pd.DataFrame):
+            raise TypeError("polyline_points must be a pandas DataFrame")
     elif polyline_points is not None:
         raise ValueError("polyline_points may only be provided for annotation_type='polyline'")
-    else:
+
+    if isinstance(df, pd.DataFrame):
         return df, None
-
-    if not isinstance(polyline_points, pd.DataFrame):
-        raise TypeError("polyline_points must be a pandas DataFrame")
-
+    if isinstance(df, (str, os.PathLike)):
+        return None, os.fspath(df)
     if df is None:
+        if annotation_type != 'polyline':
+            raise ValueError(
+                "df=None is only valid for annotation_type='polyline' "
+                "(used as a convenience when there are no properties or relationships)."
+            )
         if properties:
-            raise ValueError("Cannot pass properties=... when the main table is None.")
+            raise ValueError("Cannot pass properties=... when df is None.")
         if relationships:
-            raise ValueError("Cannot pass relationships=... when the main table is None.")
+            raise ValueError("Cannot pass relationships=... when df is None.")
         unique_ids = pd.unique(polyline_points['annotation_id'])
-        df = pd.DataFrame(index=pd.Index(unique_ids))
+        return pd.DataFrame(index=pd.Index(unique_ids)), None
+    raise TypeError(
+        f"Expected a pandas DataFrame, Feather path, or None for df; "
+        f"got {type(df).__name__}"
+    )
+
+
+def _resolve_polyline_geometry(input_df, input_path, annotation_type, polyline_points, coord_space):
+    """
+    Build the :class:`PolylineGeometry` for polyline writes and align it
+    with the main table.
+
+    For the in-memory (pandas) case we filter ``input_df`` in place;
+    for the Feather case we instead return ``needs_polyline_filter=True``
+    so the caller can call ``restrict_input_to_ids`` after registering
+    the view in DuckDB (we can't filter the file itself).
+
+    For non-polyline annotations this is a no-op.
+    """
+    if annotation_type != 'polyline':
+        return None, input_df, False
+
+    if input_df is not None:
+        main_index = input_df.index
+    else:
+        # Read just the annotation_id column from the Feather file. For
+        # 300M rows this is a few-seconds I/O pass that gives us the
+        # ordered keys we need to align polyline_points against the
+        # main table.
+        ann_ids = (
+            pa.feather.read_table(input_path, columns=['annotation_id'])
+            .column('annotation_id')
+            .to_numpy(zero_copy_only=False)
+        )
+        main_index = pd.Index(ann_ids)
 
     polyline_geom, valid_mask = _polyline_aux_to_arrays(
-        polyline_points, df.index, coord_space.names
+        polyline_points, main_index, coord_space.names
     )
-    if not valid_mask.all():
-        df = df.loc[valid_mask].copy()
 
-    return df, polyline_geom
+    needs_polyline_filter = False
+    if not valid_mask.all():
+        if input_df is not None:
+            input_df = input_df.loc[valid_mask].copy()
+        else:
+            needs_polyline_filter = True
+    return polyline_geom, input_df, needs_polyline_filter
+
+
+def _schema_sample(input_df, input_path):
+    """
+    Return a zero-row pandas DataFrame whose columns and dtypes (and
+    categorical levels, when present) match the user's input. Used by
+    :func:`annotation_property_specs` to infer property types without
+    materializing the full Feather file.
+
+    Pandas input passes through unchanged -- inspecting ``.columns`` and
+    column dtypes on a full DataFrame is just as cheap as on a slice.
+    """
+    if input_df is not None:
+        return input_df
+    if input_path is None:
+        # df=None polyline case without properties (validated upstream).
+        return pd.DataFrame()
+    return pa.feather.read_table(input_path).slice(0, 0).to_pandas()
+
+
+def _build_spatial_df(con, input_df, polyline_geom, coord_space, annotation_type, relationships):
+    """
+    Produce the DataFrame that the by-spatial writer hands to its numba
+    grid-code kernels.
+
+    The spatial writer treats this df's row order as the input order
+    used for level assignment (with ``shuffle_before_assigning_spatial_levels=False``)
+    and the source of annotation_id ↔ row-position alignment.
+
+    - Pandas + non-polyline: a shallow view dropping relationship columns
+      (no data copy).
+    - Pandas + polyline: an index-only frame -- the numba kernel reads
+      vertices from ``polyline_geom``, not from df.
+    - Feather + non-polyline: SELECT annotation_id + geometry columns
+      from DuckDB.
+    - Feather + polyline: index-only frame whose index matches
+      ``polyline_geom.annotation_ids``.
+    """
+    if annotation_type == 'polyline':
+        if input_df is not None:
+            return pd.DataFrame(index=input_df.index)
+        return pd.DataFrame(index=pd.Index(polyline_geom.annotation_ids))
+
+    if input_df is not None:
+        return input_df.drop(columns=list(relationships))
+
+    geom_cols = list(chain(*_geometry_cols(coord_space.names, annotation_type)))
+    select_cols = ', '.join(['annotation_id'] + geom_cols)
+    return con.execute(f"SELECT {select_cols} FROM {INPUT_VIEW}").df().set_index('annotation_id')
 
 
 def _polyline_aux_to_arrays(aux_df, main_index, coord_names):
