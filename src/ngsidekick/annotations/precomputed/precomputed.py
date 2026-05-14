@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-from itertools import chain
 from typing import Literal, Union
 
 import pandas as pd
@@ -342,11 +341,8 @@ def write_precomputed_annotations(
                 output_dir, write_sharded, max_shards_per_transaction, ts_context,
             )
         if write_by_spatial_chunk:
-            spatial_df = _build_spatial_df(
-                con, input_df, polyline_geom, coord_space, annotation_type, relationships,
-            )
             spatial_metadata = _write_annotations_by_spatial_chunk(
-                con, spatial_df,
+                con, input_df,
                 coord_space, annotation_type, property_specs, polyline_geom,
                 bounds, num_spatial_levels, target_chunk_limit,
                 shuffle_before_assigning_spatial_levels,
@@ -614,35 +610,6 @@ def _schema_sample(input_df, input_path):
     return pa.feather.read_table(input_path).slice(0, 0).to_pandas()
 
 
-def _build_spatial_df(con, input_df, polyline_geom, coord_space, annotation_type, relationships):
-    """
-    Produce the DataFrame that the by-spatial writer hands to its numba
-    grid-code kernels.
-
-    The spatial writer treats this df's row order as the input order
-    used for level assignment (with ``shuffle_before_assigning_spatial_levels=False``)
-    and the source of annotation_id ↔ row-position alignment.
-
-    - Pandas + non-polyline: a shallow view dropping relationship columns
-      (no data copy).
-    - Pandas + polyline: an index-only frame -- the numba kernel reads
-      vertices from ``polyline_geom``, not from df.
-    - Feather + non-polyline: SELECT annotation_id + geometry columns
-      from DuckDB.
-    - Feather + polyline: index-only frame whose index matches
-      ``polyline_geom.annotation_ids``.
-    """
-    if annotation_type == 'polyline':
-        if input_df is not None:
-            return pd.DataFrame(index=input_df.index)
-        return pd.DataFrame(index=pd.Index(polyline_geom.annotation_ids))
-
-    if input_df is not None:
-        return input_df.drop(columns=list(relationships))
-
-    geom_cols = list(chain(*_geometry_cols(coord_space.names, annotation_type)))
-    select_cols = ', '.join(['annotation_id'] + geom_cols)
-    return con.execute(f"SELECT {select_cols} FROM {INPUT_VIEW}").df().set_index('annotation_id')
 
 
 def _polyline_aux_to_arrays(aux_df, main_index, coord_names):

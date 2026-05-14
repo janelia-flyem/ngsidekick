@@ -1,5 +1,6 @@
 import logging
 import os
+from itertools import chain
 from typing import NamedTuple
 
 import numpy as np
@@ -40,9 +41,18 @@ logger = logging.getLogger(__name__)
 
 GridSpec = NamedTuple("GridSpec", [('chunk_shapes', np.ndarray), ('grid_shapes', np.ndarray)])
 
+# Default rows per batch for streaming the geometry through the
+# grid-code kernels. 10M rows × 24 bytes (line/aabb geometry) is ~240
+# MB per batch, which keeps Feather-input peak RAM well below the full
+# materialization while staying large enough that per-batch numba/JIT
+# overhead is negligible.
+_SPATIAL_KERNEL_BATCH_SIZE = 10_000_000
+
 
 def _compute_spatial_assignment(
-    df,
+    con,
+    input_df,
+    polyline_geom,
     coord_space,
     annotation_type,
     bounds,
@@ -50,32 +60,49 @@ def _compute_spatial_assignment(
     target_chunk_limit,
     shuffle_before_assigning_spatial_levels,
     *,
-    polyline_geom=None,
+    batch_size=_SPATIAL_KERNEL_BATCH_SIZE,
 ):
     """
-    Compute the spatial assignment for ``df``: for each (annotation,
-    chunk) pair, a triple ``(row, chunk_code, level)``.
+    Compute the spatial assignment: for each (annotation, chunk) pair,
+    a triple ``(row, chunk_code, level)``.
 
     The returned DataFrame is sorted by ``(level, chunk_code)`` so each
     chunk's contributions are contiguous; within a chunk the original
-    df row order is preserved (a stable sort), which matters because
+    input row order is preserved (a stable sort), which matters because
     neuroglancer subsamples a spatial chunk by taking a prefix of its
     annotation list.
 
-    Args:
-        df:
-            DataFrame containing the geometry columns appropriate for
-            ``annotation_type``. Other columns are ignored. Row order is
-            preserved.
+    Geometry source dispatch:
 
+    - polyline: ``polyline_geom`` is used directly (single full-data
+      kernel call; not batched -- see the polyline kernel for why).
+    - pandas input: ``input_df`` carries the geometry columns. We iterate
+      ``df.iloc`` slices to feed the kernel in batches; iloc is a
+      zero-copy view, so this gives a unified code path without
+      duplicating memory.
+    - Feather input (``input_df is None``): geometry batches stream out
+      of DuckDB via an Arrow record-batch reader, so the full geometry
+      never materializes in pandas memory.
+
+    Args:
+        con:
+            DuckDB connection. Used to count rows and (for Feather input)
+            stream geometry batches.
+        input_df:
+            pandas DataFrame with geometry columns, or ``None`` to stream
+            from DuckDB. Ignored for polyline annotations.
+        polyline_geom:
+            :class:`PolylineGeometry` for polyline annotations, else ``None``.
         coord_space, annotation_type, bounds, num_levels, target_chunk_limit:
             See :func:`write_precomputed_annotations`.
-
         shuffle_before_assigning_spatial_levels:
-            If True, level assignments are randomized across df rows
-            (per the neuroglancer spec recommendation). The shuffle is
-            tracked via a permutation array; ``df`` itself is not
-            modified.
+            If True, level assignments are randomized across the row
+            ordering (per the neuroglancer spec recommendation). The
+            shuffle is tracked via a permutation array; input data is
+            not modified.
+        batch_size:
+            Rows per kernel batch (non-polyline). Caps per-batch RAM
+            without affecting the result.
 
     Returns:
         ``(assignment_df, gridspec)`` -- ``assignment_df`` is a pandas
@@ -83,39 +110,39 @@ def _compute_spatial_assignment(
         sorted by ``(level, chunk_code)``; ``gridspec`` is the
         :class:`GridSpec` used to assign chunks.
     """
-    geometry_cols = _geometry_cols(coord_space.names, annotation_type)
+    if annotation_type == 'polyline':
+        n_total = len(polyline_geom.starts)
+    elif input_df is not None:
+        n_total = len(input_df)
+    else:
+        n_total = int(con.execute(f"SELECT COUNT(*) FROM {INPUT_VIEW}").fetchone()[0])
+
     gridspec = _define_spatial_grids(bounds, coord_space, num_levels)
-    level_counts = _compute_target_annotations_per_level(len(df), gridspec, target_chunk_limit)
+    level_counts = _compute_target_annotations_per_level(n_total, gridspec, target_chunk_limit)
 
     # Levels are assigned by *position* in a (possibly randomly permuted)
-    # ordering of df. Computing the permutation explicitly lets us derive
-    # the per-row level array without mutating df.
+    # ordering of the input rows. Computing the permutation explicitly
+    # lets us derive the per-row level array without mutating any input.
     if shuffle_before_assigning_spatial_levels:
         logger.info("Shuffling annotations before assigning spatial grid levels")
-        perm = np.random.permutation(len(df))
+        perm = np.random.permutation(n_total)
     else:
-        perm = np.arange(len(df))
+        perm = np.arange(n_total)
     levels_by_perm_position = np.repeat(range(num_levels), level_counts.astype(int)).astype(np.uint64)
-    per_row_levels = np.empty(len(df), dtype=np.uint64)
+    per_row_levels = np.empty(n_total, dtype=np.uint64)
     per_row_levels[perm] = levels_by_perm_position
     del perm, levels_by_perm_position
 
     logger.info("Assigning spatial grid chunks...")
-    match annotation_type:
-        case 'point':
-            rows, codes = _compute_grid_codes_for_points(df, geometry_cols, bounds, gridspec, per_row_levels)
-        case 'axis_aligned_bounding_box':
-            rows, codes = _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec, per_row_levels)
-        case 'ellipsoid':
-            rows, codes = _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_row_levels)
-        case 'line':
-            rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
-        case 'polyline':
-            rows, codes = _compute_grid_codes_for_polylines(
-                polyline_geom, bounds, gridspec, per_row_levels,
-            )
-        case _:
-            raise NotImplementedError(f"Spatial indexing for {annotation_type} annotations is not implemented")
+    if annotation_type == 'polyline':
+        rows, codes = _compute_grid_codes_for_polylines(
+            polyline_geom, bounds, gridspec, per_row_levels,
+        )
+    else:
+        rows, codes = _compute_grid_codes_batched(
+            annotation_type, input_df, con, coord_space, bounds, gridspec,
+            per_row_levels, n_total, batch_size,
+        )
     logger.info("Done assigning spatial grid chunks")
 
     # Stable-sort by (level, chunk_code) using ``np.lexsort`` and then
@@ -135,6 +162,87 @@ def _compute_spatial_assignment(
         'row_pos': rows,
     })
     return assignment_df, gridspec
+
+
+def _compute_grid_codes_batched(annotation_type, input_df, con, coord_space, bounds, gridspec,
+                                per_row_levels, n_total, batch_size):
+    """
+    Run the per-annotation grid-code kernel over the input geometry in
+    batches and concatenate the (rows, codes) outputs.
+
+    Each kernel call returns ``rows`` as positions local to the batch
+    (0..batch_len); we offset by ``batch_start`` to recover global row
+    indices into the full input. The output of the per-batch concat is
+    identical to a single full-data kernel call.
+    """
+    geometry_cols = _geometry_cols(coord_space.names, annotation_type)
+
+    all_rows = []
+    all_codes = []
+    for batch_start, batch_end, batch_df in _iter_geom_batches(
+        input_df, con, coord_space, annotation_type, n_total, batch_size,
+    ):
+        batch_levels = per_row_levels[batch_start:batch_end]
+        rows, codes = _dispatch_grid_code_kernel(
+            annotation_type, batch_df, geometry_cols, bounds, gridspec, batch_levels,
+        )
+        if batch_start:
+            rows = rows + np.uint32(batch_start)
+        all_rows.append(rows)
+        all_codes.append(codes)
+
+    return np.concatenate(all_rows), np.concatenate(all_codes)
+
+
+def _dispatch_grid_code_kernel(annotation_type, batch_df, geometry_cols, bounds, gridspec, batch_levels):
+    """Pick the right grid-code kernel for ``annotation_type``."""
+    match annotation_type:
+        case 'point':
+            return _compute_grid_codes_for_points(batch_df, geometry_cols, bounds, gridspec, batch_levels)
+        case 'axis_aligned_bounding_box':
+            return _compute_grid_codes_for_axis_aligned_bounding_boxes(batch_df, geometry_cols, bounds, gridspec, batch_levels)
+        case 'ellipsoid':
+            return _compute_grid_codes_for_ellipsoids(batch_df, geometry_cols, bounds, gridspec, batch_levels)
+        case 'line':
+            return _compute_grid_codes_for_lines(batch_df, geometry_cols, bounds, gridspec, batch_levels)
+    raise NotImplementedError(f"Spatial indexing for {annotation_type} annotations is not implemented")
+
+
+def _iter_geom_batches(input_df, con, coord_space, annotation_type, n_total, batch_size):
+    """
+    Yield ``(batch_start, batch_end, batch_df)`` tuples covering rows
+    ``[0, n_total)`` of the input.
+
+    - Pandas input: ``df.iloc`` slices (zero-copy views).
+    - Feather input (``input_df is None``): geometry-only Arrow batches
+      streamed from DuckDB via ``to_arrow_reader``, converted to pandas
+      per batch.
+
+    Both paths produce DataFrames whose columns are the annotation
+    type's geometry columns (no annotation_id, no properties); the
+    kernels never need more than that.
+    """
+    if input_df is not None:
+        for start in range(0, n_total, batch_size):
+            end = min(start + batch_size, n_total)
+            yield start, end, input_df.iloc[start:end]
+        return
+
+    geom_cols = list(chain(*_geometry_cols(coord_space.names, annotation_type)))
+    select_cols = ', '.join(geom_cols)
+    # ``to_arrow_reader`` returns a RecordBatchReader; each Arrow batch
+    # is then converted to pandas. The reader is held open until
+    # iteration completes -- no other DuckDB queries should run on this
+    # connection in the meantime.
+    reader = con.execute(
+        f"SELECT {select_cols} FROM {INPUT_VIEW}"
+    ).to_arrow_reader(batch_size=batch_size)
+    start = 0
+    for arrow_batch in reader:
+        df_batch = arrow_batch.to_pandas(zero_copy_only=False)
+        end = start + len(df_batch)
+        yield start, end, df_batch
+        start = end
 
 
 def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
@@ -563,6 +671,19 @@ def _compute_grid_codes_for_polylines(polyline_geom, bounds, gridspec, per_row_l
             the vertices of polyline ``i`` in traversal order.
         bounds, gridspec, per_row_levels:
             See callers in :func:`_compute_spatial_assignment`.
+
+    Note:
+        Unlike the other geometry types, this kernel is called once
+        over the full ``polyline_geom`` rather than batched. There's
+        nothing to gain from batching here: the polyline aux table
+        only ever ships as an in-memory pandas DataFrame (Feather aux
+        is not supported), so the vertex array is already fully
+        resident before this kernel runs. If aux ever moves to a
+        streamed source, this would be the place to add batching --
+        the kernel itself is row-iterative and would batch the same
+        way as ``_box_grid_codes`` and friends, with the caller
+        responsible for slicing ``starts``/``ends``/``annotation_ids``
+        and offsetting the returned ``row`` values.
     """
     logger.info(f"Computing grid codes for {len(polyline_geom.starts)} polylines")
     return _polyline_grid_codes(
@@ -641,7 +762,7 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
 SPATIAL_ASSIGNMENTS_TABLE = '_by_spatial_assignments'
 
 
-def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, property_specs, polyline_geom,
+def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_type, property_specs, polyline_geom,
                                         bounds, num_spatial_levels, target_chunk_limit,
                                         shuffle_before_assigning_spatial_levels,
                                         disable_subsampling, output_dir, write_sharded,
@@ -649,8 +770,7 @@ def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, p
     """
     Write the spatial index using DuckDB-backed streaming.
 
-    The numba geometry kernels still run once on the input df (they
-    need numpy array access to the geometry columns) to produce a
+    The numba geometry kernels run over the input to produce a
     ``(level, chunk_code, annotation_id)`` assignment, which is then
     materialized as a DuckDB table. For each spatial level we open a
     sharded kvstore and stream per-batch transactions: query the
@@ -660,11 +780,10 @@ def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, p
         con:
             DuckDB connection with the input registered as
             :data:`INPUT_VIEW`.
-        df:
-            The native-dtype DataFrame (also registered with DuckDB
-            above). Needed here because the numba grid-code kernels
-            operate on its geometry columns directly; not used by the
-            streaming write loop itself.
+        input_df:
+            pandas DataFrame, or ``None`` to read geometry from
+            ``INPUT_VIEW`` via DuckDB. Ignored for polyline annotations,
+            which read geometry from ``polyline_geom``.
         coord_space, annotation_type, property_specs, polyline_geom:
             See :func:`write_precomputed_annotations`.
         bounds, num_spatial_levels, target_chunk_limit,
@@ -682,9 +801,9 @@ def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, p
     """
     # 1. Run the numba kernels and stable-sort to produce the assignment.
     assignment_df, gridspec = _compute_spatial_assignment(
-        df, coord_space, annotation_type, bounds, num_spatial_levels,
-        target_chunk_limit, shuffle_before_assigning_spatial_levels,
-        polyline_geom=polyline_geom,
+        con, input_df, polyline_geom, coord_space, annotation_type, bounds,
+        num_spatial_levels, target_chunk_limit,
+        shuffle_before_assigning_spatial_levels,
     )
 
     # 2. Convert (positional row -> annotation_id) and register the
@@ -692,7 +811,18 @@ def _write_annotations_by_spatial_chunk(con, df, coord_space, annotation_type, p
     #    stable-sorted order within each (level, chunk_code) group, so
     #    queries that ``ORDER BY chunk_code, seq`` reproduce the
     #    subsampling-friendly per-chunk row order downstream code expects.
-    ann_ids = df.index.to_numpy(np.uint64, copy=False)
+    if annotation_type == 'polyline':
+        ann_ids = np.asarray(polyline_geom.annotation_ids, dtype=np.uint64)
+    elif input_df is not None:
+        ann_ids = input_df.index.to_numpy(np.uint64, copy=False)
+    else:
+        ann_ids = (
+            con.execute(f"SELECT annotation_id FROM {INPUT_VIEW}")
+            .to_arrow_table()
+            .column('annotation_id')
+            .to_numpy(zero_copy_only=False)
+            .astype(np.uint64, copy=False)
+        )
     sorted_rows = assignment_df['row_pos'].to_numpy()
     n_rows = len(assignment_df)
 

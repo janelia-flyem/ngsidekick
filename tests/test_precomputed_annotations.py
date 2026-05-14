@@ -135,6 +135,52 @@ def test_point_annotations_from_feather(point_testdata, test_output_dir, tmp_pat
     assert (out_dir / 'by_id').exists()
 
 
+def test_spatial_kernel_batched_matches_single_batch(point_testdata, test_output_dir, tmp_path, monkeypatch):
+    """The batched spatial kernel must produce identical (level,
+    chunk_code, row_pos) assignments to a single full-data kernel call,
+    so downstream output is bit-for-bit equivalent."""
+    import pyarrow.feather as feather
+    from ngsidekick.annotations.precomputed import _spatial
+
+    feather_path = tmp_path / 'points.feather'
+    df = point_testdata.copy()
+    df.insert(0, 'annotation_id', df.index.to_numpy(np.uint64))
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
+    seed = 12345
+
+    def _run(batch_size, subdir):
+        monkeypatch.setattr(_spatial, '_SPATIAL_KERNEL_BATCH_SIZE', batch_size)
+        np.random.seed(seed)
+        out_dir = test_output_dir / subdir
+        write_precomputed_annotations(
+            str(feather_path),
+            cs,
+            'point',
+            output_dir=out_dir,
+            write_by_id=False,
+            write_by_relationship=False,
+            write_by_spatial_chunk=True,
+            num_spatial_levels=4,
+            target_chunk_limit=10_000,
+        )
+        return out_dir
+
+    full_dir = _run(batch_size=10_000_000, subdir='test-spatial-single-batch')
+    batched_dir = _run(batch_size=7_000, subdir='test-spatial-multi-batch')
+
+    # The spatial subdirectories should be byte-equivalent across runs.
+    import os
+    level_dirs = sorted(p.name for p in full_dir.iterdir() if p.name.startswith('by_spatial_level_'))
+    assert level_dirs, "Expected at least one spatial level directory"
+    for level_dir in level_dirs:
+        for fname in os.listdir(full_dir / level_dir):
+            full_bytes = (full_dir / level_dir / fname).read_bytes()
+            batched_bytes = (batched_dir / level_dir / fname).read_bytes()
+            assert full_bytes == batched_bytes, f"{level_dir}/{fname} differs"
+
+
 def test_line_annotations(pointpair_testdata, test_output_dir):
     cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
     write_precomputed_annotations(
