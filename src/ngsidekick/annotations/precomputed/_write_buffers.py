@@ -43,6 +43,10 @@ def _build_ts_context(user_spec, max_threads):
     spec = dict(user_spec or {})
     spec.setdefault("data_copy_concurrency", {"limit": max_threads})
     spec.setdefault("file_io_concurrency", {"limit": max_threads})
+
+    # Since we're just writing and never reading back,
+    # we don't really need any cache at all.
+    spec.setdefault("cache_pool", {"total_bytes_limit": 1_000_000_000})
     return ts.Context(spec)
 
 
