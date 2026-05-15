@@ -20,6 +20,7 @@ from ._encode import (
     _encode_id_bytes,
 )
 from ._memory import log_memory
+from ._shard_audit import ShardWriteAuditor
 from ._shard_hash import shards_for_keys
 from ._write_buffers import (
     _open_sharded_kvstore,
@@ -997,6 +998,7 @@ def _write_one_spatial_level(con, level, gridspec,
 
         needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
         select_cols = ', '.join(f'ann_table.{c}' for c in (['annotation_id'] + needed_cols))
+        auditor = ShardWriteAuditor(os.path.join(output_dir, subdir), subdir)
 
         n_level_rows = con.execute(
             f"SELECT COUNT(*) FROM {working_data_table}",
@@ -1039,6 +1041,7 @@ def _write_one_spatial_level(con, level, gridspec,
                     polyline_geom=batch_polyline_geom,
                 )
                 _write_one_transaction(kvstore, batch_chunks, buffers)
+                auditor.record_batch(batch_shards)
                 pbar.update(len(df_batch))
                 del df_batch, buffers, batch_chunks, batch_polyline_geom
                 log_memory(f'level {level} post-batch {batch_idx + 1}/{n_transactions}')

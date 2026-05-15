@@ -1,4 +1,5 @@
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,7 @@ from ._encode import (
     _encode_id_bytes,
 )
 from ._memory import log_memory
+from ._shard_audit import ShardWriteAuditor
 from ._shard_hash import shards_for_keys
 from ._util import _ann_required_cols, _property_recsize, _slice_polyline_geom
 from ._write_buffers import (
@@ -186,6 +188,10 @@ def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type
     select_cols = ', '.join(f'v.{c}' for c in (['annotation_id'] + needed_cols))
 
     log_memory(f'by_rel_{relationship} pre-write-loop')
+    auditor = ShardWriteAuditor(
+        os.path.join(output_dir, f"by_rel_{relationship}"),
+        f'by_rel_{relationship}',
+    )
     with tqdm(total=int(n_segments)) as pbar:
         for batch_idx, chunk_start in enumerate(range(0, len(occupied_shards), batch_size)):
             chunk_shards = occupied_shards[chunk_start:chunk_start + batch_size]
@@ -229,6 +235,7 @@ def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type
                 polyline_geom=batch_polyline_geom,
             )
             _write_one_transaction(kvstore, chunk_segs_with_data, buffers)
+            auditor.record_batch(chunk_shards)
             pbar.update(len(segs_in_chunk))
             del df_batch, buffers, chunk_segs_with_data, segs_in_chunk, batch_polyline_geom
             log_memory(f'by_rel_{relationship} post-batch {batch_idx + 1}/{n_transactions}')

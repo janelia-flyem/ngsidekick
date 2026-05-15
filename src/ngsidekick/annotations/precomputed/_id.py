@@ -10,6 +10,7 @@ from . import _write_buffers
 from ._db import INPUT_VIEW
 from ._encode import _encode_annotation_records, _encode_relationship_records
 from ._memory import log_memory
+from ._shard_audit import ShardWriteAuditor
 from ._shard_hash import compute_shard_assignments_in_db
 from ._util import _property_recsize, _slice_polyline_geom
 from ._write_buffers import (
@@ -122,6 +123,7 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
                 f"{len(occupied_shards)} occupied shards "
                 f"(of {1 << shard_spec.shard_bits} possible))")
     log_memory('by_id pre-write-loop')
+    auditor = ShardWriteAuditor(os.path.join(output_dir, 'by_id'), 'by_id')
     with tqdm(total=int(n)) as pbar:
         for batch_idx, chunk_start in enumerate(range(0, len(occupied_shards), batch_size)):
             chunk_shards = occupied_shards[chunk_start:chunk_start + batch_size]
@@ -141,6 +143,7 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
 
             batch_keys = df_batch.index.to_numpy(np.uint64, copy=False)
             _write_one_transaction(kvstore, batch_keys, buffers)
+            auditor.record_batch(chunk_shards)
             pbar.update(len(df_batch))
 
             # Release this batch before the next one runs.
