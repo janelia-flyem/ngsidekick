@@ -19,6 +19,7 @@ from ._encode import (
     _encode_annotation_records,
     _encode_id_bytes,
 )
+from ._memory import log_memory
 from ._shard_hash import shards_for_keys
 from ._write_buffers import (
     _open_sharded_kvstore,
@@ -965,6 +966,7 @@ def _write_one_spatial_level(con, level, gridspec,
         #    subsampling prefix order in neuroglancer when the user
         #    chose not to shuffle.
         con.execute(f"DROP TABLE IF EXISTS {working_data_table}")
+        log_memory(f'level {level} pre-materialize')
         con.execute(f"""
             CREATE TABLE {working_data_table} AS
             SELECT
@@ -978,6 +980,7 @@ def _write_one_spatial_level(con, level, gridspec,
             WHERE ann_to_chunk.level = ?
             ORDER BY chunk_to_shard.shard_id, ann_to_chunk.chunk_code, ann_to_chunk.seq
         """, [level])
+        log_memory(f'level {level} post-materialize')
 
         # 5. Iterate occupied shards in batches.
         occupied_shards = con.execute(f"""
@@ -999,7 +1002,7 @@ def _write_one_spatial_level(con, level, gridspec,
             f"SELECT COUNT(*) FROM {working_data_table}",
         ).fetchone()[0]
         with tqdm(total=int(n_level_rows)) as pbar:
-            for chunk_start in range(0, len(occupied_shards), batch_size):
+            for batch_idx, chunk_start in enumerate(range(0, len(occupied_shards), batch_size)):
                 batch_shards = occupied_shards[chunk_start:chunk_start + batch_size]
                 con.register(batch_shards_view, pa.table({'shard_id': batch_shards}))
                 try:
@@ -1023,6 +1026,7 @@ def _write_one_spatial_level(con, level, gridspec,
                     con.unregister(batch_shards_view)
 
                 if len(df_batch) == 0:
+                    log_memory(f'level {level} post-batch {batch_idx + 1}/{n_transactions} (empty)')
                     continue
 
                 batch_polyline_geom = None
@@ -1037,6 +1041,7 @@ def _write_one_spatial_level(con, level, gridspec,
                 _write_one_transaction(kvstore, batch_chunks, buffers)
                 pbar.update(len(df_batch))
                 del df_batch, buffers, batch_chunks, batch_polyline_geom
+                log_memory(f'level {level} post-batch {batch_idx + 1}/{n_transactions}')
 
         # 6. Build level metadata.
         level_metadata = _sharded_metadata(subdir, shard_spec)
@@ -1047,6 +1052,7 @@ def _write_one_spatial_level(con, level, gridspec,
     finally:
         con.execute(f"DROP TABLE IF EXISTS {working_data_table}")
         con.execute(f"DROP TABLE IF EXISTS {shard_assignments_table}")
+        log_memory(f'level {level} done')
 
 
 def _write_one_spatial_level_unsharded(con, level, gridspec,

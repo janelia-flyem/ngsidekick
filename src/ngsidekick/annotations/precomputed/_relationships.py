@@ -13,6 +13,7 @@ from ._encode import (
     _encode_annotation_records,
     _encode_id_bytes,
 )
+from ._memory import log_memory
 from ._shard_hash import shards_for_keys
 from ._util import _ann_required_cols, _property_recsize, _slice_polyline_geom
 from ._write_buffers import (
@@ -184,8 +185,9 @@ def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type
     needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
     select_cols = ', '.join(f'v.{c}' for c in (['annotation_id'] + needed_cols))
 
+    log_memory(f'by_rel_{relationship} pre-write-loop')
     with tqdm(total=int(n_segments)) as pbar:
-        for chunk_start in range(0, len(occupied_shards), batch_size):
+        for batch_idx, chunk_start in enumerate(range(0, len(occupied_shards), batch_size)):
             chunk_shards = occupied_shards[chunk_start:chunk_start + batch_size]
 
             # The set of segment ids in this batch; we'll need it both for
@@ -229,8 +231,10 @@ def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type
             _write_one_transaction(kvstore, chunk_segs_with_data, buffers)
             pbar.update(len(segs_in_chunk))
             del df_batch, buffers, chunk_segs_with_data, segs_in_chunk, batch_polyline_geom
+            log_memory(f'by_rel_{relationship} post-batch {batch_idx + 1}/{n_transactions}')
 
     con.execute(f"DROP TABLE {shard_assignments_table}")
+    log_memory(f'by_rel_{relationship} done')
     metadata = _sharded_metadata(f"by_rel_{relationship}", shard_spec)
     metadata['id'] = relationship
     return metadata

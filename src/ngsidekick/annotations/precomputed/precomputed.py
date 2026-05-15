@@ -13,6 +13,7 @@ from neuroglancer.viewer_state import AnnotationPropertySpec
 
 from ..util import annotation_property_specs
 from ._db import INPUT_VIEW, open_connection, register_input, restrict_input_to_ids
+from ._memory import log_memory
 from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships
@@ -366,6 +367,7 @@ def write_precomputed_annotations(
             restrict_input_to_ids(con, polyline_geom.annotation_ids)
 
         bounds = _get_bounds(con, coord_space, annotation_type, polyline_geom=polyline_geom)
+        log_memory('after input registration + bounds')
 
         if write_by_id:
             by_id_metadata = _write_annotations_by_id(

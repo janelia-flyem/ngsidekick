@@ -9,6 +9,7 @@ from tqdm.auto import tqdm
 from . import _write_buffers
 from ._db import INPUT_VIEW
 from ._encode import _encode_annotation_records, _encode_relationship_records
+from ._memory import log_memory
 from ._shard_hash import compute_shard_assignments_in_db
 from ._util import _property_recsize, _slice_polyline_geom
 from ._write_buffers import (
@@ -120,8 +121,9 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
                 f"({n_transactions} transactions over "
                 f"{len(occupied_shards)} occupied shards "
                 f"(of {1 << shard_spec.shard_bits} possible))")
+    log_memory('by_id pre-write-loop')
     with tqdm(total=int(n)) as pbar:
-        for chunk_start in range(0, len(occupied_shards), batch_size):
+        for batch_idx, chunk_start in enumerate(range(0, len(occupied_shards), batch_size)):
             chunk_shards = occupied_shards[chunk_start:chunk_start + batch_size]
             df_batch = _query_rows_for_shards(con, chunk_shards)
 
@@ -143,9 +145,11 @@ def _write_annotations_by_id(con, coord_space, annotation_type, property_specs, 
 
             # Release this batch before the next one runs.
             del df_batch, ann_pb, rel_pb, buffers, batch_keys, batch_polyline_geom
+            log_memory(f'by_id post-batch {batch_idx + 1}/{n_transactions}')
 
     # Drop the temporary assignments table now that we're done with it.
     con.execute(f"DROP TABLE {SHARD_ASSIGNMENTS_TABLE}")
+    log_memory('by_id done')
     return _sharded_metadata("by_id", shard_spec)
 
 
