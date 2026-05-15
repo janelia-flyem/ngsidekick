@@ -934,34 +934,36 @@ def _write_one_spatial_level(con, level, gridspec,
         _prepare_output_subdir(output_dir, subdir)
         kvstore = _open_sharded_kvstore(output_dir, subdir, shard_spec, ts_context)
 
-        # 4. Materialize a per-level working table that already carries
-        #    the full per-row payload (annotation_id + geometry +
-        #    properties), tagged with shard_id and chunk_code, and
-        #    sorted by shard_id. Each per-batch read below then becomes
-        #    a simple WHERE filter against this table.
+        # 4. Materialize a *narrow* per-level working table containing
+        #    only ``(shard_id, chunk_code, seq, annotation_id)`` -- no
+        #    geometry or property columns. Sorted by shard_id so
+        #    per-row-group min/max statistics are tight on shard_id;
+        #    a WHERE-IN(shard_id) filter then only reads the row groups
+        #    that actually contain the batch's shards.
         #
-        #    The alternative -- joining SPATIAL_ASSIGNMENTS_TABLE,
-        #    shard_assignments_table, and INPUT_VIEW once per batch --
-        #    forces DuckDB to scan all ~N rows of the inputs on every
-        #    batch via hash joins (no zone-map pruning across joins).
-        #    For an N-batch level that's an N× scan cost.
+        #    The per-batch query (below) JOINs this narrow table back
+        #    against INPUT_VIEW to pick up the geometry and property
+        #    columns from the Feather mmap. Compared to embedding all
+        #    columns in the working table, this trades:
+        #      - lower memory (the working table is ~40% smaller for
+        #        line geometry, much smaller for property-heavy data),
+        #      - against one extra JOIN per batch, with the build side
+        #        being the small filtered ~22M-row batch and the probe
+        #        side being INPUT_VIEW (Feather mmap; pages already
+        #        warm in the page cache from earlier phases).
         #
-        #    Materialized once and sorted by shard_id, the working table
-        #    gets tight per-row-group min/max statistics on shard_id, so
-        #    a WHERE-IN filter reads only the row groups that actually
-        #    contain the batch's shards. DuckDB will spill the working
-        #    table to its temp directory if the user has set
-        #    ``duckdb_memory_limit`` tight; otherwise it stays resident.
+        #    The alternative -- per-batch 3-way JOIN against the full
+        #    SPATIAL_ASSIGNMENTS_TABLE -- would re-scan SPATIAL_ASSIGNMENTS
+        #    (311M rows) every batch. Materializing the narrow table
+        #    once collapses that to one pass over SPATIAL_ASSIGNMENTS at
+        #    materialization time.
         #
         #    Note that some annotations appear in the assignments table
         #    multiple times -- once per chunk they intersect -- so the
-        #    JOIN may duplicate rows from INPUT_VIEW. The annotation
-        #    order (preserved by ``seq``) determines per-chunk
+        #    per-batch JOIN may duplicate rows from INPUT_VIEW. The
+        #    annotation order (preserved by ``seq``) determines per-chunk
         #    subsampling prefix order in neuroglancer when the user
         #    chose not to shuffle.
-        needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
-        data_cols = ['annotation_id'] + needed_cols
-        materialize_cols = ', '.join(f'ann_table.{c}' for c in data_cols)
         con.execute(f"DROP TABLE IF EXISTS {working_data_table}")
         con.execute(f"""
             CREATE TABLE {working_data_table} AS
@@ -969,12 +971,10 @@ def _write_one_spatial_level(con, level, gridspec,
                 chunk_to_shard.shard_id,
                 ann_to_chunk.chunk_code,
                 ann_to_chunk.seq,
-                {materialize_cols}
+                ann_to_chunk.annotation_id
             FROM {SPATIAL_ASSIGNMENTS_TABLE} ann_to_chunk
             JOIN {shard_assignments_table} chunk_to_shard
                 ON chunk_to_shard.chunk_code = ann_to_chunk.chunk_code
-            JOIN {INPUT_VIEW} ann_table
-                ON ann_table.annotation_id = ann_to_chunk.annotation_id
             WHERE ann_to_chunk.level = ?
             ORDER BY chunk_to_shard.shard_id, ann_to_chunk.chunk_code, ann_to_chunk.seq
         """, [level])
@@ -992,7 +992,8 @@ def _write_one_spatial_level(con, level, gridspec,
                     f"{len(occupied_shards)} occupied shards "
                     f"(of {1 << shard_spec.shard_bits} possible))")
 
-        select_cols = ', '.join(data_cols)
+        needed_cols = _ann_required_cols(coord_space, annotation_type, property_specs)
+        select_cols = ', '.join(f'ann_table.{c}' for c in (['annotation_id'] + needed_cols))
 
         n_level_rows = con.execute(
             f"SELECT COUNT(*) FROM {working_data_table}",
@@ -1002,13 +1003,21 @@ def _write_one_spatial_level(con, level, gridspec,
                 batch_shards = occupied_shards[chunk_start:chunk_start + batch_size]
                 con.register(batch_shards_view, pa.table({'shard_id': batch_shards}))
                 try:
+                    # Filter the narrow working table to this batch's
+                    # shards (zone-map-pruned WHERE on shard_id), then
+                    # JOIN to INPUT_VIEW to pick up geometry/property
+                    # columns. The build side of the hash join is the
+                    # small filtered working-table result; the probe
+                    # side is INPUT_VIEW.
                     df_batch = con.execute(f"""
                         SELECT
                             {select_cols},
-                            chunk_code AS _chunk_code
-                        FROM {working_data_table}
-                        WHERE shard_id IN (SELECT shard_id FROM {batch_shards_view})
-                        ORDER BY chunk_code, seq
+                            work.chunk_code AS _chunk_code
+                        FROM {working_data_table} work
+                        JOIN {INPUT_VIEW} ann_table
+                            ON ann_table.annotation_id = work.annotation_id
+                        WHERE work.shard_id IN (SELECT shard_id FROM {batch_shards_view})
+                        ORDER BY work.chunk_code, work.seq
                     """).df()
                 finally:
                     con.unregister(batch_shards_view)
