@@ -836,7 +836,11 @@ def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_t
         'chunk_code': assignment_df['chunk_code'].to_numpy(np.uint64, copy=False),
         'annotation_id': ann_ids[sorted_rows],
     })
-    del assignment_df, sorted_rows
+    # ``ann_ids[sorted_rows]`` is a new array (fancy indexing copies), so
+    # ``ann_ids`` itself isn't referenced again. Drop it now -- otherwise
+    # it sits in memory throughout the entire per-level write loop (~2.4 GB
+    # for a 310M-row input).
+    del assignment_df, sorted_rows, ann_ids
 
     con.execute(f"DROP TABLE IF EXISTS {SPATIAL_ASSIGNMENTS_TABLE}")
     con.register('_by_spatial_assignments_arrow', arrow_assignment)
@@ -863,6 +867,7 @@ def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_t
                 coord_space, annotation_type, property_specs, polyline_geom,
                 output_dir, write_sharded, max_shards_per_transaction, ts_context,
                 disable_subsampling,
+                is_last_level=(level_idx == num_spatial_levels - 1),
             )
             metadata.append(level_metadata)
     finally:
@@ -874,9 +879,16 @@ def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_t
 def _write_one_spatial_level(con, level, gridspec,
                               coord_space, annotation_type, property_specs, polyline_geom,
                               output_dir, write_sharded, max_shards_per_transaction, ts_context,
-                              disable_subsampling):
+                              disable_subsampling, is_last_level=False):
     """
     Write a single spatial level's subdirectory (``by_spatial_level_<level>``).
+
+    If ``is_last_level`` is True, the shared :data:`SPATIAL_ASSIGNMENTS_TABLE`
+    is dropped as soon as this level has finished reading from it (which
+    is right after the working table is materialized in the sharded
+    path). Saves the ~24 B/row of that table during this level's write
+    loop -- significant when this is the largest level on a constrained
+    RAM budget.
     """
     subdir = f"by_spatial_level_{level}"
     logger.info(f"Preparing 'by_spatial_level_{level}' index")
@@ -886,6 +898,7 @@ def _write_one_spatial_level(con, level, gridspec,
             con, level, gridspec,
             coord_space, annotation_type, property_specs, polyline_geom,
             output_dir, subdir, ts_context, disable_subsampling,
+            is_last_level=is_last_level,
         )
 
     polyline_id_lookup = (
@@ -983,6 +996,15 @@ def _write_one_spatial_level(con, level, gridspec,
         """, [level])
         log_memory(f'level {level} post-materialize')
 
+        # The level's working table now carries everything we need to
+        # write this level. If we're processing the last level, the
+        # shared SPATIAL_ASSIGNMENTS_TABLE is no longer needed -- drop
+        # it now so its ~24 B/row don't sit alongside the working table
+        # during this level's write loop.
+        if is_last_level:
+            con.execute(f"DROP TABLE IF EXISTS {SPATIAL_ASSIGNMENTS_TABLE}")
+            log_memory(f'level {level} post-drop-assignments')
+
         # 5. Iterate occupied shards in batches.
         occupied_shards = con.execute(f"""
             SELECT DISTINCT shard_id FROM {shard_assignments_table}
@@ -1046,11 +1068,17 @@ def _write_one_spatial_level(con, level, gridspec,
                 del df_batch, buffers, batch_chunks, batch_polyline_geom
                 log_memory(f'level {level} post-batch {batch_idx + 1}/{n_transactions}')
 
-        # 6. Build level metadata.
+        # 6. Build level metadata. ``working_data_table`` already
+        #    contains only this level's rows, so it's a valid source
+        #    for the max-per-chunk computation without re-filtering --
+        #    and SPATIAL_ASSIGNMENTS_TABLE may have been dropped above
+        #    if this is the last level.
         level_metadata = _sharded_metadata(subdir, shard_spec)
         level_metadata['chunk_size'] = gridspec.chunk_shapes[level].tolist()
         level_metadata['grid_shape'] = gridspec.grid_shapes[level].tolist()
-        level_metadata['limit'] = _compute_subsampling_limit(con, level, disable_subsampling)
+        level_metadata['limit'] = _compute_subsampling_limit(
+            con, working_data_table, disable_subsampling,
+        )
         return level_metadata
     finally:
         con.execute(f"DROP TABLE IF EXISTS {working_data_table}")
@@ -1060,7 +1088,8 @@ def _write_one_spatial_level(con, level, gridspec,
 
 def _write_one_spatial_level_unsharded(con, level, gridspec,
                                        coord_space, annotation_type, property_specs, polyline_geom,
-                                       output_dir, subdir, ts_context, disable_subsampling):
+                                       output_dir, subdir, ts_context, disable_subsampling,
+                                       is_last_level=False):
     """
     Unsharded variant: one file per chunk, named by underscore-joined grid
     coordinates (e.g. ``'0_3_2'``). The file contents follow the same
@@ -1079,6 +1108,17 @@ def _write_one_spatial_level_unsharded(con, level, gridspec,
         ORDER BY a.chunk_code, a.seq
     """, [level]).df()
 
+    # All data for this level is now in ``df_full``; on the last level
+    # the shared SPATIAL_ASSIGNMENTS_TABLE is no longer needed. Compute
+    # the subsampling limit from the in-memory frame so we don't have
+    # to keep the table alive past this point.
+    if disable_subsampling:
+        limit = 1
+    else:
+        limit = int(df_full['_chunk_code'].value_counts().max() or 1)
+    if is_last_level:
+        con.execute(f"DROP TABLE IF EXISTS {SPATIAL_ASSIGNMENTS_TABLE}")
+
     output_dir = os.path.abspath(output_dir)
     kvstore = ts.KvStore.open(f"file://{output_dir}/{subdir}/", context=ts_context).result()
 
@@ -1086,7 +1126,7 @@ def _write_one_spatial_level_unsharded(con, level, gridspec,
         "key": subdir,
         "chunk_size": gridspec.chunk_shapes[level].tolist(),
         "grid_shape": gridspec.grid_shapes[level].tolist(),
-        "limit": _compute_subsampling_limit(con, level, disable_subsampling),
+        "limit": limit,
     }
     if len(df_full) == 0:
         return level_metadata
@@ -1117,11 +1157,13 @@ def _write_one_spatial_level_unsharded(con, level, gridspec,
     return level_metadata
 
 
-def _compute_subsampling_limit(con, level, disable_subsampling):
+def _compute_subsampling_limit(con, source_table, disable_subsampling):
     """
     Return the ``limit`` value to record in this level's spatial-index
     metadata. Normally this is the max per-chunk annotation count at
-    this level.
+    this level, computed by ``MAX(COUNT(*) GROUP BY chunk_code)`` over
+    ``source_table`` (which must already contain only this level's
+    rows).
 
     The spec defines ``limit`` as the per-cell annotation target used
     during index *construction* (each annotation emitted at this level
@@ -1147,12 +1189,9 @@ def _compute_subsampling_limit(con, level, disable_subsampling):
         return 1
     max_count = con.execute(f"""
         SELECT MAX(c) FROM (
-            SELECT COUNT(*) AS c
-            FROM {SPATIAL_ASSIGNMENTS_TABLE}
-            WHERE level = ?
-            GROUP BY chunk_code
+            SELECT COUNT(*) AS c FROM {source_table} GROUP BY chunk_code
         )
-    """, [level]).fetchone()[0]
+    """).fetchone()[0]
     return int(max_count or 1)
 
 
