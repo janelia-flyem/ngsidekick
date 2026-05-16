@@ -1,11 +1,20 @@
 """
-Optional Linux memory instrumentation for the precomputed-annotations writer.
+Optional cross-platform memory instrumentation for the
+precomputed-annotations writer.
 
 When the environment variable ``NGSK_DEBUG_MEMORY=1`` is set,
 :func:`log_memory` emits a single info-level log line per call with the
-current process's memory breakdown read from ``/proc/self/status`` and
-``/proc/self/smaps_rollup``. Useful for narrowing down what kind of
-memory is growing during a long-running write:
+current process's memory metrics:
+
+- ``MaxRSS``   -- peak RSS since process start. Cross-platform (Linux
+  and macOS), via POSIX ``resource.getrusage``. Monotonic, so a spike
+  between two log markers is captured even if its instant value isn't.
+  The delta of ``MaxRSS`` across consecutive markers is "how much new
+  peak this phase claimed".
+
+On Linux (where ``/proc/self/{status,smaps_rollup}`` exist) we also
+include a per-region breakdown, useful for narrowing down what *kind*
+of memory is growing during a long-running write:
 
 - ``RssAnon``  -- anonymous mappings (Python/DuckDB/tensorstore heap).
 - ``RssFile``  -- file-backed mmap pages resident in the process
@@ -13,16 +22,17 @@ memory is growing during a long-running write:
 - ``RssShmem`` -- shared memory regions.
 - ``Pss``      -- proportional set size (shared pages weighted by share
   count). Closer to "real" memory cost.
-- ``VmRSS``    -- total resident set, the headline number.
-- ``VmPeak``   -- highest VmSize observed since process start.
+- ``VmRSS``    -- total current resident set.
+- ``VmPeak``   -- peak VmSize since process start (peak virtual address
+  space, not peak RSS; ``MaxRSS`` is the RSS-specific high-water mark).
 
 When the env var is unset (the default), :func:`log_memory` is a no-op
 and adds no measurable overhead.
-
-Linux-only. On other platforms calls are silently skipped.
 """
 import logging
 import os
+import resource
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +68,29 @@ def _read_kv(path, wanted):
     return out
 
 
+def _peak_rss_bytes():
+    """
+    Return peak RSS since process start, in bytes.
+
+    Uses POSIX ``resource.getrusage(RUSAGE_SELF).ru_maxrss``. The units
+    of that field differ by platform: Linux reports kilobytes, macOS
+    reports bytes. We normalize to bytes here.
+    """
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    if sys.platform == 'darwin':
+        return rss
+    return rss * 1024
+
+
 def _gather():
-    """Return a dict of memory metrics, or empty dict on non-Linux/unsupported."""
-    out = {}
+    """
+    Return a dict of memory metrics in bytes.
+
+    ``MaxRSS`` (peak RSS since process start) is always included since
+    it's portable. On Linux we additionally include the per-region
+    breakdown from ``/proc``.
+    """
+    out = {'MaxRSS': _peak_rss_bytes()}
     out.update(_read_kv('/proc/self/status', _STATUS_KEYS))
     out.update(_read_kv('/proc/self/smaps_rollup', _SMAPS_KEYS))
     return out
@@ -73,7 +103,10 @@ def log_memory(label: str) -> None:
     environment variable ``NGSK_DEBUG_MEMORY=1`` is set.
 
     Lines are grep-friendly: ``grep '\\[MEMORY\\]' job.log`` extracts the
-    full memory trace.
+    full memory trace. The ``MaxRSS`` field is monotonic, so for each
+    phase you can read off the peak-so-far at its boundary; the delta
+    between consecutive ``MaxRSS`` values is the high-water-mark
+    contribution from the phase in between.
     """
     if not _enabled():
         return
