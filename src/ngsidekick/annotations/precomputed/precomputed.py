@@ -36,7 +36,7 @@ def write_precomputed_annotations(
     write_by_id: bool = True,
     write_by_relationship: bool = True,
     write_by_spatial_chunk: bool = True,
-    num_spatial_levels: int = 7,
+    num_spatial_levels: int = 64,
     target_chunk_limit: int = 10_000,
     shuffle_spatial_ordering: bool = True,
     max_threads: int | None = None,
@@ -200,6 +200,8 @@ def write_precomputed_annotations(
             The maximum number of spatial index levels to write.
             If not all levels are needed (because all annotations fit within the first N levels),
             then the actual number of levels written will be less than this value.
+            The default allows up to 64 levels (at least 9e18 spatial subdivisions at the finest level),
+            which far exceeds the max that any real dataset would need.
 
         target_chunk_limit:
             int
@@ -304,6 +306,10 @@ def write_precomputed_annotations(
         raise ValueError(
             "target_chunk_limit=0 disables subsampling and is only valid "
             "with num_spatial_levels=1."
+        )
+    if num_spatial_levels > 64:
+        raise ValueError(
+            "num_spatial_levels must be less than or equal to 64."
         )
 
     # Resolve concurrency parameters once so all index writes share the
