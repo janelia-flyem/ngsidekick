@@ -66,25 +66,29 @@ def _compute_spatial_assignment(
 ):
     """
     Compute the spatial assignment: for each (annotation, chunk) pair,
-    a triple ``(row, chunk_code, level)``.
+    a triple ``(row, chunk_code, level)``. The returned DataFrame is
+    sorted by ``(level, chunk_code)`` so each chunk's contributions
+    are contiguous (with within-chunk order handled by
+    :func:`_sort_spatial_assignment`).
 
-    The returned DataFrame is sorted by ``(level, chunk_code)`` so each
-    chunk's contributions are contiguous; within a chunk the original
-    input row order is preserved (a stable sort), which matters because
-    neuroglancer subsamples a spatial chunk by taking a prefix of its
-    annotation list.
+    Pipeline:
+
+    1. ``n_total`` is determined from polyline_geom / input_df / DuckDB.
+    2. ``gridspec`` is built from ``bounds`` and ``coord_space``.
+    3. Per-row level assignment via :func:`_assign_spatial_levels`.
+    4. Grid-code kernels run over the geometry (batched for non-polyline,
+       single-pass for polyline; see :func:`_compute_grid_codes_batched`
+       and :func:`_compute_grid_codes_for_polylines`).
+    5. ``(rows, codes, levels)`` sorted by :func:`_sort_spatial_assignment`.
 
     Geometry source dispatch:
 
-    - polyline: ``polyline_geom`` is used directly (single full-data
-      kernel call; not batched -- see the polyline kernel for why).
-    - pandas input: ``input_df`` carries the geometry columns. We iterate
-      ``df.iloc`` slices to feed the kernel in batches; iloc is a
-      zero-copy view, so this gives a unified code path without
-      duplicating memory.
-    - Feather input (``input_df is None``): geometry batches stream out
-      of DuckDB via an Arrow record-batch reader, so the full geometry
-      never materializes in pandas memory.
+    - polyline: ``polyline_geom`` is used directly.
+    - pandas input: ``input_df`` carries the geometry columns, sliced
+      via zero-copy ``df.iloc``.
+    - Feather input (``input_df is None``): geometry streams out of
+      DuckDB via Arrow record-batches, so the full geometry never
+      materializes in pandas memory.
 
     Args:
         con:
@@ -98,10 +102,7 @@ def _compute_spatial_assignment(
         coord_space, annotation_type, bounds, num_levels, target_chunk_limit:
             See :func:`write_precomputed_annotations`.
         shuffle_before_assigning_spatial_levels:
-            If True, level assignments are randomized across the row
-            ordering (per the neuroglancer spec recommendation). The
-            shuffle is tracked via a permutation array; input data is
-            not modified.
+            See :func:`_assign_spatial_levels`.
         batch_size:
             Rows per kernel batch (non-polyline). Caps per-batch RAM
             without affecting the result.
@@ -120,20 +121,10 @@ def _compute_spatial_assignment(
         n_total = int(con.execute(f"SELECT COUNT(*) FROM {INPUT_VIEW}").fetchone()[0])
 
     gridspec = _define_spatial_grids(bounds, coord_space, num_levels)
-    level_counts = _compute_target_annotations_per_level(n_total, gridspec, target_chunk_limit)
-
-    # Levels are assigned by *position* in a (possibly randomly permuted)
-    # ordering of the input rows. Computing the permutation explicitly
-    # lets us derive the per-row level array without mutating any input.
-    if shuffle_before_assigning_spatial_levels:
-        logger.info("Shuffling annotations before assigning spatial grid levels")
-        perm = np.random.permutation(n_total)
-    else:
-        perm = np.arange(n_total)
-    levels_by_perm_position = np.repeat(range(num_levels), level_counts.astype(int)).astype(np.uint64)
-    per_row_levels = np.empty(n_total, dtype=np.uint64)
-    per_row_levels[perm] = levels_by_perm_position
-    del perm, levels_by_perm_position
+    per_row_levels = _assign_spatial_levels(
+        n_total, gridspec, target_chunk_limit,
+        shuffle_before_assigning_spatial_levels,
+    )
 
     logger.info("Assigning spatial grid chunks...")
     if annotation_type == 'polyline':
@@ -147,16 +138,8 @@ def _compute_spatial_assignment(
         )
     logger.info("Done assigning spatial grid chunks")
 
-    # Stable-sort by (level, chunk_code) using ``np.lexsort`` and then
-    # reorder ``rows``, ``codes``, and ``levels`` one at a time. This
-    # avoids constructing an unsorted 3-column DataFrame just to sort it
-    # (which transiently doubles memory during ``pd.sort_values``).
-    levels = per_row_levels[rows]
-    order = np.lexsort((codes, levels))
-    rows = rows[order]
-    codes = codes[order]
-    levels = levels[order]
-    del order
+    rows, codes, levels = _sort_spatial_assignment(rows, codes, per_row_levels)
+    del per_row_levels
 
     assignment_df = pd.DataFrame({
         'level': levels,
@@ -164,6 +147,54 @@ def _compute_spatial_assignment(
         'row_pos': rows,
     })
     return assignment_df, gridspec
+
+
+def _assign_spatial_levels(n_total, gridspec, target_chunk_limit, shuffle):
+    """
+    Decide which spatial level each input row should land at, returning
+    a ``(n_total,)`` uint64 array where ``per_row_levels[i]`` is the
+    level for row ``i``.
+
+    The per-level row count is determined by
+    :func:`_compute_target_annotations_per_level`. Rows are bound to
+    levels by *position* in a permuted ordering -- when ``shuffle`` is
+    True the permutation is uniformly random (so each level carries a
+    uniform random sample of all input rows, as the neuroglancer spec
+    recommends), and when False it's the identity (so the earliest
+    input rows go to the coarsest levels and callers can drive coarse-
+    zoom rendering priority via input order).
+    """
+    num_levels = len(gridspec.grid_shapes)
+    level_counts = _compute_target_annotations_per_level(n_total, gridspec, target_chunk_limit)
+    if shuffle:
+        logger.info("Shuffling annotations before assigning spatial grid levels")
+        perm = np.random.permutation(n_total)
+    else:
+        perm = np.arange(n_total)
+    levels_by_perm_position = np.repeat(range(num_levels), level_counts.astype(int)).astype(np.uint64)
+    per_row_levels = np.empty(n_total, dtype=np.uint64)
+    per_row_levels[perm] = levels_by_perm_position
+    return per_row_levels
+
+
+def _sort_spatial_assignment(rows, codes, per_row_levels):
+    """
+    Sort the kernel-output ``(rows, codes)`` pairs by
+    ``(per_row_levels[rows], codes)`` so each chunk's contributions are
+    contiguous in the output, and return the sorted
+    ``(rows, codes, levels)`` triple.
+
+    ``np.lexsort`` is stable, so within each ``(level, chunk_code)``
+    group the original input row order from the grid-code kernel is
+    preserved -- which matters because neuroglancer subsamples a
+    spatial chunk by taking a prefix of its stored annotation list.
+    """
+    levels = per_row_levels[rows]
+    order = np.lexsort((codes, levels))
+    rows = rows[order]
+    codes = codes[order]
+    levels = levels[order]
+    return rows, codes, levels
 
 
 def _compute_grid_codes_batched(annotation_type, input_df, con, coord_space, bounds, gridspec,
