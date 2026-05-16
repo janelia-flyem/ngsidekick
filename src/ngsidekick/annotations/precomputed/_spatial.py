@@ -60,7 +60,7 @@ def _compute_spatial_assignment(
     bounds,
     num_levels,
     target_chunk_limit,
-    shuffle_before_assigning_spatial_levels,
+    shuffle_spatial_ordering,
     *,
     batch_size=_SPATIAL_KERNEL_BATCH_SIZE,
 ):
@@ -101,7 +101,7 @@ def _compute_spatial_assignment(
             :class:`PolylineGeometry` for polyline annotations, else ``None``.
         coord_space, annotation_type, bounds, num_levels, target_chunk_limit:
             See :func:`write_precomputed_annotations`.
-        shuffle_before_assigning_spatial_levels:
+        shuffle_spatial_ordering:
             See :func:`_assign_spatial_levels` and
             :func:`_sort_spatial_assignment` for the two ways this flag
             affects the output ordering.
@@ -125,7 +125,7 @@ def _compute_spatial_assignment(
     gridspec = _define_spatial_grids(bounds, coord_space, num_levels)
     per_row_levels = _assign_spatial_levels(
         n_total, gridspec, target_chunk_limit,
-        shuffle_before_assigning_spatial_levels,
+        shuffle_spatial_ordering,
     )
 
     logger.info("Assigning spatial grid chunks...")
@@ -142,7 +142,7 @@ def _compute_spatial_assignment(
 
     rows, codes, levels = _sort_spatial_assignment(
         rows, codes, per_row_levels,
-        shuffle_before_assigning_spatial_levels,
+        shuffle_spatial_ordering,
     )
     del per_row_levels
 
@@ -816,7 +816,7 @@ SPATIAL_ASSIGNMENTS_TABLE = '_by_spatial_assignments'
 
 def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_type, property_specs, polyline_geom,
                                         bounds, num_spatial_levels, target_chunk_limit,
-                                        shuffle_before_assigning_spatial_levels,
+                                        shuffle_spatial_ordering,
                                         disable_subsampling, output_dir, write_sharded,
                                         max_shards_per_transaction, ts_context):
     """
@@ -839,7 +839,7 @@ def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_t
         coord_space, annotation_type, property_specs, polyline_geom:
             See :func:`write_precomputed_annotations`.
         bounds, num_spatial_levels, target_chunk_limit,
-        shuffle_before_assigning_spatial_levels:
+        shuffle_spatial_ordering:
             See :func:`_compute_spatial_assignment` /
             :func:`write_precomputed_annotations`.
         disable_subsampling:
@@ -855,7 +855,7 @@ def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_t
     assignment_df, gridspec = _compute_spatial_assignment(
         con, input_df, polyline_geom, coord_space, annotation_type, bounds,
         num_spatial_levels, target_chunk_limit,
-        shuffle_before_assigning_spatial_levels,
+        shuffle_spatial_ordering,
     )
 
     # 2. Convert (positional row -> annotation_id) and register the

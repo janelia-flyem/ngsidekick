@@ -280,7 +280,7 @@ Other notes specific to the Feather path:
 - DuckDB's documented `order-preservation guarantee
   <https://duckdb.org/docs/current/sql/dialect/order_preservation>`_
   ensures that the streamed batches deliver rows in the file's storage
-  order, which matters when ``shuffle_before_assigning_spatial_levels=False``.
+  order, which matters when ``shuffle_spatial_ordering=False``.
 
 
 Tuning tensorstore writes

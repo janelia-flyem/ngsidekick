@@ -38,7 +38,7 @@ def write_precomputed_annotations(
     write_by_spatial_chunk: bool = True,
     num_spatial_levels: int = 7,
     target_chunk_limit: int = 10_000,
-    shuffle_before_assigning_spatial_levels: bool = True,
+    shuffle_spatial_ordering: bool = True,
     max_threads: int | None = None,
     max_shards_per_transaction: int | None = None,
     duckdb_memory_limit: str | None = None,
@@ -214,7 +214,7 @@ def write_precomputed_annotations(
                 by setting this to the special value of 0.  In our implementation, this is only valid
                 when num_spatial_levels=1.
 
-        shuffle_before_assigning_spatial_levels:
+        shuffle_spatial_ordering:
             bool
             Whether to randomize the spatial assignment. When True (the
             default), two things happen randomly:
@@ -394,7 +394,7 @@ def write_precomputed_annotations(
                 con, input_df,
                 coord_space, annotation_type, property_specs, polyline_geom,
                 bounds, num_spatial_levels, target_chunk_limit,
-                shuffle_before_assigning_spatial_levels,
+                shuffle_spatial_ordering,
                 disable_subsampling=(target_chunk_limit == 0),
                 output_dir=output_dir,
                 write_sharded=write_sharded,
