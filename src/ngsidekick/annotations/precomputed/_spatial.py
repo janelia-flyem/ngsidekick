@@ -102,7 +102,9 @@ def _compute_spatial_assignment(
         coord_space, annotation_type, bounds, num_levels, target_chunk_limit:
             See :func:`write_precomputed_annotations`.
         shuffle_before_assigning_spatial_levels:
-            See :func:`_assign_spatial_levels`.
+            See :func:`_assign_spatial_levels` and
+            :func:`_sort_spatial_assignment` for the two ways this flag
+            affects the output ordering.
         batch_size:
             Rows per kernel batch (non-polyline). Caps per-batch RAM
             without affecting the result.
@@ -138,7 +140,10 @@ def _compute_spatial_assignment(
         )
     logger.info("Done assigning spatial grid chunks")
 
-    rows, codes, levels = _sort_spatial_assignment(rows, codes, per_row_levels)
+    rows, codes, levels = _sort_spatial_assignment(
+        rows, codes, per_row_levels,
+        shuffle_before_assigning_spatial_levels,
+    )
     del per_row_levels
 
     assignment_df = pd.DataFrame({
@@ -177,20 +182,32 @@ def _assign_spatial_levels(n_total, gridspec, target_chunk_limit, shuffle):
     return per_row_levels
 
 
-def _sort_spatial_assignment(rows, codes, per_row_levels):
+def _sort_spatial_assignment(rows, codes, per_row_levels, shuffle):
     """
     Sort the kernel-output ``(rows, codes)`` pairs by
     ``(per_row_levels[rows], codes)`` so each chunk's contributions are
     contiguous in the output, and return the sorted
     ``(rows, codes, levels)`` triple.
 
-    ``np.lexsort`` is stable, so within each ``(level, chunk_code)``
-    group the original input row order from the grid-code kernel is
-    preserved -- which matters because neuroglancer subsamples a
-    spatial chunk by taking a prefix of its stored annotation list.
+    ``np.lexsort`` is stable, so without further effort the within-chunk
+    order would be whatever input order the grid-code kernel emitted.
+    That's what we want when the caller asked *not* to shuffle, so the
+    user's input order drives neuroglancer's prefix-based subsampling
+    priority. But for ``shuffle=True`` the spec calls for *random*
+    within-chunk order: neuroglancer subsamples a chunk by taking a
+    prefix of its stored list, so without randomization the coarse-
+    zoom rendering would show the first-N-by-input-order subset of
+    each chunk's random selection -- defeating the level-assignment
+    shuffle. We achieve random within-chunk order by adding a random
+    tiebreaker as the lowest-priority lexsort key.
     """
     levels = per_row_levels[rows]
-    order = np.lexsort((codes, levels))
+    if shuffle:
+        tiebreaker = np.random.randint(0, 2**31, len(rows), dtype=np.int32)
+        order = np.lexsort((tiebreaker, codes, levels))
+        del tiebreaker
+    else:
+        order = np.lexsort((codes, levels))
     rows = rows[order]
     codes = codes[order]
     levels = levels[order]

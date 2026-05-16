@@ -216,14 +216,24 @@ def write_precomputed_annotations(
 
         shuffle_before_assigning_spatial_levels:
             bool
-            Whether to shuffle the annotations before assigning spatial levels.
-            By default, we shuffle the annotations to avoid any bias in the spatial
-            assignment, which is what the neuroglancer spec recommends.
-            However, in some use-cases a bias may be desirable (e.g. deliberately
-            preferring to show larger annotations when zoomed out).
-            So if this is False, the annotations will be assigned to spatial levels in
-            the order they appear in the input dataframe, with earlier annotations
-            assigned to coarser spatial levels.
+            Whether to randomize the spatial assignment. When True (the
+            default), two things happen randomly:
+
+            (a) which level each annotation lands at is uniformly random,
+                so coarse levels carry a uniform random sample of all
+                annotations -- the neuroglancer spec recommendation.
+
+            (b) the within-chunk order is also random, so that
+                neuroglancer's prefix-based subsampling (it draws the
+                first N annotations from a chunk's stored list) produces
+                an unbiased sample at any zoom level.
+
+            When False, both orderings use the input row order: earlier
+            input rows go to coarser levels, and within each chunk
+            annotations are stored in input row order. Set this False
+            when you have deliberately ordered your input (e.g. by
+            importance) and want neuroglancer to render the most
+            important annotations first.
 
         max_threads:
             int or None
