@@ -189,7 +189,17 @@ def compute_shard_assignments_in_db(
     con.execute(f"DROP TABLE IF EXISTS {dest_table}")
     con.register('_shard_pairs', pairs)
     try:
-        con.execute(f"CREATE TABLE {dest_table} AS SELECT * FROM _shard_pairs")
+        # ORDER BY shard_id so DuckDB lays the resulting table out in
+        # shard-sorted order. Per-row-group min/max statistics on
+        # ``shard_id`` then become tight, and downstream per-batch
+        # queries that filter by shard_id (e.g. the by-id writer's
+        # ``WHERE shard_id IN (...)`` JOIN) can zone-map-prune almost
+        # all row groups instead of doing a full-table scan every
+        # batch.
+        con.execute(f"""
+            CREATE TABLE {dest_table} AS
+            SELECT * FROM _shard_pairs ORDER BY shard_id
+        """)
     finally:
         con.unregister('_shard_pairs')
     del pairs

@@ -163,7 +163,15 @@ def _write_annotations_by_relationship_sharded(con, coord_space, annotation_type
     con.execute(f"DROP TABLE IF EXISTS {shard_assignments_table}")
     con.register('_by_rel_pairs', pairs)
     try:
-        con.execute(f"CREATE TABLE {shard_assignments_table} AS SELECT * FROM _by_rel_pairs")
+        # ORDER BY shard_id so DuckDB lays the resulting table out in
+        # shard-sorted order. Per-row-group min/max statistics on
+        # ``shard_id`` then become tight, and the per-batch query that
+        # filters by shard_id can zone-map-prune most row groups instead
+        # of full-scanning the table on each batch.
+        con.execute(f"""
+            CREATE TABLE {shard_assignments_table} AS
+            SELECT * FROM _by_rel_pairs ORDER BY shard_id
+        """)
     finally:
         con.unregister('_by_rel_pairs')
     del pairs
