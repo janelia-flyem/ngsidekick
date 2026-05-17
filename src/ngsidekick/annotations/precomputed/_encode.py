@@ -370,7 +370,7 @@ def _encode_one_relationship(s):
 
 
 def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_type, property_specs,
-                                  polyline_geom=None):
+                                  polyline_geom=None, shuffle_within_group=False):
     """
     Given a batch DataFrame containing the rows for one tensorstore
     transaction (already sorted by ``group_col``, then by annotation_id
@@ -396,6 +396,18 @@ def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_t
             :class:`PolylineGeometry` whose ``starts``/``ends`` are
             aligned with ``df_batch`` row order. Pass ``None`` for
             other annotation types.
+        shuffle_within_group:
+            If True, the rows within each ``group_col`` value are
+            randomly permuted before encoding -- so the on-disk per-
+            group list ends up in random order, which is what
+            neuroglancer's prefix-based subsampling expects for
+            spatial chunks when the caller asked for shuffled output.
+            Cheap, because each batch is at most ``max_shards_per_transaction``
+            shards worth of rows (tens of millions at most) and the
+            sort fits in cache. Compare to doing this globally over
+            the full kernel output, which for line annotations on
+            a 311M-row input is ~1.5B rows and would require a
+            multi-GB tiebreaker array.
 
     Returns:
         ``(buffers, unique_groups)``: a list of three
@@ -404,6 +416,17 @@ def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_t
         batch, in the same order as the buffers.
     """
     group_ids = df_batch[group_col].to_numpy(np.uint64, copy=False)
+
+    if shuffle_within_group and len(df_batch) > 0:
+        # Stable-sort by (group_col, random_tiebreaker) so within each
+        # group the rows end up in random order. The group order
+        # (sorted by group_col) is preserved.
+        tiebreaker = np.random.randint(0, 2**31, len(df_batch), dtype=np.int32)
+        order = np.lexsort((tiebreaker, group_ids))
+        df_batch = df_batch.iloc[order]
+        group_ids = group_ids[order]
+        del tiebreaker, order
+
     df_batch = df_batch.drop(columns=group_col).set_index('annotation_id')
 
     # Run-boundaries inside group_ids (one run per group).

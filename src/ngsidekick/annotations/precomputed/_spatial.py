@@ -102,9 +102,11 @@ def _compute_spatial_assignment(
         coord_space, annotation_type, bounds, num_levels, target_chunk_limit:
             See :func:`write_precomputed_annotations`.
         shuffle_spatial_ordering:
-            See :func:`_assign_spatial_levels` and
-            :func:`_sort_spatial_assignment` for the two ways this flag
-            affects the output ordering.
+            If True, level assignments are randomized via
+            :func:`_assign_spatial_levels`. Within-chunk randomization
+            is then applied per-batch in
+            :func:`._encode._build_grouped_record_buffers` at write
+            time (the caller threads the flag to ``shuffle_within_group``).
         batch_size:
             Rows per kernel batch (non-polyline). Caps per-batch RAM
             without affecting the result.
@@ -140,10 +142,7 @@ def _compute_spatial_assignment(
         )
     logger.info("Done assigning spatial grid chunks")
 
-    rows, codes, levels = _sort_spatial_assignment(
-        rows, codes, per_row_levels,
-        shuffle_spatial_ordering,
-    )
+    rows, codes, levels = _sort_spatial_assignment(rows, codes, per_row_levels)
     del per_row_levels
 
     assignment_df = pd.DataFrame({
@@ -182,32 +181,26 @@ def _assign_spatial_levels(n_total, gridspec, target_chunk_limit, shuffle):
     return per_row_levels
 
 
-def _sort_spatial_assignment(rows, codes, per_row_levels, shuffle):
+def _sort_spatial_assignment(rows, codes, per_row_levels):
     """
     Sort the kernel-output ``(rows, codes)`` pairs by
-    ``(per_row_levels[rows], codes)`` so each chunk's contributions are
-    contiguous in the output, and return the sorted
+    ``(per_row_levels[rows], codes)`` so each chunk's contributions
+    are contiguous in the output, and return the sorted
     ``(rows, codes, levels)`` triple.
 
-    ``np.lexsort`` is stable, so without further effort the within-chunk
-    order would be whatever input order the grid-code kernel emitted.
-    That's what we want when the caller asked *not* to shuffle, so the
-    user's input order drives neuroglancer's prefix-based subsampling
-    priority. But for ``shuffle=True`` the spec calls for *random*
-    within-chunk order: neuroglancer subsamples a chunk by taking a
-    prefix of its stored list, so without randomization the coarse-
-    zoom rendering would show the first-N-by-input-order subset of
-    each chunk's random selection -- defeating the level-assignment
-    shuffle. We achieve random within-chunk order by adding a random
-    tiebreaker as the lowest-priority lexsort key.
+    ``np.lexsort`` is stable, so within each ``(level, chunk_code)``
+    group the rows stay in the order the grid-code kernel emitted
+    (which is input row order). When the caller wants random
+    within-chunk order (``shuffle_spatial_ordering=True``), that's
+    applied per-batch in :func:`._encode._build_grouped_record_buffers`
+    instead -- doing it globally here would require a tiebreaker
+    array proportional to the full kernel output (~1.5B int32 entries
+    for line annotations on a 311M-row input) and a much slower
+    3-key sort, whereas the per-batch shuffle works on at most a
+    few tens of millions of rows at a time and fits in cache.
     """
     levels = per_row_levels[rows]
-    if shuffle:
-        tiebreaker = np.random.randint(0, 2**31, len(rows), dtype=np.int32)
-        order = np.lexsort((tiebreaker, codes, levels))
-        del tiebreaker
-    else:
-        order = np.lexsort((codes, levels))
+    order = np.lexsort((codes, levels))
     rows = rows[order]
     codes = codes[order]
     levels = levels[order]
@@ -916,6 +909,7 @@ def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_t
                 output_dir, write_sharded, max_shards_per_transaction, ts_context,
                 disable_subsampling,
                 is_last_level=(level_idx == num_spatial_levels - 1),
+                shuffle_within_chunk=shuffle_spatial_ordering,
             )
             metadata.append(level_metadata)
     finally:
@@ -927,9 +921,15 @@ def _write_annotations_by_spatial_chunk(con, input_df, coord_space, annotation_t
 def _write_one_spatial_level(con, level, gridspec,
                               coord_space, annotation_type, property_specs, polyline_geom,
                               output_dir, write_sharded, max_shards_per_transaction, ts_context,
-                              disable_subsampling, is_last_level=False):
+                              disable_subsampling, is_last_level=False,
+                              shuffle_within_chunk=False):
     """
     Write a single spatial level's subdirectory (``by_spatial_level_<level>``).
+
+    ``shuffle_within_chunk`` is forwarded to
+    :func:`._encode._build_grouped_record_buffers` so that, when the
+    caller enabled shuffled spatial ordering, each chunk's stored
+    annotation list is randomized.
 
     If ``is_last_level`` is True, the shared :data:`SPATIAL_ASSIGNMENTS_TABLE`
     is dropped as soon as this level has finished reading from it (which
@@ -947,6 +947,7 @@ def _write_one_spatial_level(con, level, gridspec,
             coord_space, annotation_type, property_specs, polyline_geom,
             output_dir, subdir, ts_context, disable_subsampling,
             is_last_level=is_last_level,
+            shuffle_within_chunk=shuffle_within_chunk,
         )
 
     polyline_id_lookup = (
@@ -1109,6 +1110,7 @@ def _write_one_spatial_level(con, level, gridspec,
                 buffers, batch_chunks = _build_grouped_record_buffers(
                     df_batch, '_chunk_code', coord_space, annotation_type, property_specs,
                     polyline_geom=batch_polyline_geom,
+                    shuffle_within_group=shuffle_within_chunk,
                 )
                 _write_one_transaction(kvstore, batch_chunks, buffers)
                 auditor.record_batch(batch_shards)
@@ -1137,7 +1139,7 @@ def _write_one_spatial_level(con, level, gridspec,
 def _write_one_spatial_level_unsharded(con, level, gridspec,
                                        coord_space, annotation_type, property_specs, polyline_geom,
                                        output_dir, subdir, ts_context, disable_subsampling,
-                                       is_last_level=False):
+                                       is_last_level=False, shuffle_within_chunk=False):
     """
     Unsharded variant: one file per chunk, named by underscore-joined grid
     coordinates (e.g. ``'0_3_2'``). The file contents follow the same
@@ -1188,6 +1190,7 @@ def _write_one_spatial_level_unsharded(con, level, gridspec,
     buffers, unique_chunks = _build_grouped_record_buffers(
         df_full, '_chunk_code', coord_space, annotation_type, property_specs,
         polyline_geom=sliced_polyline_geom,
+        shuffle_within_group=shuffle_within_chunk,
     )
 
     # For unsharded the key is the chunk's grid coordinate joined with '_'.
