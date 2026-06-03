@@ -14,10 +14,8 @@ from . import _write_buffers
 from .compressed_morton import compressed_morton_code, compressed_morton_decode, _compressed_morton_code_no_alloc
 from ._db import INPUT_VIEW
 from ._encode import (
-    PartitionedBuffer,
     _build_grouped_record_buffers,
     _encode_annotation_records,
-    _encode_id_bytes,
 )
 from ._memory import log_memory
 from ._shard_audit import ShardWriteAuditor
@@ -34,7 +32,6 @@ from ._util import (
     _property_recsize,
     _slice_polyline_geom,
     _unravel_index,
-    PolylineGeometry,
 )
 
 from tqdm.auto import tqdm

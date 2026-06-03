@@ -6,7 +6,6 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 import pyarrow as pa
-import pyarrow.feather
 
 from neuroglancer.coordinate_space import CoordinateSpace
 from neuroglancer.viewer_state import AnnotationPropertySpec
@@ -17,7 +16,7 @@ from ._memory import log_memory
 from ._util import _drop_unused_columns, _geometry_cols, PolylineGeometry
 from ._id import _write_annotations_by_id
 from ._relationships import _write_annotations_by_relationships
-from ._spatial import _compute_spatial_assignment, _write_annotations_by_spatial_chunk
+from ._spatial import _write_annotations_by_spatial_chunk
 from ._write_buffers import _build_ts_context, _default_max_threads
 
 logger = logging.getLogger(__name__)

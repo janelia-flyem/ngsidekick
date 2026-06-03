@@ -21,7 +21,6 @@ from typing import Union
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import pyarrow.feather
 import duckdb
 
 INPUT_VIEW = 'annotations_input'

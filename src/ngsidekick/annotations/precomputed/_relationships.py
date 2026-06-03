@@ -9,10 +9,8 @@ from tqdm.auto import tqdm
 from . import _write_buffers
 from ._db import INPUT_VIEW
 from ._encode import (
-    PartitionedBuffer,
     _build_grouped_record_buffers,
     _encode_annotation_records,
-    _encode_id_bytes,
 )
 from ._memory import log_memory
 from ._shard_audit import ShardWriteAuditor
