@@ -14,7 +14,7 @@ Geometry columns
 
 Annotations can live in a coordinate space of any dimensionality (not just 3D);
 the column names are derived from ``coord_space.names``. For example, with
-``coord_space.names == ['x', 'y', 'z']``, the main DataFrame must have the
+``coord_space.names == ['x', 'y', 'z']``, the input table must have the
 following geometry columns (plus any property / relationship columns):
 
 - ``'point'``: ``x``, ``y``, ``z``
@@ -22,9 +22,15 @@ following geometry columns (plus any property / relationship columns):
 - ``'ellipsoid'``: ``x``, ``y``, ``z``, ``rx``, ``ry``, ``rz``
 - ``'polyline'``: no geometry columns; vertices are supplied separately via ``polyline_points``
 
-The DataFrame's index is used as the annotation ID. In most use-cases the
-annotation ID is not user-visible, so the index need not be carefully chosen;
-any unique uint64-compatible values will do (e.g. ``range(len(df))``).
+For a pandas DataFrame input the index supplies the annotation ID; for a
+Feather file input the ID is resolved from (in order) an explicit
+``annotation_id`` column, a pandas-index column carried in the file's
+schema metadata, or finally synthesized as ``0, 1, 2, ...`` if neither is
+available -- so a file written via ``df.to_feather(path)`` just works.
+See `Streaming from a Feather file`_ below for the full resolution order.
+In most use-cases the annotation ID is not user-visible, so the values
+need not be carefully chosen; any unique uint64-compatible values will
+do (e.g. ``range(len(df))``).
 
 
 Examples
@@ -146,11 +152,16 @@ property and relationship column conventions, which apply identically to
 polyline annotations.
 
 If your polylines have no properties or relationships, you can omit the main
-DataFrame entirely and pass the points table as the first positional argument:
+DataFrame entirely by passing ``None`` as the first argument; the main table
+is synthesized from the unique annotation IDs in ``polyline_points``:
 
 .. code-block:: python
 
-    write_precomputed_annotations(polyline_points, 'xyz', 'polyline', output_dir='out/polylines')
+    write_precomputed_annotations(
+        None, 'xyz', 'polyline',
+        polyline_points=polyline_points,
+        output_dir='out/polylines',
+    )
 
 
 Properties and relationships
@@ -221,27 +232,55 @@ single-segment relationships (``body_pre`` / ``body_post``) use scalar
     )
 
 
-Releasing input data early
---------------------------
+Streaming from a Feather file
+-----------------------------
 
-For very large inputs (hundreds of millions of annotations and up), this
-function has high peak RAM requirements.
-You can partially mitigate the peak by transferring ownership of your input DataFrame
-to the function via a :class:`~ngsidekick.annotations.precomputed.TableHandle`:
-wrap your DataFrame, drop your own reference, and pass the handle.
-:func:`~ngsidekick.annotations.precomputed.write_precomputed_annotations` will
-release the handle's reference as soon as the data has been consumed, freeing
-the DataFrame before the writing phase begins:
+For datasets that don't fit comfortably in pandas memory, ``df`` can be a
+path (``str`` or ``os.PathLike``) to a Feather/Arrow IPC file. The file is
+memory-mapped via PyArrow and registered into DuckDB; the writers stream
+through it in shard-aligned batches so the full input never materializes
+in the Python heap.
 
 .. code-block:: python
 
-    from ngsidekick.annotations.precomputed import TableHandle
+    import pyarrow.feather as feather
 
-    handle = TableHandle(df)
-    del df  # release your own reference
-    write_precomputed_annotations(handle, 'xyz', 'point', output_dir='out/points')
+    # Pre-built annotation table on disk -- one row per annotation, with
+    # an explicit ``annotation_id`` column (Feather files don't carry a
+    # pandas index).
+    feather.write_feather(df, 'annotations.feather')
 
-The same option applies to ``polyline_points``.
+    write_precomputed_annotations(
+        'annotations.feather', 'xyz', 'line',
+        properties=['confidence'],
+        relationships=['body_pre'],
+        output_dir='out/lines',
+    )
+
+Annotation IDs in Feather files are resolved in priority order:
+
+1. If the file has a column named ``annotation_id``, it is used directly.
+2. If the file was written by pandas with a real index column (named or
+   anonymous), that column is reused as ``annotation_id`` via a
+   zero-copy PyArrow rename. So if you wrote your file with something
+   like ``df.to_feather(path)``, the index comes through automatically
+   no matter what it was called.
+3. If neither applies (e.g. the file was written from a pandas
+   ``RangeIndex``, or by a non-pandas tool with no id column), an
+   ``annotation_id`` is synthesized on the fly via DuckDB's
+   ``ROW_NUMBER()``. A pandas ``RangeIndex(start, stop, step)``
+   descriptor in the file's schema metadata, if present, is honored;
+   otherwise IDs are ``0, 1, 2, ...``.
+
+Other notes specific to the Feather path:
+
+- Polyline auxiliary data (``polyline_points``) is still required to be
+  an in-memory pandas DataFrame. The main table may be Feather even for
+  polyline annotations; only the aux table is restricted.
+- DuckDB's documented `order-preservation guarantee
+  <https://duckdb.org/docs/current/sql/dialect/order_preservation>`_
+  ensures that the streamed batches deliver rows in the file's storage
+  order, which matters when ``shuffle_spatial_ordering=False``.
 
 
 Tuning tensorstore writes
@@ -297,6 +336,41 @@ Any keys you provide are passed through verbatim; the
 ``data_copy_concurrency`` and ``file_io_concurrency`` keys are filled
 in from ``max_threads`` only when your dict doesn't already specify
 them, so you can override one without touching the other.
+
+
+Bounding DuckDB's working set
+-----------------------------
+
+The shard-streamed write pipeline materializes a per-level working
+table inside DuckDB (joining the spatial assignments with the input
+geometry+properties, sorted by ``shard_id``). For large inputs this
+working set can become several GB. If you want to cap how much of it
+DuckDB keeps resident, pass ``duckdb_memory_limit``:
+
+.. code-block:: python
+
+    write_precomputed_annotations(
+        'annotations.feather', 'xyz', 'line', output_dir='out/lines',
+        duckdb_memory_limit='40GB',
+    )
+
+DuckDB spills excess to its temp directory once the limit is reached,
+trading some I/O for a tighter resident-RAM ceiling. Leaving the
+argument as ``None`` (the default) lets DuckDB choose -- typically
+~80% of system RAM, which is fine for most jobs.
+
+DuckDB's spill directory defaults to ``.tmp/`` under the process's
+**current working directory**. On a cluster node whose CWD lives on a
+slow shared filesystem (GPFS, NFS, etc.), it's worth pointing
+DuckDB at fast local scratch instead via ``duckdb_temp_directory``:
+
+.. code-block:: python
+
+    write_precomputed_annotations(
+        'annotations.feather', 'xyz', 'line', output_dir='out/lines',
+        duckdb_memory_limit='40GB',
+        duckdb_temp_directory='/scratch/myuser/duckdb-spill',
+    )
 
 
 API reference

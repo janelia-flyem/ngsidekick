@@ -242,14 +242,37 @@ def _encode_geometry_prop_df(geometry_prop_df, geometry_cols, property_specs):
             "so consider casting to uint8 or int16 if your annotations don't load."
         )
 
-    # Convert category columns to their integer equivalents
+    # Convert enum columns to their integer code equivalents.
+    #
+    # A categorical column may arrive here in one of two shapes
+    # depending on the upstream path:
+    #
+    #   - dtype='category' -- the pandas Categorical survived (e.g. for
+    #     direct pandas input registered with DuckDB, where DuckDB
+    #     recognizes the column as ENUM). Use .cat.codes.
+    #
+    #   - dtype=object (strings) -- the categorical-ness was stripped on
+    #     the way through DuckDB. This is what happens for Feather input:
+    #     Arrow dictionary-encoded columns get registered as VARCHAR, and
+    #     queries return them as object dtype. We recover the codes by
+    #     reconstructing a Categorical against ``enum_labels`` from the
+    #     spec (which was captured before streaming).
     for spec in property_specs:
         p = spec['id']
         if spec['type'] in ('rgb', 'rgba'):
             continue
-        if geometry_prop_df[p].dtype == 'category':
-            geometry_prop_df[p] = geometry_prop_df[p].cat.codes
-            dtypes[p] = spec['type']
+        col_series = geometry_prop_df[p]
+        if col_series.dtype == 'category':
+            geometry_prop_df[p] = col_series.cat.codes
+        elif 'enum_labels' in spec:
+            cat = pd.Categorical(col_series, categories=spec['enum_labels'], ordered=False)
+            if (cat.codes == -1).any():
+                unknown = sorted({v for v in col_series[cat.codes == -1].unique() if v is not None})
+                raise ValueError(
+                    f"Column {p!r}: values not present in enum_labels {spec['enum_labels']}: "
+                    f"{unknown}"
+                )
+            geometry_prop_df[p] = cat.codes
 
     return _records_to_uint8(geometry_prop_df, dtypes)
 
@@ -344,3 +367,96 @@ def _encode_one_relationship(s):
         out[s_off+4:s_off+4+ids_bytes] = ids_uint8[id_cursor:id_cursor+ids_bytes]
         id_cursor += ids_bytes
     return PartitionedBuffer(out, offsets)
+
+
+def _build_grouped_record_buffers(df_batch, group_col, coord_space, annotation_type, property_specs,
+                                  polyline_geom=None, shuffle_within_group=False):
+    """
+    Given a batch DataFrame containing the rows for one tensorstore
+    transaction (already sorted by ``group_col``, then by annotation_id
+    within each group), build the three :class:`PartitionedBuffer`
+    instances that together encode each group's by-rel or by-spatial
+    record::
+
+        <count:uint64le><ann_record_1>..<ann_record_count>
+        <ann_id_1:uint64le>..<ann_id_count:uint64le>
+
+    Args:
+        df_batch:
+            DataFrame with one row per (annotation, group) pairing.
+            Must have an ``annotation_id`` column and a ``group_col``
+            column; everything else is geometry+property data for the
+            encoder.
+        group_col:
+            Name of the column that identifies the output group
+            (e.g. ``'_segment_id'`` for by-rel, ``'_chunk_code'`` for
+            by-spatial).
+        polyline_geom:
+            For polyline annotations, the per-batch
+            :class:`PolylineGeometry` whose ``starts``/``ends`` are
+            aligned with ``df_batch`` row order. Pass ``None`` for
+            other annotation types.
+        shuffle_within_group:
+            If True, the rows within each ``group_col`` value are
+            randomly permuted before encoding -- so the on-disk per-
+            group list ends up in random order, which is what
+            neuroglancer's prefix-based subsampling expects for
+            spatial chunks when the caller asked for shuffled output.
+            Cheap, because each batch is at most ``max_shards_per_transaction``
+            shards worth of rows (tens of millions at most) and the
+            sort fits in cache. Compare to doing this globally over
+            the full kernel output, which for line annotations on
+            a 311M-row input is ~1.5B rows and would require a
+            multi-GB tiebreaker array.
+
+    Returns:
+        ``(buffers, unique_groups)``: a list of three
+        :class:`PartitionedBuffer` (count_buf, ann_buf, id_buf) and the
+        uint64 array of distinct group ids actually present in the
+        batch, in the same order as the buffers.
+    """
+    group_ids = df_batch[group_col].to_numpy(np.uint64, copy=False)
+
+    if shuffle_within_group and len(df_batch) > 0:
+        # Stable-sort by (group_col, random_tiebreaker) so within each
+        # group the rows end up in random order. The group order
+        # (sorted by group_col) is preserved.
+        tiebreaker = np.random.randint(0, 2**31, len(df_batch), dtype=np.int32)
+        order = np.lexsort((tiebreaker, group_ids))
+        df_batch = df_batch.iloc[order]
+        group_ids = group_ids[order]
+        del tiebreaker, order
+
+    df_batch = df_batch.drop(columns=group_col).set_index('annotation_id')
+
+    # Run-boundaries inside group_ids (one run per group).
+    if len(group_ids) == 0:
+        boundaries = np.array([0], dtype=np.int64)
+    else:
+        boundaries = np.concatenate((
+            [0],
+            np.flatnonzero(group_ids[1:] != group_ids[:-1]) + 1,
+            [len(group_ids)],
+        )).astype(np.int64)
+    unique_groups = group_ids[boundaries[:-1]]
+    counts = (boundaries[1:] - boundaries[:-1]).astype(np.uint64)
+
+    # Encode ann and id buffers, in group (then annotation_id) order.
+    ann_pb = _encode_annotation_records(
+        df_batch, coord_space, annotation_type, property_specs, polyline_geom=polyline_geom,
+    )
+    id_pb = _encode_id_bytes(df_batch.index)
+
+    # Per-group byte ranges into the flat ann/id buffers.
+    if isinstance(ann_pb.layout, (int, np.integer)):
+        ann_offsets = (boundaries * int(ann_pb.layout)).astype(np.int64)
+    else:
+        ann_offsets = ann_pb.layout[boundaries].astype(np.int64, copy=False)
+    id_offsets = (boundaries * int(id_pb.layout)).astype(np.int64)
+
+    buffers = [
+        PartitionedBuffer(counts.astype('<u8', copy=False).tobytes(), 8),
+        PartitionedBuffer(ann_pb.buf, ann_offsets),
+        PartitionedBuffer(id_pb.buf, id_offsets),
+    ]
+    return buffers, unique_groups

@@ -1,11 +1,9 @@
 import logging
-from dataclasses import dataclass
 from itertools import chain
 from typing import NamedTuple
 
 from numba import njit
 import numpy as np
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -18,28 +16,49 @@ class PolylineGeometry(NamedTuple):
       in main-df-row order. ``points[starts[i]:ends[i]]`` are the vertices of
       polyline ``i`` in traversal order.
     - ``starts``, ``ends``: (N,) int64 offsets into ``points``.
+    - ``annotation_ids``: (N,) uint64 ID for each polyline. Streaming writers
+      use this to look up a polyline's row position from its annotation_id at
+      per-batch encode time (see :func:`_slice_polyline_geom`).
     """
     points: np.ndarray
     starts: np.ndarray
     ends: np.ndarray
+    annotation_ids: np.ndarray
 
 
-@dataclass
-class TableHandle:
+def _property_recsize(property_specs):
     """
-    A wrapper for a pandas DataFrame that can be provided to transfer ownership
-    of the DataFrame to ``write_precomputed_annotations()``, which will delete
-    the handle's reference to the DataFrame as soon as possible to save RAM.
-
-    Example:
-
-    .. code-block:: python
-
-        >>> handle = TableHandle(df)
-        >>> del df  # Delete your own reference to the original data
-        >>> write_precomputed_annotations(handle, 'xyz', 'point')
+    Padded per-record property size in bytes, matching the layout
+    produced by :func:`._encode._geometry_prop_df`.
     """
-    df: pd.DataFrame | None = None
+    prop_size = 0
+    for spec in property_specs:
+        if spec['type'] == 'rgb':
+            prop_size += 3
+        elif spec['type'] == 'rgba':
+            prop_size += 4
+        else:
+            prop_size += np.dtype(spec['type']).itemsize
+    return prop_size + ((4 - (prop_size % 4)) % 4)
+
+
+def _slice_polyline_geom(polyline_geom, rows):
+    """
+    Return a :class:`PolylineGeometry` that selects ``polyline_geom``'s
+    rows in the order given by ``rows`` (an int array of row positions).
+    The ``points`` array is shared with the original (zero-copy);
+    ``starts``, ``ends``, and ``annotation_ids`` are gathered.
+
+    Useful when a streaming writer has pulled a batch of annotation_ids
+    out of DuckDB and needs to hand the encoder a polyline_geom whose
+    starts/ends are aligned with that batch's row order.
+    """
+    return PolylineGeometry(
+        points=polyline_geom.points,
+        starts=polyline_geom.starts[rows],
+        ends=polyline_geom.ends[rows],
+        annotation_ids=polyline_geom.annotation_ids[rows],
+    )
 
 
 def _geometry_cols(coord_names, annotation_type):

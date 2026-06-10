@@ -1,11 +1,10 @@
 import pytest
-import weakref
 import numpy as np
 import pandas as pd
 from bokeh.palettes import Category10
 
 from neuroglancer.coordinate_space import CoordinateSpace
-from ngsidekick.annotations.precomputed import write_precomputed_annotations, TableHandle
+from ngsidekick.annotations.precomputed import write_precomputed_annotations
 
 
 @pytest.fixture(scope='session')
@@ -108,6 +107,193 @@ def test_point_annotations(point_testdata, test_output_dir):
     )
 
 
+def test_point_annotations_from_feather(point_testdata, test_output_dir, tmp_path):
+    """End-to-end Feather input path: write to .feather, then pass the
+    path to write_precomputed_annotations and verify the output exists."""
+    import pyarrow.feather as feather
+
+    feather_path = tmp_path / 'points.feather'
+    df = point_testdata.copy()
+    # Feather has no index column; surface annotation_id explicitly.
+    df.insert(0, 'annotation_id', df.index.to_numpy(np.uint64))
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
+    out_dir = test_output_dir / 'test-point-annotations-feather'
+    write_precomputed_annotations(
+        str(feather_path),
+        cs,
+        'point',
+        ['cluster_color'],
+        ['cluster_id'],
+        output_dir=out_dir,
+        write_by_spatial_chunk=True,
+        num_spatial_levels=4,
+        target_chunk_limit=10_000,
+    )
+    assert (out_dir / 'info').exists()
+    assert (out_dir / 'by_id').exists()
+
+
+def _write_and_run(point_df, cs, tmp_path, out_dir):
+    """Helper: write a df to feather, run write_precomputed_annotations, return out_dir."""
+    import pyarrow.feather as feather
+    feather_path = tmp_path / 'pts.feather'
+    feather.write_feather(point_df, feather_path)
+    write_precomputed_annotations(
+        str(feather_path), cs, 'point',
+        output_dir=out_dir,
+        write_by_spatial_chunk=True,
+        num_spatial_levels=2,
+        target_chunk_limit=10_000,
+    )
+    return out_dir
+
+
+def test_feather_input_with_explicit_annotation_id(point_testdata, test_output_dir, tmp_path):
+    """File has an explicit ``annotation_id`` column: used as-is."""
+    cs = CoordinateSpace(names=[*'xyz'], units=['m']*3, scales=[100, 10, 1])
+    df = point_testdata[[*'xyz']].copy()
+    df['annotation_id'] = np.arange(len(df), dtype=np.uint64)
+    out = _write_and_run(df, cs, tmp_path, test_output_dir / 'feather-explicit-ann-id')
+    assert (out / 'info').exists()
+
+
+def test_feather_input_with_named_index(point_testdata, test_output_dir, tmp_path):
+    """File was written by pandas with a named index: column is renamed
+    to annotation_id via zero-copy PyArrow rename."""
+    cs = CoordinateSpace(names=[*'xyz'], units=['m']*3, scales=[100, 10, 1])
+    df = point_testdata[[*'xyz']].copy()
+    df.index = pd.Index(np.arange(len(df), dtype=np.uint64) + 1000, name='my_id')
+    out = _write_and_run(df, cs, tmp_path, test_output_dir / 'feather-named-index')
+    assert (out / 'info').exists()
+
+
+def test_feather_input_with_default_rangeindex(point_testdata, test_output_dir, tmp_path):
+    """File was written from a default RangeIndex: no real id column;
+    annotation_id is synthesized via ROW_NUMBER()."""
+    cs = CoordinateSpace(names=[*'xyz'], units=['m']*3, scales=[100, 10, 1])
+    df = point_testdata[[*'xyz']].copy()  # default RangeIndex
+    out = _write_and_run(df, cs, tmp_path, test_output_dir / 'feather-rangeindex')
+    assert (out / 'info').exists()
+
+
+def test_feather_input_with_categorical_property(test_output_dir, tmp_path):
+    """Feather files store pandas categoricals as Arrow dictionary-encoded
+    columns. DuckDB registers those as plain VARCHAR, so by the time the
+    encoder sees the column it's object-dtype strings, not pandas
+    Categorical. The encoder must recover the codes from the spec's
+    ``enum_labels``."""
+    import pyarrow.feather as feather
+
+    rng = np.random.default_rng(0)
+    n = 100
+    df = pd.DataFrame({
+        'x': rng.random(n).astype(np.float32),
+        'y': rng.random(n).astype(np.float32),
+        'z': rng.random(n).astype(np.float32),
+        # Includes a label with bracket characters that look like a
+        # number-coercion failure when surfaced in error messages,
+        # matching the field-report case.
+        'kind': pd.Categorical(rng.choice(['a', 'b', '<unspecified>'], n)),
+    })
+    feather_path = tmp_path / 'cat.feather'
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
+    out_dir = test_output_dir / 'feather-categorical'
+    write_precomputed_annotations(
+        str(feather_path), cs, 'point',
+        properties=['kind'],
+        output_dir=out_dir,
+        num_spatial_levels=2,
+        target_chunk_limit=50,
+    )
+    assert (out_dir / 'info').exists()
+
+
+@pytest.mark.parametrize('annotation_type,geom_cols', [
+    ('point', ['x', 'y', 'z']),
+    ('line', ['xa', 'ya', 'za', 'xb', 'yb', 'zb']),
+    ('axis_aligned_bounding_box', ['xa', 'ya', 'za', 'xb', 'yb', 'zb']),
+    ('ellipsoid', ['x', 'y', 'z', 'rx', 'ry', 'rz']),
+])
+def test_integer_geometry_columns(annotation_type, geom_cols, test_output_dir, tmp_path):
+    """Geometry columns stored as int32 must round-trip through bounds,
+    spatial assignment, and encoding. The DuckDB ``isnan()`` check, the
+    numba grid-code kernels, and the float32 encoder cast all need to
+    cope with integer-dtype input."""
+    import pyarrow.feather as feather
+
+    rng = np.random.default_rng(42)
+    n = 50
+    df = pd.DataFrame({c: rng.integers(0, 1000, n).astype(np.int32) for c in geom_cols})
+    # For line/aabb the geometry expects ``a < b``; nudge so each axis's
+    # second point is strictly greater than the first.
+    if annotation_type in ('line', 'axis_aligned_bounding_box'):
+        for axis in 'xyz':
+            df[f'{axis}b'] = df[f'{axis}a'] + 10
+
+    feather_path = tmp_path / f'int-{annotation_type}.feather'
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
+    out_dir = test_output_dir / f'int-geom-{annotation_type}'
+    write_precomputed_annotations(
+        str(feather_path), cs, annotation_type,
+        output_dir=out_dir,
+        num_spatial_levels=2,
+        target_chunk_limit=20,
+    )
+    assert (out_dir / 'info').exists()
+
+
+def test_spatial_kernel_batched_matches_single_batch(point_testdata, test_output_dir, tmp_path, monkeypatch):
+    """The batched spatial kernel must produce identical (level,
+    chunk_code, row_pos) assignments to a single full-data kernel call,
+    so downstream output is bit-for-bit equivalent."""
+    import pyarrow.feather as feather
+    from ngsidekick.annotations.precomputed import _spatial
+
+    feather_path = tmp_path / 'points.feather'
+    df = point_testdata.copy()
+    df.insert(0, 'annotation_id', df.index.to_numpy(np.uint64))
+    feather.write_feather(df, feather_path)
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
+    seed = 12345
+
+    def _run(batch_size, subdir):
+        monkeypatch.setattr(_spatial, '_SPATIAL_KERNEL_BATCH_SIZE', batch_size)
+        np.random.seed(seed)
+        out_dir = test_output_dir / subdir
+        write_precomputed_annotations(
+            str(feather_path),
+            cs,
+            'point',
+            output_dir=out_dir,
+            write_by_id=False,
+            write_by_relationship=False,
+            write_by_spatial_chunk=True,
+            num_spatial_levels=4,
+            target_chunk_limit=10_000,
+        )
+        return out_dir
+
+    full_dir = _run(batch_size=10_000_000, subdir='test-spatial-single-batch')
+    batched_dir = _run(batch_size=7_000, subdir='test-spatial-multi-batch')
+
+    # The spatial subdirectories should be byte-equivalent across runs.
+    import os
+    level_dirs = sorted(p.name for p in full_dir.iterdir() if p.name.startswith('by_spatial_level_'))
+    assert level_dirs, "Expected at least one spatial level directory"
+    for level_dir in level_dirs:
+        for fname in os.listdir(full_dir / level_dir):
+            full_bytes = (full_dir / level_dir / fname).read_bytes()
+            batched_bytes = (batched_dir / level_dir / fname).read_bytes()
+            assert full_bytes == batched_bytes, f"{level_dir}/{fname} differs"
+
+
 def test_line_annotations(pointpair_testdata, test_output_dir):
     cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
     write_precomputed_annotations(
@@ -121,6 +307,58 @@ def test_line_annotations(pointpair_testdata, test_output_dir):
         num_spatial_levels=6,
         target_chunk_limit=10
     )
+
+
+def test_list_typed_relationship(test_output_dir):
+    """
+    A list-typed relationship column (one annotation referencing multiple
+    related segments) must:
+      - Enumerate the distinct segment ids via UNNEST.
+      - Drop within-annotation duplicate ids.
+      - Skip annotations whose list is empty or NULL.
+    """
+    import struct, json
+    import tensorstore as ts
+
+    # 3 annotations + the by-rel index 'nearby_mito':
+    #   ann 10 -> [100, 200]
+    #   ann 20 -> [100, 100, 300]  (the duplicate 100 must be deduped)
+    #   ann 30 -> []                 (empty list contributes nothing)
+    df = pd.DataFrame({
+        'xa': [0.0, 10.0, 20.0], 'ya': [0.0, 0.0, 0.0], 'za': [0.0, 0.0, 0.0],
+        'xb': [5.0, 15.0, 25.0], 'yb': [5.0, 5.0, 5.0], 'zb': [0.0, 0.0, 0.0],
+        'nearby_mito': [[100, 200], [100, 100, 300], []],
+    }, index=pd.Index([10, 20, 30], dtype=np.uint64))
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
+    out = test_output_dir / 'test-list-rel'
+    write_precomputed_annotations(
+        df, cs, 'line',
+        relationships=['nearby_mito'],
+        output_dir=out,
+        write_sharded=True,
+        write_by_id=False, write_by_spatial_chunk=False,
+    )
+
+    info = json.loads((out / 'info').read_text())
+    kv = ts.KvStore.open({
+        'driver': 'neuroglancer_uint64_sharded',
+        'metadata': info['relationships'][0]['sharding'],
+        'base': f'file://{out}/by_rel_nearby_mito',
+    }).result()
+
+    def read_segment(seg):
+        raw = bytes(kv.read(int(seg).to_bytes(8, 'big')).result().value)
+        count = struct.unpack('<Q', raw[:8])[0]
+        rec_size = 24
+        ids = struct.unpack(f'<{count}Q', raw[8 + count*rec_size:])
+        return count, sorted(ids)
+
+    assert read_segment(100) == (2, [10, 20])  # deduped
+    assert read_segment(200) == (1, [10])
+    assert read_segment(300) == (1, [20])
+    # Empty list (annotation 30) contributes no segment.
+    assert kv.read(int(0).to_bytes(8, 'big')).result().state == 'missing'
 
 
 def test_box_annotations(pointpair_testdata, test_output_dir):
@@ -211,7 +449,7 @@ def test_polyline_annotations(polyline_testdata, test_output_dir):
 
 
 def test_polyline_annotations_aux_only(test_output_dir):
-    """Convenience: pass aux table as the first arg and omit a main table."""
+    """df=None convenience: main table is synthesized from polyline_points."""
     aux_df = pd.DataFrame({
         'x': [0.1, 0.2, 0.3, 0.5, 0.9],
         'y': [0.1, 0.2, 0.3, 0.5, 0.5],
@@ -220,9 +458,10 @@ def test_polyline_annotations_aux_only(test_output_dir):
     })
     cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
     write_precomputed_annotations(
-        aux_df,
+        None,
         cs,
         'polyline',
+        polyline_points=aux_df,
         output_dir=test_output_dir / 'test-polyline-aux-only',
         write_by_spatial_chunk=True,
         num_spatial_levels=2,
@@ -243,33 +482,6 @@ def test_ellipsoid_annotations(ellipsoid_testdata, test_output_dir):
         num_spatial_levels=6,
         target_chunk_limit=10
     )
-
-def test_early_data_deletion(point_testdata, test_output_dir):
-    """
-    If we wrap the data in a TableHandle and delete our own reference to the data,
-    then the original reference should be invalid by the time the annotations are written.
-    We can verify this with a weakref.
-    """
-    point_testdata = point_testdata.sample(100).copy()
-
-    ref = weakref.ref(point_testdata)
-    lines_handle = TableHandle(point_testdata)
-    del point_testdata
-
-    cs = CoordinateSpace(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
-    write_precomputed_annotations(
-        lines_handle,
-        cs,
-        'point',
-        output_dir=test_output_dir / 'test-tablehandle-deletion',
-        write_by_spatial_chunk=True,
-        num_spatial_levels=6,
-        target_chunk_limit=10_000
-    )
-    
-    assert lines_handle.df is None
-    assert ref() is None
-
 
 @pytest.mark.manual
 def test_inspect_test_results(
