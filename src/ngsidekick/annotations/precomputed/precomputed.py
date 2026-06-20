@@ -6,6 +6,7 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 import pyarrow as pa
+import pyarrow.feather  # noqa
 
 from neuroglancer.coordinate_space import CoordinateSpace
 from neuroglancer.viewer_state import AnnotationPropertySpec
