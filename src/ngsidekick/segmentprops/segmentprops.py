@@ -373,7 +373,7 @@ def _scalar_property_json(s, prop_type, description):
     prop = {
         'id': s.name,
         'type': prop_type,
-        'values': s.fillna("").astype(str).tolist()
+        'values': s.astype(object).fillna("").tolist()
     }
 
     if description:
