@@ -329,9 +329,16 @@ def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
     # Level 0 chunk shape and grid shape -- just one chunk.
     bounds = np.asarray(bounds, np.float64)
 
+    # If the annotations have no extent along some axis (e.g. 2D data
+    # embedded in a 3D coordinate space, with z == 0 everywhere), use a
+    # chunk size of 1 (in coordinate units) along that axis, since the
+    # chunk size must be non-zero.
+    extent = bounds[1] - bounds[0]
+    extent = np.where(extent > 0, extent, 1.0)
+
     # We want roughly isotropic chunks in physical units, so we'll multiply
     # by the coordinate scales and then divide the scales out at the end.
-    chunk_shape = (bounds[1] - bounds[0]) * coord_space.scales
+    chunk_shape = extent * coord_space.scales
     grid_shape = np.ones_like(chunk_shape, dtype=np.uint64)
 
     chunk_shapes = [chunk_shape]
@@ -370,6 +377,26 @@ def _define_spatial_grids(bounds, coord_space, num_levels: int) -> GridSpec:
     grid_shapes = grid_shapes.astype(np.min_scalar_type(grid_shapes.max()))
 
     return GridSpec(chunk_shapes, grid_shapes)
+
+
+@njit(inline='always')
+def _grid_span(lower, upper, origin, chunk_size, grid_size):
+    """
+    Return the ``(start, stop)`` range of grid cell indices along one axis
+    which may overlap the closed interval ``[lower, upper]``.
+
+    The range always contains at least one cell -- even if ``lower == upper``
+    and that value lies exactly on a cell boundary (e.g. a line which is
+    perpendicular to this axis, or a box which is flat along this axis).
+    It's also clamped to the grid, so that geometry exactly at the upper
+    bound (or slightly outside the grid due to rounding) is assigned to
+    the last cell rather than to a nonexistent one.
+    """
+    start = np.floor((lower - origin) / chunk_size)
+    stop = np.ceil((upper - origin) / chunk_size)
+    start = min(max(start, 0.0), grid_size - 1.0)
+    stop = min(max(stop, start + 1.0), float(grid_size))
+    return np.uint64(start), np.uint64(stop)
 
 
 def _axis_bits_c_order(grid_shapes):
@@ -456,12 +483,13 @@ def _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bound
         per_row_levels,
         bounds[0],
         gridspec.chunk_shapes,
+        gridspec.grid_shapes,
         _axis_bits_c_order(gridspec.grid_shapes),
     )
 
 
 @njit
-def _box_grid_codes(boxes, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+def _box_grid_codes(boxes, levels, grid_origin, chunk_shapes, grid_shapes, axis_bits_per_level):
     D = boxes.shape[2]
 
     # Pre-allocate these and reuse them on each loop iteration
@@ -476,6 +504,7 @@ def _box_grid_codes(boxes, levels, grid_origin, chunk_shapes, axis_bits_per_leve
 
     for row, (box, level) in enumerate(zip(boxes, levels)):
         chunk_shape = chunk_shapes[level]
+        grid_shape = grid_shapes[level]
         ab = axis_bits_per_level[level]
 
         # We'd prefer the following, but we're worried about little allocations,
@@ -487,8 +516,9 @@ def _box_grid_codes(boxes, levels, grid_origin, chunk_shapes, axis_bits_per_leve
         # Compute per-axis grid-cell range.
         grid_span_cell_count = np.uint64(1)
         for d in range(D):
-            grid_span[0, d] = np.uint64(np.floor((box[0, d] - grid_origin[d]) / chunk_shape[d]))
-            grid_span[1, d] = np.uint64(np.ceil((box[1, d] - grid_origin[d]) / chunk_shape[d]))
+            start, stop = _grid_span(box[0, d], box[1, d], grid_origin[d], chunk_shape[d], grid_shape[d])
+            grid_span[0, d] = start
+            grid_span[1, d] = stop
             grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
             grid_span_cell_count *= grid_span_shape[d]
 
@@ -516,12 +546,13 @@ def _compute_grid_codes_for_ellipsoids(df, geometry_cols, bounds, gridspec, per_
         per_row_levels,
         bounds[0],
         gridspec.chunk_shapes,
+        gridspec.grid_shapes,
         _axis_bits_c_order(gridspec.grid_shapes),
     )
 
 
 @njit
-def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, chunk_shapes, grid_shapes, axis_bits_per_level):
     D = centroids.shape[1]
 
     # Pre-allocate these and reuse them on each loop iteration
@@ -535,6 +566,7 @@ def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, chunk_shapes, a
     codes = List()
     for row, (centroid, radius, level) in enumerate(zip(centroids, radii, levels)):
         chunk_shape = chunk_shapes[level]
+        grid_shape = grid_shapes[level]
         ab = axis_bits_per_level[level]
 
         # We'd prefer the following, but we're worried about little allocations,
@@ -545,8 +577,11 @@ def _ellipsoid_grid_codes(centroids, radii, levels, grid_origin, chunk_shapes, a
 
         grid_span_cell_count = np.uint64(1)
         for d in range(D):
-            grid_span[0, d] = np.uint64(np.floor((centroid[d] - radius[d] - grid_origin[d]) / chunk_shape[d]))
-            grid_span[1, d] = np.uint64(np.ceil((centroid[d] + radius[d] - grid_origin[d]) / chunk_shape[d]))
+            start, stop = _grid_span(
+                centroid[d] - radius[d], centroid[d] + radius[d], grid_origin[d], chunk_shape[d], grid_shape[d]
+            )
+            grid_span[0, d] = start
+            grid_span[1, d] = stop
             grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
             grid_span_cell_count *= grid_span_shape[d]
 
@@ -590,7 +625,14 @@ def _ellipsoid_chunk_overlap(center, radii, grid_origin, cell_shape, grid_index)
             min_distance = 0.0
         else:
             min_distance = min(start_dist, end_dist)
-        
+
+        if radii[i] == 0.0:
+            # The ellipsoid is flat along this axis, so it overlaps
+            # the cell only if its center lies within the cell's slab.
+            if min_distance > 0.0:
+                return False
+            continue
+
         min_sum += min_distance**2 / radii[i]**2
     
     return min_sum <= 1.0
@@ -607,12 +649,13 @@ def _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_l
         per_row_levels,
         bounds[0],
         gridspec.chunk_shapes,
+        gridspec.grid_shapes,
         _axis_bits_c_order(gridspec.grid_shapes),
     )
 
 
 @njit
-def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, grid_shapes, axis_bits_per_level):
     D = endpoints.shape[2]
 
     # Pre-allocate these and reuse them on each loop iteration
@@ -626,6 +669,7 @@ def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per
     codes = List()
     for row, ((point_a, point_b), level) in enumerate(zip(endpoints, levels)):
         chunk_shape = chunk_shapes[level]
+        grid_shape = grid_shapes[level]
         ab = axis_bits_per_level[level]
 
         # We'd prefer the following, but we're worried about little allocations,
@@ -642,8 +686,9 @@ def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per
         for d in range(D):
             lower = min(point_a[d], point_b[d])
             upper = max(point_a[d], point_b[d])
-            grid_span[0, d] = np.uint64(np.floor((lower - grid_origin[d]) / chunk_shape[d]))
-            grid_span[1, d] = np.uint64(np.ceil((upper - grid_origin[d]) / chunk_shape[d]))
+            start, stop = _grid_span(lower, upper, grid_origin[d], chunk_shape[d], grid_shape[d])
+            grid_span[0, d] = start
+            grid_span[1, d] = stop
             grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
             grid_span_cell_count *= grid_span_shape[d]
 
@@ -743,12 +788,14 @@ def _compute_grid_codes_for_polylines(polyline_geom, bounds, gridspec, per_row_l
         per_row_levels,
         bounds[0],
         gridspec.chunk_shapes,
+        gridspec.grid_shapes,
         _axis_bits_c_order(gridspec.grid_shapes),
     )
 
 
 @njit
-def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_origin, chunk_shapes, axis_bits_per_level):
+def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_origin, chunk_shapes, grid_shapes,
+                         axis_bits_per_level):
     D = points.shape[1]
 
     # Pre-allocate these and reuse them on each loop iteration
@@ -763,6 +810,7 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
     codes = List()
     for row, (start, end, level) in enumerate(zip(starts_per_row, ends_per_row, levels)):
         chunk_shape = chunk_shapes[level]
+        grid_shape = grid_shapes[level]
         ab = axis_bits_per_level[level]
 
         poly_points = points[start:end]
@@ -775,8 +823,9 @@ def _polyline_grid_codes(points, starts_per_row, ends_per_row, levels, grid_orig
 
         grid_span_cell_count = np.uint64(1)
         for d in range(D):
-            grid_span[0, d] = np.uint64(np.floor((poly_bbox[0, d] - grid_origin[d]) / chunk_shape[d]))
-            grid_span[1, d] = np.uint64(np.ceil((poly_bbox[1, d] - grid_origin[d]) / chunk_shape[d]))
+            start, stop = _grid_span(poly_bbox[0, d], poly_bbox[1, d], grid_origin[d], chunk_shape[d], grid_shape[d])
+            grid_span[0, d] = start
+            grid_span[1, d] = stop
             grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
             grid_span_cell_count *= grid_span_shape[d]
 

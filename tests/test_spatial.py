@@ -397,3 +397,101 @@ def test_line_cells_contain_sampled_points():
         # barely clips, so they must be adjacent to a sampled cell.
         for c in cells - sampled_cells:
             assert any(max(abs(np.subtract(c, s))) <= 1 for s in sampled_cells), c
+
+
+def test_flat_geometry_on_chunk_boundaries():
+    """
+    Geometry with zero extent along some axis must still be assigned to a chunk,
+    even if it lies exactly on a chunk boundary (or on the grid's lower/upper bound).
+    Regression test for a bug in which such annotations were assigned to no
+    chunks at all (and thus silently omitted from the spatial index).
+    """
+    # 4x4x4 grid over [0,1]^3 (cell width 0.25)
+    grid_shape = (4, 4, 4)
+
+    # Line in the plane z=0 (the lower bound) and line in the plane x=0.5 (a cell boundary).
+    assert _line_cells([0.1, 0.1, 0.0], [0.9, 0.1, 0.0], grid_shape) == {(i, 0, 0) for i in range(4)}
+    assert _line_cells([0.5, 0.1, 0.1], [0.5, 0.9, 0.1], grid_shape) == {(2, j, 0) for j in range(4)}
+
+    # Line in the plane z=1 (the upper bound) goes in the last cell.
+    assert _line_cells([0.1, 0.1, 1.0], [0.3, 0.1, 1.0], grid_shape) == {(0, 0, 3), (1, 0, 3)}
+
+    # Same for polylines (both multi-vertex and single-vertex).
+    assert _line_cells([0.1, 0.1, 0.0], [0.9, 0.1, 0.0], grid_shape, 'polyline') == {(i, 0, 0) for i in range(4)}
+    bounds = np.array([[0.0] * 3, [1.0] * 3])
+    gridspec = _single_level_gridspec(grid_shape)
+    geom = PolylineGeometry(
+        np.array([[0.5, 0.5, 1.0]], dtype=np.float32), np.array([0]), np.array([1]), np.array([0], dtype=np.uint64)
+    )
+    rows, codes = _compute_grid_codes_for_polylines(geom, bounds, gridspec, np.zeros(1, dtype=np.uint64))
+    assert _cells(codes, grid_shape) == {(2, 2, 3)}
+
+    # Flat box (zero extent in z, on a cell boundary).
+    df = pd.DataFrame({'xa': [0.1], 'ya': [0.1], 'za': [0.5], 'xb': [0.3], 'yb': [0.2], 'zb': [0.5]})
+    rows, codes = _compute_grid_codes_for_axis_aligned_bounding_boxes(
+        df, [['xa', 'ya', 'za'], ['xb', 'yb', 'zb']], bounds, gridspec, np.zeros(1, dtype=np.uint64)
+    )
+    assert _cells(codes, grid_shape) == {(0, 0, 2), (1, 0, 2)}
+
+    # Ellipsoid with zero radius in z, centered on a cell boundary.
+    df = pd.DataFrame({'x': [0.1], 'y': [0.1], 'z': [0.5], 'rx': [0.05], 'ry': [0.05], 'rz': [0.0]})
+    rows, codes = _compute_grid_codes_for_ellipsoids(
+        df, [['x', 'y', 'z'], ['rx', 'ry', 'rz']], bounds, gridspec, np.zeros(1, dtype=np.uint64)
+    )
+    assert _cells(codes, grid_shape) == {(0, 0, 2)}
+
+
+def _spatial_index_ids(out):
+    """Return the set of annotation IDs found anywhere in the (sharded) spatial index."""
+    import json
+    import tensorstore as ts
+
+    info = json.loads((out / 'info').read_text())
+    ids = set()
+    for level in info['spatial']:
+        kv = ts.KvStore.open({
+            'driver': 'neuroglancer_uint64_sharded',
+            'metadata': level['sharding'],
+            'base': f"file://{out}/{level['key']}/",
+        }).result()
+        for key in kv.list().result():
+            value = kv[key]
+            count = int(np.frombuffer(value[:8], '<u8')[0])
+            ids |= set(np.frombuffer(value[len(value) - 8 * count:], '<u8').tolist())
+    return ids
+
+
+@pytest.mark.parametrize('annotation_type', ['point', 'line', 'axis_aligned_bounding_box', 'ellipsoid', 'polyline'])
+def test_flat_dataset(annotation_type, tmp_path):
+    """
+    A dataset with zero extent along one axis (e.g. 2D annotations embedded
+    in a 3D coordinate space) can be written, and every annotation appears
+    in the spatial index. Also covers ellipsoids with a zero radius.
+    Regression test for crashes (division by zero) in that case.
+    """
+    from ngsidekick.annotations.precomputed import write_precomputed_annotations
+
+    n = 200
+    rng = np.random.default_rng(0)
+    xy = lambda: rng.uniform(0, 100, n).astype(np.float32)  # noqa: E731
+    zero = np.zeros(n, dtype=np.float32)
+    polyline_points = None
+    if annotation_type == 'point':
+        df = pd.DataFrame({'x': xy(), 'y': xy(), 'z': zero})
+    elif annotation_type in ('line', 'axis_aligned_bounding_box'):
+        df = pd.DataFrame({'xa': xy(), 'ya': xy(), 'za': zero, 'xb': xy(), 'yb': xy(), 'zb': zero})
+    elif annotation_type == 'ellipsoid':
+        df = pd.DataFrame({'x': xy(), 'y': xy(), 'z': zero, 'rx': zero + 1, 'ry': zero + 1, 'rz': zero})
+    else:
+        df = None
+        polyline_points = pd.DataFrame({
+            'annotation_id': np.repeat(np.arange(n), 3),
+            'x': rng.uniform(0, 100, 3 * n), 'y': rng.uniform(0, 100, 3 * n), 'z': 0.0,
+        })
+
+    out = tmp_path / annotation_type
+    write_precomputed_annotations(
+        df, 'xyz', annotation_type, output_dir=out, polyline_points=polyline_points,
+        num_spatial_levels=4, target_chunk_limit=20,
+    )
+    assert _spatial_index_ids(out) == set(range(n))
