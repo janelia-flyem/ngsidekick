@@ -353,7 +353,19 @@ def _encode_one_relationship(s):
     assert s.dtype == object
     counts = s.map(len).to_numpy(np.uint32)
     counts_uint8 = counts.view(np.uint8).reshape(-1)  # 4 bytes per count
-    ids_uint8 = np.concatenate(s.to_list(), dtype=np.uint64).view(np.uint8).reshape(-1)
+    # Note:
+    #   - np.concatenate() requires at least one array, so handle the zero-row case separately.
+    #   - Lists of plain Python ints may arrive here as (signed) int32 or int64 arrays
+    #     (depending on how DuckDB inferred the column type), which numpy won't implicitly
+    #     cast to uint64, so we cast explicitly after checking for negative values.
+    if len(s):
+        ids = np.concatenate(s.to_list())
+        if ids.dtype.kind == 'i' and (ids < 0).any():
+            raise ValueError(f"Relationship column {s.name!r} contains negative IDs")
+        ids = ids.astype(np.uint64, copy=False)
+    else:
+        ids = np.zeros(0, dtype=np.uint64)
+    ids_uint8 = ids.view(np.uint8).reshape(-1)
 
     per_row_sizes = 4 + counts.astype(np.int64) * 8
     offsets = np.concatenate(([0], np.cumsum(per_row_sizes))).astype(np.int64)

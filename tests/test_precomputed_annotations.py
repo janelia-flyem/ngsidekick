@@ -361,6 +361,46 @@ def test_list_typed_relationship(test_output_dir):
     assert kv.read(int(0).to_bytes(8, 'big')).result().state == 'missing'
 
 
+def test_list_typed_relationship_by_id(test_output_dir):
+    """
+    A list-typed relationship given as plain Python lists of ints
+    can be written to the sharded annotation ID index.
+    """
+    import struct, json
+    import tensorstore as ts
+
+    df = pd.DataFrame({
+        'x': [0.0, 10.0, 20.0], 'y': [0.0, 0.0, 0.0], 'z': [0.0, 0.0, 0.0],
+        'nearby_mito': [[100, 200], [300], []],
+    }, index=pd.Index([10, 20, 30], dtype=np.uint64))
+
+    cs = CoordinateSpace(names=[*'xyz'], units=['nm']*3, scales=[1, 1, 1])
+    out = test_output_dir / 'test-list-rel-by-id'
+    write_precomputed_annotations(
+        df, cs, 'point',
+        relationships=['nearby_mito'],
+        output_dir=out,
+        write_sharded=True,
+        write_by_relationship=False, write_by_spatial_chunk=False,
+    )
+
+    info = json.loads((out / 'info').read_text())
+    kv = ts.KvStore.open({
+        'driver': 'neuroglancer_uint64_sharded',
+        'metadata': info['by_id']['sharding'],
+        'base': f'file://{out}/by_id',
+    }).result()
+
+    def read_related_ids(annotation_id):
+        raw = bytes(kv.read(int(annotation_id).to_bytes(8, 'big')).result().value)
+        count = struct.unpack('<I', raw[12:16])[0]
+        return list(struct.unpack(f'<{count}Q', raw[16:]))
+
+    assert read_related_ids(10) == [100, 200]
+    assert read_related_ids(20) == [300]
+    assert read_related_ids(30) == []
+
+
 def test_box_annotations(pointpair_testdata, test_output_dir):
     cs = dict(names=[*'xyz'], units=['m', 'm', 'm'], scales=[100, 10, 1])
     write_precomputed_annotations(
