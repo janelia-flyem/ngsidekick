@@ -2,11 +2,13 @@ annotations.precomputed
 =======================
 
 Export annotations in neuroglancer's `precomputed annotations format
-<https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md>`_.
-The single entry point is
-:func:`~ngsidekick.annotations.precomputed.write_precomputed_annotations`,
+<https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/annotations.md>`_
+via :func:`~ngsidekick.annotations.precomputed.write_precomputed_annotations`,
 which supports five annotation types: ``'point'``, ``'line'``,
 ``'axis_aligned_bounding_box'``, ``'ellipsoid'``, and ``'polyline'``.
+Read them back via
+:func:`~ngsidekick.annotations.precomputed.read_precomputed_annotations`
+(see `Reading annotations`_).
 
 
 Geometry columns
@@ -281,6 +283,49 @@ Other notes specific to the Feather path:
   <https://duckdb.org/docs/current/sql/dialect/order_preservation>`_
   ensures that the streamed batches deliver rows in the file's storage
   order, which matters when ``shuffle_spatial_ordering=False``.
+
+
+Reading annotations
+-------------------
+
+:func:`~ngsidekick.annotations.precomputed.read_precomputed_annotations`
+reads an annotation collection from its annotation ID index (``by_id``),
+which contains every annotation along with its complete relationships.
+The result is a :class:`~ngsidekick.annotations.precomputed.PrecomputedAnnotations`
+named tuple whose first five fields match the first five arguments of
+``write_precomputed_annotations()``, using the same column conventions
+described above:
+
+.. code-block:: python
+
+    from ngsidekick.annotations.precomputed import (
+        read_precomputed_annotations,
+        write_precomputed_annotations,
+    )
+
+    a = read_precomputed_annotations('out/lines')
+    a.df               # one row per annotation, indexed by 'annotation_id'
+    a.coord_space      # CoordinateSpace
+    a.annotation_type  # e.g. 'line'
+    a.properties       # property specs
+    a.relationships    # relationship (column) names
+    a.polyline_points  # vertices (for polylines only; otherwise None)
+    a.info             # the raw info JSON
+
+    # Read only specific annotations (in the order given).
+    a = read_precomputed_annotations('out/lines', ids=[123, 456])
+
+    # The result can be written back out directly.
+    write_precomputed_annotations(*a[:5], output_dir='out/lines-copy', polyline_points=a.polyline_points)
+
+Enum properties are returned as pandas categorical columns, and color
+properties are returned as per-channel ``uint8`` columns (e.g. ``mycolor_r``).
+A relationship column has dtype ``uint64`` if every annotation has exactly
+one related ID; otherwise each value is a ``uint64`` array of related IDs.
+
+When reading all annotations from a sharded index, each shard file is read
+and decoded in its entirety, which is much faster than looking up each
+annotation ID individually. The result is sorted by annotation ID.
 
 
 Tuning tensorstore writes
