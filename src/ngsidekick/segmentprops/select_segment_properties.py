@@ -137,6 +137,8 @@ def _select_segment_properties_from_dataframe(
     expressions: Dict[str, str] = {},
 ) -> pd.DataFrame:
 
+    full_df = full_df.copy(deep=False)
+
     for col in full_df.columns.tolist():
         if full_df[col].dtype in ("category", "object", "string"):
             full_df[col] = full_df[col].astype('string').fillna('')
@@ -187,7 +189,7 @@ def _select_segment_properties_from_dataframe(
     return new_df
 
 
-def string_template_names(template: str) -> bool:
+def string_template_names(template: str) -> list[str]:
     try:
         return [name for (_, name, *_) in string.Formatter().parse(template) if name]
     except ValueError:

@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import tensorstore as ts
 from tqdm.auto import tqdm
 
 from . import _write_buffers
@@ -372,9 +373,6 @@ def _write_annotations_by_relationship_unsharded(con, coord_space, annotation_ty
     id as the filename. The file contents follow the same
     ``<count><records><ids>`` layout as the sharded case.
     """
-    import os
-    import tensorstore as ts
-
     pairs_view = f'_by_rel_pairs__{relationship}'
     pairs_kind = _create_pairs_source(con, relationship, pairs_view)
     try:
