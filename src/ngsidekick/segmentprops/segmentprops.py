@@ -484,12 +484,13 @@ def _convert_to_categorical(s):
         s = s.cat.remove_unused_categories()
 
     if s.dtype in (bool, 'boolean'):
-        s = s.astype('category', copy=False)
+        s = s.astype('category')
         s = s.cat.rename_categories({True: s.name})
         if False in s.dtype.categories:
             s = s.cat.remove_categories([False])
 
-    s = s.astype('category', copy=False)
+    if s.dtype != 'category':
+        s = s.astype('category')
     s = _replace_spaces(s)
 
     # We interpret empty string as null

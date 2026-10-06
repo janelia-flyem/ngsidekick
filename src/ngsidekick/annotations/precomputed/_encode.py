@@ -343,10 +343,10 @@ def _encode_one_relationship(s):
     For an object column of lists, the per-row record is variable-width.
     """
     if pd.api.types.is_integer_dtype(s):
-        df_count_id = (
-            pd.DataFrame({'count': np.uint32(1), 'id': s.to_numpy()})
-            .astype({'count': np.uint32, 'id': np.uint64}, copy=False)
-        )
+        df_count_id = pd.DataFrame({
+            'count': np.ones(len(s), dtype=np.uint32),
+            'id': s.to_numpy(np.uint64),
+        })
         buf, recsize = _records_to_uint8(df_count_id, {'count': np.uint32, 'id': np.uint64})
         return PartitionedBuffer(buf, recsize)
 
