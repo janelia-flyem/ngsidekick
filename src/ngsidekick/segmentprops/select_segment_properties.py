@@ -189,7 +189,7 @@ def _select_segment_properties_from_dataframe(
     return new_df
 
 
-def string_template_names(template: str) -> bool:
+def string_template_names(template: str) -> list[str]:
     try:
         return [name for (_, name, *_) in string.Formatter().parse(template) if name]
     except ValueError:
