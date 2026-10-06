@@ -341,3 +341,27 @@ def test_not_an_annotation_directory(tmp_path):
     (tmp_path / 'info').write_text(json.dumps({'@type': 'neuroglancer_multiscale_volume'}))
     with pytest.raises(ValueError, match='Not a precomputed annotations info file'):
         read_precomputed_annotations(tmp_path)
+
+
+@pytest.mark.parametrize('sharded', [True, False])
+def test_without_relationship_indexes(sharded, tmp_path):
+    """
+    With write_by_relationship=False, the relationships are still encoded in the
+    annotation ID index, so they must still be listed in the info file.
+    Regression test for a bug in which the info file listed no relationships,
+    making the annotation ID index undecodable.
+    """
+    df, _ = _testdata('point')
+    _write(df, 'point', tmp_path, write_sharded=sharded, write_by_relationship=False)
+
+    info = json.loads((tmp_path / 'info').read_text())
+    assert info['relationships'] == [
+        {'id': 'pre', 'key': 'by_rel_pre'},
+        {'id': 'partners', 'key': 'by_rel_partners'},
+    ]
+    assert not (tmp_path / 'by_rel_pre').exists()
+    assert not (tmp_path / 'by_rel_partners').exists()
+
+    a = read_precomputed_annotations(tmp_path)
+    assert a.relationships == RELATIONSHIPS
+    _assert_df_equal(a.df, df.sort_index())

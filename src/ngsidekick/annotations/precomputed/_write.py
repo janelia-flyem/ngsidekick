@@ -190,10 +190,14 @@ def write_precomputed_annotations(
             Whether to write the annotations to the "Annotation ID Index".
             If False, skip writing.
 
-        write_relationships:
+        write_by_relationship:
             bool
-            Whether to write the relationships to the "Related Object ID Index".
-            If False, skip writing.
+            Whether to write the "Related Object ID Index" for each relationship.
+            If False, skip writing those indexes. The relationships are still
+            encoded in the "Annotation ID Index" and listed in the info file
+            (since the info file must describe the annotation encoding), so
+            neuroglancer can still show an annotation's related segments,
+            but it won't be able to find annotations by related segment.
 
         write_by_spatial_chunk:
             bool
@@ -399,6 +403,13 @@ def write_precomputed_annotations(
                 con, coord_space, annotation_type, property_specs, relationships, polyline_geom,
                 output_dir, write_sharded, max_shards_per_transaction, ts_context,
             )
+        else:
+            # The relationships must still be listed in the info file,
+            # since they're encoded in the annotation ID index.
+            by_rel_metadata = [
+                {"id": relationship, "key": f"by_rel_{relationship}"}
+                for relationship in relationships
+            ]
         if write_by_spatial_chunk:
             spatial_metadata = _write_annotations_by_spatial_chunk(
                 con, input_df,
