@@ -238,6 +238,12 @@ def _validate_args(df, label_col, description_col, string_cols, number_cols,
     """
     if isinstance(df, pd.Series):
         df = df.to_frame()
+    else:
+        df = df.copy(deep=False)
+
+    # We populate each property's "id" with the column name,
+    # and neuroglancer expects "id" to be a string.
+    df.columns = df.columns.astype(str)
 
     if isinstance(string_cols, str):
         string_cols = [string_cols]

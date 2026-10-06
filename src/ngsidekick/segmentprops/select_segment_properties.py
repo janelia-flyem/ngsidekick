@@ -137,6 +137,8 @@ def _select_segment_properties_from_dataframe(
     expressions: Dict[str, str] = {},
 ) -> pd.DataFrame:
 
+    full_df = full_df.copy(deep=False)
+
     for col in full_df.columns.tolist():
         if full_df[col].dtype in ("category", "object", "string"):
             full_df[col] = full_df[col].astype('string').fillna('')
