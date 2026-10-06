@@ -495,3 +495,47 @@ def test_flat_dataset(annotation_type, tmp_path):
         num_spatial_levels=4, target_chunk_limit=20,
     )
     assert _spatial_index_ids(out) == set(range(n))
+
+
+def test_unsharded_spatial_chunk_filenames(tmp_path):
+    """
+    In the unsharded spatial index, each chunk file is named by its grid
+    coordinates (e.g. '5_1_0'), and must contain only annotations that lie
+    in that grid cell. Regression test for a bug in which the chunk codes
+    were decoded with the grid shape in the wrong axis order, so that
+    (once the grid is split along multiple axes) many chunks were stored
+    under the filename of a different grid cell.
+    """
+    import json
+    from ngsidekick.annotations.precomputed import write_precomputed_annotations
+
+    # Anisotropic bounds, so the finer levels are split along multiple axes,
+    # with a different number of cells along each.
+    n = 3000
+    rng = np.random.default_rng(0)
+    df = pd.DataFrame({
+        'x': rng.uniform(0, 800, n), 'y': rng.uniform(0, 200, n), 'z': rng.uniform(0, 50, n),
+    }).astype(np.float32)
+    write_precomputed_annotations(
+        df, 'xyz', 'point', output_dir=tmp_path, write_sharded=False,
+        num_spatial_levels=5, target_chunk_limit=50,
+    )
+
+    info = json.loads((tmp_path / 'info').read_text())
+    lower_bound = np.array(info['lower_bound'], dtype=np.float32)
+    points = df.to_numpy()
+    assert any(np.count_nonzero(np.array(s['grid_shape']) > 1) > 1 for s in info['spatial'])
+
+    num_checked = 0
+    for level in info['spatial']:
+        chunk_size = np.array(level['chunk_size'], dtype=np.float32)
+        grid_shape = np.array(level['grid_shape'])
+        for path in (tmp_path / level['key']).iterdir():
+            value = path.read_bytes()
+            count = int(np.frombuffer(value[:8], '<u8')[0])
+            ids = np.frombuffer(value[len(value) - 8 * count:], '<u8').astype(np.int64)
+            cells = np.minimum((points[ids] - lower_bound) // chunk_size, grid_shape - 1).astype(int)
+            named_cell = [int(c) for c in path.name.split('_')]
+            assert (cells == named_cell).all(), (level['key'], path.name)
+            num_checked += count
+    assert num_checked == n

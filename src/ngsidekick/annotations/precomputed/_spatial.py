@@ -1248,7 +1248,10 @@ def _write_one_spatial_level_unsharded(con, level, gridspec,
     )
 
     # For unsharded the key is the chunk's grid coordinate joined with '_'.
-    grid_coords = compressed_morton_decode(unique_chunks, gridspec.grid_shapes[level])
+    # The chunk codes were computed from C-order (e.g. zyx) grid coordinates,
+    # so we must decode them with the C-order grid shape, and then reverse
+    # the result to obtain the coordinates in the coordinate space's order.
+    grid_coords = compressed_morton_decode(unique_chunks, gridspec.grid_shapes[level][::-1])[:, ::-1]
     string_keys = list(map('_'.join, grid_coords.astype(str)))
 
     logger.info(f"Writing annotations to '{subdir}' index "
