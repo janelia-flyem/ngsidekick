@@ -442,7 +442,9 @@ def _compute_grid_codes_for_points(df, geometry_cols, bounds, gridspec, per_row_
 
 
 def _compute_grid_codes_for_axis_aligned_bounding_boxes(df, geometry_cols, bounds, gridspec, per_row_levels):
-    boxes = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy().reshape(len(df), 2, -1)
+    # copy=True: under pandas 3 (copy-on-write) to_numpy() may return a
+    # read-only view, and we modify the array in-place below.
+    boxes = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy(copy=True).reshape(len(df), 2, -1)
 
     # Ensure start < end
     swap_mask = (boxes[:, 0, :] > boxes[:, 1, :])[:, None, :]
@@ -595,7 +597,8 @@ def _ellipsoid_chunk_overlap(center, radii, grid_origin, cell_shape, grid_index)
 
 
 def _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels):
-    endpoints = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy().reshape(len(df), 2, -1)
+    # copy=True: see note in _compute_grid_codes_for_axis_aligned_bounding_boxes()
+    endpoints = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy(copy=True).reshape(len(df), 2, -1)
 
     # Ensure start < end
     swap_mask = (endpoints[:, 0, :] > endpoints[:, 1, :])[:, None, :]
