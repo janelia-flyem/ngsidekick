@@ -299,3 +299,101 @@ def test_polyline_with_single_point_emits_one_chunk():
     )
     assert rows.tolist() == [0]
     assert len(codes) == 1
+
+
+def _cells(codes, grid_shape):
+    """
+    Decode chunk codes (as emitted by the grid-code kernels) into the
+    set of grid cell coordinates (in the same axis order as grid_shape).
+    """
+    from ngsidekick.annotations.precomputed.compressed_morton import compressed_morton_decode
+    grid_shape = np.asarray(grid_shape, dtype=np.uint64)
+    coords = compressed_morton_decode(np.asarray(codes, np.uint64), grid_shape[::-1])[..., ::-1]
+    return set(map(tuple, coords.reshape(-1, len(grid_shape)).tolist()))
+
+
+def _line_cells(point_a, point_b, grid_shape, kernel='line'):
+    """Cells reported for a single line (or 2-vertex polyline) in [0, 1]^D."""
+    D = len(grid_shape)
+    bounds = np.array([[0.0] * D, [1.0] * D])
+    gridspec = _single_level_gridspec(tuple(grid_shape))
+    per_row_levels = np.zeros(1, dtype=np.uint64)
+    if kernel == 'line':
+        names = [f'c{d}' for d in range(D)]
+        geometry_cols = [[f'{c}a' for c in names], [f'{c}b' for c in names]]
+        df = pd.DataFrame([[*point_a, *point_b]], columns=[*geometry_cols[0], *geometry_cols[1]])
+        rows, codes = _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels)
+    else:
+        points = np.array([point_a, point_b], dtype=np.float32)
+        geom = PolylineGeometry(points, np.array([0]), np.array([2]), np.array([0], dtype=np.uint64))
+        rows, codes = _compute_grid_codes_for_polylines(geom, bounds, gridspec, per_row_levels)
+    return _cells(codes, grid_shape)
+
+
+@pytest.mark.parametrize('kernel', ['line', 'polyline'])
+def test_line_direction_matters(kernel):
+    """
+    A line's chunks depend on its direction, not just its bounding box.
+    Regression test for a bug in which every line was treated as the main
+    diagonal of its bounding box, so an anti-diagonal line was assigned
+    to the wrong chunks.
+
+    In a 4x4 grid over [0,1]^2 (cells of width 0.25), the line from
+    (0.1, 0.9) to (0.9, 0.3) passes through these cells (in order):
+    """
+    expected = {(0, 3), (1, 3), (1, 2), (2, 2), (2, 1), (3, 1)}
+    assert _line_cells([0.1, 0.9], [0.9, 0.3], (4, 4), kernel) == expected
+
+    # The reversed line covers the same cells.
+    assert _line_cells([0.9, 0.3], [0.1, 0.9], (4, 4), kernel) == expected
+
+    # The main-diagonal line with the same bounding box covers different cells.
+    assert _line_cells([0.1, 0.3], [0.9, 0.9], (4, 4), kernel) == {
+        (0, 1), (1, 1), (1, 2), (2, 2), (2, 3), (3, 3)
+    }
+
+
+@pytest.mark.parametrize('kernel', ['line', 'polyline'])
+def test_line_cells_mirror_symmetry(kernel):
+    """
+    Mirroring a line along any axis must mirror the set of cells it occupies.
+    """
+    rng = np.random.default_rng(0)
+    grid_shape = np.array([8, 4, 2])
+    for _ in range(200):
+        a, b = rng.uniform(0, 1, (2, 3)).astype(np.float32)
+        cells = _line_cells(a, b, grid_shape, kernel)
+        for axis in range(3):
+            # Mirror around 0.5 (which is exact in float32 for these grids'
+            # cell boundaries, so no new boundary-touching cases arise).
+            ma, mb = a.copy(), b.copy()
+            ma[axis] = 1 - ma[axis]
+            mb[axis] = 1 - mb[axis]
+            mirrored = {
+                tuple(int(grid_shape[d] - 1 - c[d]) if d == axis else c[d] for d in range(3))
+                for c in cells
+            }
+            assert _line_cells(ma, mb, grid_shape, kernel) == mirrored
+
+
+def test_line_cells_contain_sampled_points():
+    """
+    Every cell containing a point on the line must be reported,
+    and each reported cell must lie close to the line.
+    """
+    rng = np.random.default_rng(1)
+    grid_shape = np.array([8, 8, 4])
+    cell_shape = 1.0 / grid_shape
+    t = np.linspace(0, 1, 2001)[:, None]
+    for _ in range(200):
+        a, b = rng.uniform(0, 1, (2, 3))
+        cells = _line_cells(a, b, grid_shape)
+
+        samples = a + t * (b - a)
+        sampled_cells = set(map(tuple, np.minimum(samples // cell_shape, grid_shape - 1).astype(int).tolist()))
+        assert sampled_cells <= cells
+
+        # Cells which weren't hit by any sample can only be cells that the line
+        # barely clips, so they must be adjacent to a sampled cell.
+        for c in cells - sampled_cells:
+            assert any(max(abs(np.subtract(c, s))) <= 1 for s in sampled_cells), c

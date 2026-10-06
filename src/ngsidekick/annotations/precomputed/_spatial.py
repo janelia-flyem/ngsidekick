@@ -597,13 +597,10 @@ def _ellipsoid_chunk_overlap(center, radii, grid_origin, cell_shape, grid_index)
 
 
 def _compute_grid_codes_for_lines(df, geometry_cols, bounds, gridspec, per_row_levels):
-    # copy=True: see note in _compute_grid_codes_for_axis_aligned_bounding_boxes()
-    endpoints = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy(copy=True).reshape(len(df), 2, -1)
-
-    # Ensure start < end
-    swap_mask = (endpoints[:, 0, :] > endpoints[:, 1, :])[:, None, :]
-    swap_mask = np.concatenate([swap_mask, swap_mask], axis=1)
-    endpoints[swap_mask] = endpoints[:, ::-1, :][swap_mask]
+    # Note: Unlike boxes, we must not reorder the endpoint coordinates per-axis,
+    # since that would change the line itself (e.g. turning an anti-diagonal
+    # line into the main diagonal of its bounding box).
+    endpoints = df[[*geometry_cols[0], *geometry_cols[1]]].to_numpy().reshape(len(df), 2, -1)
 
     return _line_grid_codes(
         endpoints,
@@ -633,14 +630,20 @@ def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per
 
         # We'd prefer the following, but we're worried about little allocations,
         # so below we loop over the dimensions explicitly.
-        ## grid_span[0] = np.floor((point_a - grid_origin) / chunk_shape)
-        ## grid_span[1] = np.ceil((point_b - grid_origin) / chunk_shape)
+        ## lower = np.minimum(point_a, point_b)
+        ## upper = np.maximum(point_a, point_b)
+        ## grid_span[0] = np.floor((lower - grid_origin) / chunk_shape)
+        ## grid_span[1] = np.ceil((upper - grid_origin) / chunk_shape)
         ## grid_span_cell_count = np.prod(grid_span[1] - grid_span[0])
 
+        # The span is computed from the line's bounding box,
+        # and then each cell in the span is checked for overlap.
         grid_span_cell_count = np.uint64(1)
         for d in range(D):
-            grid_span[0, d] = np.uint64(np.floor((point_a[d] - grid_origin[d]) / chunk_shape[d]))
-            grid_span[1, d] = np.uint64(np.ceil((point_b[d] - grid_origin[d]) / chunk_shape[d]))
+            lower = min(point_a[d], point_b[d])
+            upper = max(point_a[d], point_b[d])
+            grid_span[0, d] = np.uint64(np.floor((lower - grid_origin[d]) / chunk_shape[d]))
+            grid_span[1, d] = np.uint64(np.ceil((upper - grid_origin[d]) / chunk_shape[d]))
             grid_span_shape[d] = grid_span[1, d] - grid_span[0, d]
             grid_span_cell_count *= grid_span_shape[d]
 
@@ -662,48 +665,50 @@ def _line_grid_codes(endpoints, levels, grid_origin, chunk_shapes, axis_bits_per
 @njit
 def _line_chunk_overlap(point_a, point_b, grid_origin, cell_shape, grid_index):
     """
-    Ported from the C++ implementation[1] by jbms.
-    Returns True if the line intersects the cell, False otherwise.
+    Returns True if the line segment from point_a to point_b intersects
+    the (closed) grid cell at grid_index, False otherwise.
 
-    [1]: https://github.com/google/neuroglancer/pull/522#issuecomment-1940516294
+    Uses the "slab" method: parameterize the segment as
+    ``point_a + t * (point_b - point_a)`` for ``t`` in ``[0, 1]``,
+    and for each axis narrow the range of ``t`` to the portion of the
+    segment that lies between the cell's lower and upper planes along
+    that axis. The segment intersects the cell iff the final range is
+    non-empty.
+
+    Note:
+        The direction of the segment along each axis matters.
+        (It's not sufficient to consider the per-axis min/max of the
+        endpoints, which would describe a different line: the main
+        diagonal of the segment's bounding box.)
     """
     rank = len(point_a)
     min_t = 0.0
     max_t = 1.0
-    
+
     for i in range(rank):
         a = point_a[i]
         b = point_b[i]
-        line_lower = min(a, b)
-        line_upper = max(a, b)
         box_lower = grid_origin[i] + cell_shape[i] * grid_index[i]
         box_upper = box_lower + cell_shape[i]
-        
-        line_range = line_upper - line_lower
-        
-        if box_lower > line_lower:
-            if line_range == 0.0:
-                # Line is a point, check if it's outside the box
-                if line_lower < box_lower:
-                    return False
-            else:
-                t = (box_lower - line_lower) / line_range
-                if t > 1:
-                    return False
-                min_t = max(min_t, t)
-        
-        if box_upper < line_upper:
-            if line_range == 0.0:
-                # Line is a point, check if it's outside the box
-                if line_lower > box_upper:
-                    return False
-            else:
-                t = (box_upper - line_lower) / line_range
-                if t < 0:
-                    return False
-                max_t = min(max_t, t)
-    
-    return max_t >= min_t
+
+        delta = b - a
+        if delta == 0.0:
+            # The segment is parallel to this axis' slab:
+            # it's either entirely inside the slab or entirely outside.
+            if a < box_lower or a > box_upper:
+                return False
+            continue
+
+        t0 = (box_lower - a) / delta
+        t1 = (box_upper - a) / delta
+        if t0 > t1:
+            t0, t1 = t1, t0
+        min_t = max(min_t, t0)
+        max_t = min(max_t, t1)
+        if min_t > max_t:
+            return False
+
+    return True
 
 
 def _compute_grid_codes_for_polylines(polyline_geom, bounds, gridspec, per_row_levels):
